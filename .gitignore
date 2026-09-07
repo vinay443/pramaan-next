@@ -1,0 +1,28 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Env
+.env
+.env.local
+*.local
+
+# Java / Maven
+backend-java/target/
+
+# Go
+agents-go/bin/
+*.exe
+*.test
+*.out
+
+# Node / frontend
+frontend-react/node_modules/
+frontend-react/dist/
+node_modules/
+
+# Logs
+*.log

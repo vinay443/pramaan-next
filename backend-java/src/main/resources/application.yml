@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: pramaan-next-backend
+
+server:
+  port: 8080
+
+# Infra endpoints (see root docker-compose.yml). Datasource wiring is intentionally
+# left commented out until persistence work begins.
+# spring:
+#   datasource:
+#     url: jdbc:postgresql://localhost:5433/pramaan
+#     username: pramaan
+#     password: pramaan
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
