@@ -1,0 +1,23 @@
+{
+  "note": "UC03 Controls_Framework_Mapping. Maps an internal control code to every compliance framework that control helps satisfy. This is the source of truth for the evidence 'frameworks' metadata tag. Reference data only — deliberately NOT a DB entity (see EvidenceNaming / task decision note). Add a row here when a new control code is introduced.",
+  "mappings": {
+    "OS-BASELINE-VERSION": ["ITPP", "ISO27001", "IS"],
+    "OS-SSH-ROOT-LOGIN": ["C-SITE", "PCI_DSS", "ISO27001", "IS"],
+    "OS-SSH-PASSWORD-AUTH": ["C-SITE", "PCI_DSS", "ISO27001"],
+    "OS-AUDIT-LOGGING": ["PCI_DSS", "ISO27001", "IS", "DPSC"],
+    "DB-TLS-IN-TRANSIT": ["PCI_DSS", "DPSC", "ISO27001"],
+    "DB-AUDIT-LOGGING": ["PCI_DSS", "ISO27001", "IS"],
+    "DB-PASSWORD-STORAGE": ["C-SITE", "PCI_DSS", "ISO27001"],
+    "DB-AUTH-NO-TRUST": ["C-SITE", "PCI_DSS"],
+    "MW-TLS-VERSION": ["PCI_DSS", "DPSC", "ISG"],
+    "MW-BANNER-SUPPRESSION": ["C-SITE", "ISG"],
+    "MW-HSTS": ["DPSC", "ISG", "ISO27001"],
+    "TLS-PROTOCOL-VERSION": ["PCI_DSS", "DPSC", "ISG"],
+    "TLS-CERT-EXPIRY": ["C-SITE", "ISG", "ISO27001"],
+    "TLS-KEY-STRENGTH": ["C-SITE", "PCI_DSS", "ISG"],
+    "TLS-CERT-TRUST": ["DPSC", "ISG"],
+    "ITPP-CHG-02": ["ITPP", "ISO27001", "IS"],
+    "DPSC-SDLC-04": ["DPSC", "ISO27001", "PCI_DSS"],
+    "PCI-DSS-6.2": ["PCI_DSS", "DPSC"]
+  }
+}

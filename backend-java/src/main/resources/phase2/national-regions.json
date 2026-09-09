@@ -1,0 +1,10 @@
+{
+  "_comment": "UC20 — mock region-to-application map (no real national roster available locally).",
+  "regions": [
+    { "name": "North",   "applications": ["net-banking"] },
+    { "name": "West",     "applications": ["payments"] },
+    { "name": "South",    "applications": ["mobile-banking"] },
+    { "name": "East",     "applications": [] },
+    { "name": "Central",  "applications": [] }
+  ]
+}

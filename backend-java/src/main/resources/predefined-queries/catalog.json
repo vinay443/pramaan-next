@@ -1,0 +1,3093 @@
+[
+  {
+    "controlId": "DB-001",
+    "technology": "PostgreSQL",
+    "controlName": "SSL Enabled",
+    "command": "SHOW ssl;",
+    "frameworks": [
+      "DB Baselining",
+      "PCI DSS",
+      "DPSC"
+    ],
+    "evidenceType": "SQL Output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "DB-002",
+    "technology": "PostgreSQL",
+    "controlName": "Password Policy",
+    "command": "SHOW password_encryption;",
+    "frameworks": [
+      "DB Baselining",
+      "PCI DSS"
+    ],
+    "evidenceType": "SQL Output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Password / Authentication"
+  },
+  {
+    "controlId": "DB-003",
+    "technology": "PostgreSQL",
+    "controlName": "Replication Health",
+    "command": "SELECT * FROM pg_stat_replication;",
+    "frameworks": [
+      "DB Baselining",
+      "ITDRM"
+    ],
+    "evidenceType": "SQL Output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Backup / Resilience"
+  },
+  {
+    "controlId": "DB-004",
+    "technology": "Oracle",
+    "controlName": "Encryption At Rest",
+    "command": "SELECT * FROM V$ENCRYPTION_WALLET;",
+    "frameworks": [
+      "DB Baselining",
+      "PCI DSS",
+      "DPSC"
+    ],
+    "evidenceType": "SQL Output",
+    "executableNow": false,
+    "runtimeStatus": "Configuration Required",
+    "controlFamily": "Encryption at Rest"
+  },
+  {
+    "controlId": "DB-005",
+    "technology": "Unknown",
+    "controlName": "Audit Logging",
+    "command": "SHOW PARAMETER audit_trail;",
+    "frameworks": [
+      "DB Baselining",
+      "PCI DSS",
+      "CSITE"
+    ],
+    "evidenceType": "SQL Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "DB-006",
+    "technology": "YugabyteDB",
+    "controlName": "Cluster Health",
+    "command": "SELECT * FROM yb_servers();",
+    "frameworks": [
+      "DB Baselining",
+      "CSITE"
+    ],
+    "evidenceType": "SQL Output",
+    "executableNow": false,
+    "runtimeStatus": "Configuration Required",
+    "controlFamily": "Backup / Resilience"
+  },
+  {
+    "controlId": "DB-007",
+    "technology": "Aurora MySQL",
+    "controlName": "SSL Enabled",
+    "command": "SHOW VARIABLES LIKE 'have_ssl';",
+    "frameworks": [
+      "DB Baselining",
+      "PCI DSS",
+      "DPSC"
+    ],
+    "evidenceType": "SQL Output",
+    "executableNow": false,
+    "runtimeStatus": "Configuration Required",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "OS-001",
+    "technology": "Linux",
+    "controlName": "Patch Compliance",
+    "command": "yum check-update",
+    "frameworks": [
+      "OS Baselining",
+      "PCI DSS",
+      "DPSC",
+      "VAPT"
+    ],
+    "evidenceType": "Command Output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Patch Compliance"
+  },
+  {
+    "controlId": "OS-002",
+    "technology": "Linux",
+    "controlName": "SSH Hardening",
+    "command": "cat /etc/ssh/sshd_config",
+    "frameworks": [
+      "OS Baselining",
+      "PCI DSS"
+    ],
+    "evidenceType": "Configuration File",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "OS-003",
+    "technology": "Linux",
+    "controlName": "NTP Synchronization",
+    "command": "timedatectl status",
+    "frameworks": [
+      "OS Baselining"
+    ],
+    "evidenceType": "Command Output",
+    "executableNow": false,
+    "runtimeStatus": "Configuration Required",
+    "controlFamily": "Time Synchronization"
+  },
+  {
+    "controlId": "OS-004",
+    "technology": "Linux",
+    "controlName": "User Account Review",
+    "command": "cat /etc/passwd",
+    "frameworks": [
+      "OS Baselining",
+      "PCI DSS"
+    ],
+    "evidenceType": "Configuration File",
+    "executableNow": false,
+    "runtimeStatus": "Configuration Required",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "OS-005",
+    "technology": "Linux",
+    "controlName": "Service Hardening",
+    "command": "systemctl list-units --type=service",
+    "frameworks": [
+      "OS Baselining"
+    ],
+    "evidenceType": "Command Output",
+    "executableNow": false,
+    "runtimeStatus": "Configuration Required",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "OS-006",
+    "technology": "Windows",
+    "controlName": "Patch Compliance",
+    "command": "Get-HotFix",
+    "frameworks": [
+      "OS Baselining",
+      "PCI DSS",
+      "DPSC",
+      "VAPT"
+    ],
+    "evidenceType": "PowerShell Output",
+    "executableNow": false,
+    "runtimeStatus": "Connector Missing",
+    "controlFamily": "Patch Compliance"
+  },
+  {
+    "controlId": "OS-007",
+    "technology": "Windows",
+    "controlName": "Antivirus Status",
+    "command": "Get-MpComputerStatus",
+    "frameworks": [
+      "OS Baselining",
+      "CSITE"
+    ],
+    "evidenceType": "PowerShell Output",
+    "executableNow": false,
+    "runtimeStatus": "Connector Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "MW-001",
+    "technology": "NGINX",
+    "controlName": "TLS Configuration",
+    "command": "nginx -T",
+    "frameworks": [
+      "Middleware Baselining",
+      "PCI DSS",
+      "DPSC"
+    ],
+    "evidenceType": "Configuration Export",
+    "executableNow": false,
+    "runtimeStatus": "Configuration Required",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "MW-002",
+    "technology": "Unknown",
+    "controlName": "Certificate Expiry",
+    "command": "openssl x509 -enddate -noout -in cert.pem",
+    "frameworks": [
+      "Middleware Baselining",
+      "PCI DSS",
+      "DPSC"
+    ],
+    "evidenceType": "Certificate Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "MW-003",
+    "technology": "Tomcat",
+    "controlName": "Admin Account Review",
+    "command": "cat tomcat-users.xml",
+    "frameworks": [
+      "Middleware Baselining",
+      "PCI DSS"
+    ],
+    "evidenceType": "Configuration File",
+    "executableNow": false,
+    "runtimeStatus": "Configuration Required",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "PCI-001",
+    "technology": "Windows",
+    "controlName": "MFA/User Review",
+    "command": "Get-ADUser -Filter *",
+    "frameworks": [
+      "PCI DSS",
+      "DPSC",
+      "MBSS"
+    ],
+    "evidenceType": "PowerShell Output",
+    "executableNow": false,
+    "runtimeStatus": "Connector Missing",
+    "controlFamily": "Password / Authentication"
+  },
+  {
+    "controlId": "PCI-002",
+    "technology": "Unknown",
+    "controlName": "Audit Logging Validation",
+    "command": "index=*",
+    "frameworks": [
+      "PCI DSS",
+      "CSITE"
+    ],
+    "evidenceType": "Search Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "PCI-003",
+    "technology": "Oracle",
+    "controlName": "Privileged Access Review",
+    "command": "SELECT * FROM DBA_ROLE_PRIVS;",
+    "frameworks": [
+      "PCI DSS",
+      "DPSC",
+      "DB Baselining"
+    ],
+    "evidenceType": "SQL Output",
+    "executableNow": false,
+    "runtimeStatus": "Configuration Required",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "PCI-004",
+    "technology": "Unknown",
+    "controlName": "Encryption In Transit",
+    "command": "openssl s_client -connect host:443",
+    "frameworks": [
+      "PCI DSS",
+      "DPSC",
+      "Middleware Baselining"
+    ],
+    "evidenceType": "Certificate Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "APP-001",
+    "technology": "SonarQube",
+    "controlName": "SAST Scan",
+    "command": "curl http://sonarqube/api/issues/search",
+    "frameworks": [
+      "AppSec",
+      "ASST",
+      "DPSC"
+    ],
+    "evidenceType": "API Output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Vulnerability / Security Testing"
+  },
+  {
+    "controlId": "APP-002",
+    "technology": "GitLeaks",
+    "controlName": "Secrets Scanning",
+    "command": "gitleaks detect",
+    "frameworks": [
+      "AppSec",
+      "ASST",
+      "DPSC"
+    ],
+    "evidenceType": "Scan Report",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Vulnerability / Security Testing"
+  },
+  {
+    "controlId": "APP-003",
+    "technology": "Unknown",
+    "controlName": "Dependency Scanning",
+    "command": "dependency-check.sh --scan .",
+    "frameworks": [
+      "AppSec",
+      "ASST"
+    ],
+    "evidenceType": "Scan Report",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Vulnerability / Security Testing"
+  },
+  {
+    "controlId": "APP-004",
+    "technology": "Trivy",
+    "controlName": "Container Security Scan",
+    "command": "trivy image app:latest",
+    "frameworks": [
+      "AppSec",
+      "ASST"
+    ],
+    "evidenceType": "Scan Report",
+    "executableNow": false,
+    "runtimeStatus": "Configuration Required",
+    "controlFamily": "Vulnerability / Security Testing"
+  },
+  {
+    "controlId": "DPSC-001",
+    "technology": "Unknown",
+    "controlName": "API Authentication",
+    "command": "curl https://api-gateway/admin/routes",
+    "frameworks": [
+      "DPSC",
+      "AppSec"
+    ],
+    "evidenceType": "API Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "DPSC-002",
+    "technology": "Unknown",
+    "controlName": "API Rate Limiting",
+    "command": "curl https://api-gateway/admin/rate-limits",
+    "frameworks": [
+      "DPSC",
+      "AppSec"
+    ],
+    "evidenceType": "API Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "VAPT-001",
+    "technology": "Unknown",
+    "controlName": "Vulnerability Scan",
+    "command": "GET /nessus/scans",
+    "frameworks": [
+      "VAPT",
+      "PCI DSS",
+      "DPSC"
+    ],
+    "evidenceType": "API Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Vulnerability / Security Testing"
+  },
+  {
+    "controlId": "VAPT-002",
+    "technology": "Unknown",
+    "controlName": "Critical Vulnerability Closure",
+    "command": "GET /nessus/vulnerabilities",
+    "frameworks": [
+      "VAPT",
+      "PCI DSS"
+    ],
+    "evidenceType": "API Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Vulnerability / Security Testing"
+  },
+  {
+    "controlId": "VAPT-003",
+    "technology": "Unknown",
+    "controlName": "DAST Findings",
+    "command": "GET /burp/api/issues",
+    "frameworks": [
+      "VAPT",
+      "AppSec"
+    ],
+    "evidenceType": "API Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Vulnerability / Security Testing"
+  },
+  {
+    "controlId": "ITPP-001",
+    "technology": "Unknown",
+    "controlName": "Backup Success",
+    "command": "tail backup.log",
+    "frameworks": [
+      "ITPP",
+      "ITDRM"
+    ],
+    "evidenceType": "Log Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Backup / Resilience"
+  },
+  {
+    "controlId": "ITPP-002",
+    "technology": "Linux",
+    "controlName": "Capacity Management",
+    "command": "df -h",
+    "frameworks": [
+      "ITPP"
+    ],
+    "evidenceType": "Command Output",
+    "executableNow": false,
+    "runtimeStatus": "Configuration Required",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "ITPP-003",
+    "technology": "Linux",
+    "controlName": "Memory Utilization",
+    "command": "free -m",
+    "frameworks": [
+      "ITPP"
+    ],
+    "evidenceType": "Command Output",
+    "executableNow": false,
+    "runtimeStatus": "Configuration Required",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "ITPP-004",
+    "technology": "Unknown",
+    "controlName": "CPU Utilization",
+    "command": "top",
+    "frameworks": [
+      "ITPP"
+    ],
+    "evidenceType": "Command Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "AI-001",
+    "technology": "Unknown",
+    "controlName": "Model Approval",
+    "command": "SELECT * FROM model_inventory WHERE approval_status='Approved';",
+    "frameworks": [
+      "AI SDLC"
+    ],
+    "evidenceType": "SQL Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "AI-002",
+    "technology": "Unknown",
+    "controlName": "Prompt Approval",
+    "command": "SELECT * FROM prompt_repository;",
+    "frameworks": [
+      "AI SDLC"
+    ],
+    "evidenceType": "SQL Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "AI-003",
+    "technology": "Unknown",
+    "controlName": "Hallucination Testing",
+    "command": "SELECT * FROM model_test_results;",
+    "frameworks": [
+      "AI SDLC"
+    ],
+    "evidenceType": "SQL Output",
+    "executableNow": false,
+    "runtimeStatus": "Unsupported Technology",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "PGX-001",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL SSL Enabled",
+    "command": "SHOW ssl;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "PGX-002",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL Password Encryption",
+    "command": "SHOW password_encryption;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Password / Authentication"
+  },
+  {
+    "controlId": "PGX-003",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL Replication Status",
+    "command": "SELECT * FROM pg_stat_replication;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Backup / Resilience"
+  },
+  {
+    "controlId": "PGX-004",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL User Privileges",
+    "command": "SELECT rolname, rolsuper, rolcreaterole, rolcreatedb, rolcanlogin FROM pg_roles;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "PGX-005",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL Database Sizes",
+    "command": "SELECT datname, pg_database_size(datname) AS size_bytes FROM pg_database;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "PGX-006",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL Active Sessions",
+    "command": "SELECT datname, usename, application_name, client_addr, state FROM pg_stat_activity;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "PGX-007",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL Installed Extensions",
+    "command": "SELECT extname, extversion FROM pg_extension;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "PGX-008",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL Audit Extension Check",
+    "command": "SELECT extname FROM pg_extension WHERE extname IN ('pgaudit');",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "PGX-009",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL Connection Limits",
+    "command": "SELECT name, setting FROM pg_settings WHERE name IN ('max_connections', 'superuser_reserved_connections');",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "PGX-010",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL Long Running Queries",
+    "command": "SELECT pid, usename, state, now() - query_start AS runtime FROM pg_stat_activity WHERE state <> 'idle' AND now() - query_start > interval '5 minutes';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "PGX-011",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL Database Uptime",
+    "command": "SELECT pg_postmaster_start_time() AS start_time, now() - pg_postmaster_start_time() AS uptime;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Backup / Resilience"
+  },
+  {
+    "controlId": "PGX-012",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL Schema Inventory",
+    "command": "SELECT schemaname, count(*) AS table_count FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema') GROUP BY schemaname;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "PGX-013",
+    "technology": "PostgreSQL",
+    "controlName": "PostgreSQL Security Parameters",
+    "command": "SELECT name, setting FROM pg_settings WHERE name IN ('log_connections', 'log_disconnections', 'ssl', 'password_encryption', 'log_statement');",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "YBX-001",
+    "technology": "YugabyteDB",
+    "controlName": "YugabyteDB Cluster Servers",
+    "command": "SELECT * FROM yb_servers();",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "YBX-002",
+    "technology": "YugabyteDB",
+    "controlName": "YugabyteDB Version",
+    "command": "SELECT version();",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "YBX-003",
+    "technology": "YugabyteDB",
+    "controlName": "YugabyteDB Active Sessions",
+    "command": "SELECT datname, usename, application_name, client_addr, state FROM pg_stat_activity;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "YBX-004",
+    "technology": "YugabyteDB",
+    "controlName": "YugabyteDB User Privileges",
+    "command": "SELECT rolname, rolsuper, rolcreaterole, rolcreatedb, rolcanlogin FROM pg_roles;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "YBX-005",
+    "technology": "YugabyteDB",
+    "controlName": "YugabyteDB Database Sizes",
+    "command": "SELECT datname, pg_database_size(datname) AS size_bytes FROM pg_database;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "YBX-006",
+    "technology": "YugabyteDB",
+    "controlName": "YugabyteDB Table List",
+    "command": "SELECT schemaname, tablename, tableowner FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema');",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "YBX-007",
+    "technology": "YugabyteDB",
+    "controlName": "YugabyteDB Extensions",
+    "command": "SELECT extname, extversion FROM pg_extension;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "YBX-008",
+    "technology": "YugabyteDB",
+    "controlName": "YugabyteDB SSL Check",
+    "command": "SHOW ssl;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "YBX-009",
+    "technology": "YugabyteDB",
+    "controlName": "YugabyteDB Connection Limits",
+    "command": "SELECT name, setting FROM pg_settings WHERE name IN ('max_connections', 'superuser_reserved_connections');",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "YBX-010",
+    "technology": "YugabyteDB",
+    "controlName": "YugabyteDB Long Running Queries",
+    "command": "SELECT pid, usename, state, now() - query_start AS runtime FROM pg_stat_activity WHERE state <> 'idle' AND now() - query_start > interval '5 minutes';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "YBX-011",
+    "technology": "YugabyteDB",
+    "controlName": "YugabyteDB Security Parameters",
+    "command": "SELECT name, setting FROM pg_settings WHERE name IN ('log_connections', 'log_disconnections', 'ssl', 'password_encryption');",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "MYX-001",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL SSL Status",
+    "command": "SHOW VARIABLES LIKE 'have_ssl';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "MYX-002",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL Secure Transport",
+    "command": "SHOW VARIABLES LIKE 'require_secure_transport';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "MYX-003",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL Binary Logging",
+    "command": "SHOW VARIABLES LIKE 'log_bin';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "MYX-004",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL Audit Variables",
+    "command": "SHOW VARIABLES LIKE 'server_audit%';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "MYX-005",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL Users",
+    "command": "SELECT user, host, plugin FROM mysql.user;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "MYX-006",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL Version",
+    "command": "SELECT VERSION();",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "MYX-007",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL Databases",
+    "command": "SHOW DATABASES;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "MYX-008",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL Process List",
+    "command": "SHOW PROCESSLIST;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "MYX-009",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL Grants Summary",
+    "command": "SELECT user, host, select_priv, insert_priv, update_priv, delete_priv, create_priv, drop_priv, super_priv FROM mysql.user;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "MYX-010",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL TLS Config",
+    "command": "SHOW VARIABLES LIKE '%ssl%';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "MYX-011",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL Connection Limits",
+    "command": "SHOW VARIABLES LIKE 'max_connections';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "MYX-012",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL Long Running Queries",
+    "command": "SELECT id, user, host, db, time, state FROM information_schema.processlist WHERE command <> 'Sleep' AND time > 300;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "MYX-013",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL Failed Connections",
+    "command": "SHOW GLOBAL STATUS LIKE 'Aborted_connects';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "MYX-014",
+    "technology": "Aurora MySQL",
+    "controlName": "Aurora MySQL Uptime",
+    "command": "SHOW GLOBAL STATUS LIKE 'Uptime';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Backup / Resilience"
+  },
+  {
+    "controlId": "ORX-001",
+    "technology": "Oracle",
+    "controlName": "Oracle Version",
+    "command": "SELECT * FROM v$version;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "ORX-002",
+    "technology": "Oracle",
+    "controlName": "Oracle Database Open Mode",
+    "command": "SELECT name, open_mode, database_role FROM v$database;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "ORX-003",
+    "technology": "Oracle",
+    "controlName": "Oracle Encryption Wallet Status",
+    "command": "SELECT wallet_type, status, wallet_order FROM v$encryption_wallet;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Encryption at Rest"
+  },
+  {
+    "controlId": "ORX-004",
+    "technology": "Oracle",
+    "controlName": "Oracle Audit Trail Setting",
+    "command": "SELECT name, value FROM v$parameter WHERE name = 'audit_trail';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "ORX-005",
+    "technology": "Oracle",
+    "controlName": "Oracle Failed Login Profile Settings",
+    "command": "SELECT profile, resource_name, limit FROM dba_profiles WHERE resource_name IN ('FAILED_LOGIN_ATTEMPTS','PASSWORD_LOCK_TIME','PASSWORD_LIFE_TIME');",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Password / Authentication"
+  },
+  {
+    "controlId": "ORX-006",
+    "technology": "Oracle",
+    "controlName": "Oracle Privileged Users",
+    "command": "SELECT username, account_status, common, oracle_maintained FROM dba_users WHERE username IN ('SYS','SYSTEM') OR account_status <> 'OPEN';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "ORX-007",
+    "technology": "Oracle",
+    "controlName": "Oracle Roles Granted To Users",
+    "command": "SELECT grantee, granted_role, admin_option, default_role FROM dba_role_privs;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "ORX-008",
+    "technology": "Oracle",
+    "controlName": "Oracle Tablespace Usage",
+    "command": "SELECT tablespace_name, status, contents FROM dba_tablespaces;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "ORX-009",
+    "technology": "Oracle",
+    "controlName": "Oracle Datafile Encryption Status",
+    "command": "SELECT tablespace_name, encrypted FROM dba_tablespaces;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "ORX-010",
+    "technology": "Oracle",
+    "controlName": "Oracle Active Sessions",
+    "command": "SELECT username, status, machine, program FROM v$session WHERE username IS NOT NULL;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "ORX-011",
+    "technology": "Oracle",
+    "controlName": "Oracle Connection/Resource Limits",
+    "command": "SELECT resource_name, current_utilization, max_utilization, limit_value FROM v$resource_limit WHERE resource_name IN ('sessions', 'processes');",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "ORX-012",
+    "technology": "Oracle",
+    "controlName": "Oracle Instance Uptime",
+    "command": "SELECT instance_name, status, startup_time FROM v$instance;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Backup / Resilience"
+  },
+  {
+    "controlId": "ORX-013",
+    "technology": "Oracle",
+    "controlName": "Oracle Long Running Sessions",
+    "command": "SELECT sid, username, status, last_call_et FROM v$session WHERE username IS NOT NULL AND status = 'ACTIVE' AND last_call_et > 300;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "ORX-014",
+    "technology": "Oracle",
+    "controlName": "Oracle Schema Object Inventory",
+    "command": "SELECT owner, object_type, COUNT(*) AS object_count FROM dba_objects WHERE owner NOT IN ('SYS','SYSTEM') GROUP BY owner, object_type;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Database configuration query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "MSX-001",
+    "technology": "SQL Server",
+    "controlName": "SQL Server Version",
+    "command": "SELECT @@VERSION;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "MSX-002",
+    "technology": "SQL Server",
+    "controlName": "SQL Server Edition/Level",
+    "command": "SELECT SERVERPROPERTY('Edition') AS edition, SERVERPROPERTY('ProductLevel') AS level;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "MSX-003",
+    "technology": "SQL Server",
+    "controlName": "SQL Server Authentication Mode",
+    "command": "SELECT SERVERPROPERTY('IsIntegratedSecurityOnly') AS windows_auth_only;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Password / Authentication"
+  },
+  {
+    "controlId": "MSX-004",
+    "technology": "SQL Server",
+    "controlName": "SQL Server Logins",
+    "command": "SELECT name, type_desc, is_disabled FROM sys.server_principals WHERE type IN ('S','U','G');",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "MSX-005",
+    "technology": "SQL Server",
+    "controlName": "SQL Server sysadmin Members",
+    "command": "SELECT p.name FROM sys.server_role_members m JOIN sys.server_principals r ON m.role_principal_id = r.principal_id JOIN sys.server_principals p ON m.member_principal_id = p.principal_id WHERE r.name = 'sysadmin';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "MSX-006",
+    "technology": "SQL Server",
+    "controlName": "SQL Server Databases",
+    "command": "SELECT name, state_desc, recovery_model_desc FROM sys.databases;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "MSX-007",
+    "technology": "SQL Server",
+    "controlName": "SQL Server TDE Status",
+    "command": "SELECT DB_NAME(database_id) AS db, encryption_state FROM sys.dm_database_encryption_keys;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "MSX-008",
+    "technology": "SQL Server",
+    "controlName": "SQL Server Force Encryption",
+    "command": "SELECT value_in_use FROM sys.configurations WHERE name = 'remote admin connections';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "MSX-009",
+    "technology": "SQL Server",
+    "controlName": "SQL Server Audit Specifications",
+    "command": "SELECT name, is_state_enabled FROM sys.server_audit_specifications;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "MSX-010",
+    "technology": "SQL Server",
+    "controlName": "SQL Server Failed Login Auditing",
+    "command": "SELECT value_in_use FROM sys.configurations WHERE name = 'default trace enabled';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "MSX-011",
+    "technology": "SQL Server",
+    "controlName": "SQL Server Connection Limit",
+    "command": "SELECT value_in_use FROM sys.configurations WHERE name = 'user connections';",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "MSX-012",
+    "technology": "SQL Server",
+    "controlName": "SQL Server Long Running Requests",
+    "command": "SELECT session_id, status, command, total_elapsed_time FROM sys.dm_exec_requests WHERE total_elapsed_time > 300000;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "MSX-013",
+    "technology": "SQL Server",
+    "controlName": "SQL Server Uptime",
+    "command": "SELECT sqlserver_start_time FROM sys.dm_os_sys_info;",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "SQL Server query output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Backup / Resilience"
+  },
+  {
+    "controlId": "MGX-001",
+    "technology": "MongoDB",
+    "controlName": "MongoDB Build Info",
+    "command": "buildInfo",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "MongoDB command output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "MGX-002",
+    "technology": "MongoDB",
+    "controlName": "MongoDB Server Status",
+    "command": "serverStatus",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "MongoDB command output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "MGX-003",
+    "technology": "MongoDB",
+    "controlName": "MongoDB Auth Enabled",
+    "command": "getCmdLineOpts",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "MongoDB command output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "MGX-004",
+    "technology": "MongoDB",
+    "controlName": "MongoDB TLS Config",
+    "command": "getParameter:sslMode",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "MongoDB command output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "MGX-005",
+    "technology": "MongoDB",
+    "controlName": "MongoDB Users",
+    "command": "usersInfo",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "MongoDB command output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "MGX-006",
+    "technology": "MongoDB",
+    "controlName": "MongoDB Roles",
+    "command": "rolesInfo",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "MongoDB command output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "MGX-007",
+    "technology": "MongoDB",
+    "controlName": "MongoDB Databases",
+    "command": "listDatabases",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "MongoDB command output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "MGX-008",
+    "technology": "MongoDB",
+    "controlName": "MongoDB Audit Config",
+    "command": "getParameter:auditAuthorizationSuccess",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "MongoDB command output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "MGX-009",
+    "technology": "MongoDB",
+    "controlName": "MongoDB Replication Status",
+    "command": "replSetGetStatus",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "MongoDB command output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Backup / Resilience"
+  },
+  {
+    "controlId": "MGX-010",
+    "technology": "MongoDB",
+    "controlName": "MongoDB Current Operations",
+    "command": "currentOp",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "MongoDB command output",
+    "executableNow": false,
+    "runtimeStatus": "Dependency Missing",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "NGX-001",
+    "technology": "NGINX",
+    "controlName": "NGINX Version",
+    "command": "nginx -v 2>&1",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Middleware command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "NGX-002",
+    "technology": "NGINX",
+    "controlName": "NGINX Config Test",
+    "command": "nginx -t 2>&1",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Middleware command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "NGX-003",
+    "technology": "NGINX",
+    "controlName": "NGINX TLS Protocol Configuration",
+    "command": "grep -R \"ssl_protocols\" /etc/nginx /etc/nginx/conf.d 2>/dev/null || true",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Middleware command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "NGX-004",
+    "technology": "NGINX",
+    "controlName": "NGINX TLS Cipher Configuration",
+    "command": "grep -R \"ssl_ciphers\" /etc/nginx /etc/nginx/conf.d 2>/dev/null || true",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Middleware command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "NGX-005",
+    "technology": "NGINX",
+    "controlName": "NGINX Server Tokens Disabled",
+    "command": "grep -R \"server_tokens\" /etc/nginx /etc/nginx/conf.d 2>/dev/null || true",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Middleware command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "NGX-006",
+    "technology": "NGINX",
+    "controlName": "NGINX Access Log Configuration",
+    "command": "grep -R \"access_log\" /etc/nginx /etc/nginx/conf.d 2>/dev/null || true",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Middleware command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "NGX-007",
+    "technology": "NGINX",
+    "controlName": "NGINX Error Log Configuration",
+    "command": "grep -R \"error_log\" /etc/nginx /etc/nginx/conf.d 2>/dev/null || true",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Middleware command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "NGX-008",
+    "technology": "NGINX",
+    "controlName": "NGINX Enabled Sites",
+    "command": "find /etc/nginx/sites-enabled /etc/nginx/conf.d -maxdepth 2 -type f 2>/dev/null",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Middleware command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "LNX-001",
+    "technology": "Linux",
+    "controlName": "Linux OS Release",
+    "command": "cat /etc/os-release",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "LNX-002",
+    "technology": "Linux",
+    "controlName": "Linux Kernel Version",
+    "command": "uname -a",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "LNX-003",
+    "technology": "Linux",
+    "controlName": "Linux Running Services",
+    "command": "systemctl list-units --type=service --state=running --no-pager 2>/dev/null || service --status-all 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "LNX-004",
+    "technology": "Linux",
+    "controlName": "Linux Firewall Status",
+    "command": "systemctl is-active firewalld 2>/dev/null || ufw status 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Network Security"
+  },
+  {
+    "controlId": "LNX-005",
+    "technology": "Linux",
+    "controlName": "Linux SSH Root Login Setting",
+    "command": "grep -Ei \"^\\s*PermitRootLogin\" /etc/ssh/sshd_config 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "LNX-006",
+    "technology": "Linux",
+    "controlName": "Linux Password Authentication Setting",
+    "command": "grep -Ei \"^\\s*PasswordAuthentication\" /etc/ssh/sshd_config 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Password / Authentication"
+  },
+  {
+    "controlId": "LNX-007",
+    "technology": "Linux",
+    "controlName": "Linux Sudoers Configuration",
+    "command": "grep -R \"ALL=\" /etc/sudoers /etc/sudoers.d 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "LNX-008",
+    "technology": "Linux",
+    "controlName": "Linux Local Users",
+    "command": "cut -d: -f1,3,7 /etc/passwd",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "RH8-001",
+    "technology": "Red Hat Enterprise Linux 8.x",
+    "controlName": "RHEL 8 Version Check",
+    "command": "cat /etc/redhat-release",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "RH8-002",
+    "technology": "Red Hat Enterprise Linux 8.x",
+    "controlName": "RHEL 8 Crypto Policy",
+    "command": "update-crypto-policies --show 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "RH8-003",
+    "technology": "Red Hat Enterprise Linux 8.x",
+    "controlName": "RHEL 8 SELinux Status",
+    "command": "getenforce 2>/dev/null || sestatus 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "RH8-004",
+    "technology": "Red Hat Enterprise Linux 8.x",
+    "controlName": "RHEL 8 Firewalld Status",
+    "command": "systemctl is-active firewalld 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Network Security"
+  },
+  {
+    "controlId": "RH8-005",
+    "technology": "Red Hat Enterprise Linux 8.x",
+    "controlName": "RHEL 8 Auditd Status",
+    "command": "systemctl is-active auditd 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "RH8-006",
+    "technology": "Red Hat Enterprise Linux 8.x",
+    "controlName": "RHEL 8 SSH PermitRootLogin",
+    "command": "grep -Ei \"^\\s*PermitRootLogin\" /etc/ssh/sshd_config 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "RH8-007",
+    "technology": "Red Hat Enterprise Linux 8.x",
+    "controlName": "RHEL 8 Password Authentication",
+    "command": "grep -Ei \"^\\s*PasswordAuthentication\" /etc/ssh/sshd_config 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Password / Authentication"
+  },
+  {
+    "controlId": "RH8-008",
+    "technology": "Red Hat Enterprise Linux 8.x",
+    "controlName": "RHEL 8 Installed Security Updates",
+    "command": "dnf updateinfo list security installed 2>/dev/null || yum updateinfo list security installed 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "RH9-001",
+    "technology": "Red Hat Enterprise Linux 9.x",
+    "controlName": "RHEL 9 Version Check",
+    "command": "cat /etc/redhat-release",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "RH9-002",
+    "technology": "Red Hat Enterprise Linux 9.x",
+    "controlName": "RHEL 9 Crypto Policy",
+    "command": "update-crypto-policies --show 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "RH9-003",
+    "technology": "Red Hat Enterprise Linux 9.x",
+    "controlName": "RHEL 9 SELinux Status",
+    "command": "getenforce 2>/dev/null || sestatus 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "RH9-004",
+    "technology": "Red Hat Enterprise Linux 9.x",
+    "controlName": "RHEL 9 Firewalld Status",
+    "command": "systemctl is-active firewalld 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Network Security"
+  },
+  {
+    "controlId": "RH9-005",
+    "technology": "Red Hat Enterprise Linux 9.x",
+    "controlName": "RHEL 9 Auditd Status",
+    "command": "systemctl is-active auditd 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "RH9-006",
+    "technology": "Red Hat Enterprise Linux 9.x",
+    "controlName": "RHEL 9 SSH PermitRootLogin",
+    "command": "grep -Ei \"^\\s*PermitRootLogin\" /etc/ssh/sshd_config 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "RH9-007",
+    "technology": "Red Hat Enterprise Linux 9.x",
+    "controlName": "RHEL 9 Password Authentication",
+    "command": "grep -Ei \"^\\s*PasswordAuthentication\" /etc/ssh/sshd_config 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Password / Authentication"
+  },
+  {
+    "controlId": "RH9-008",
+    "technology": "Red Hat Enterprise Linux 9.x",
+    "controlName": "RHEL 9 FIPS Mode",
+    "command": "fips-mode-setup --check 2>/dev/null || cat /proc/sys/crypto/fips_enabled 2>/dev/null || true",
+    "frameworks": [
+      "OS Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OS configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "RDX-001",
+    "technology": "Redis",
+    "controlName": "Redis Server Info",
+    "command": "redis-cli INFO server",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Redis configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "RDX-002",
+    "technology": "Redis",
+    "controlName": "Redis Persistence Config",
+    "command": "redis-cli CONFIG GET save",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Redis configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "RDX-003",
+    "technology": "Redis",
+    "controlName": "Redis AOF Enabled",
+    "command": "redis-cli CONFIG GET appendonly",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Redis configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "RDX-004",
+    "technology": "Redis",
+    "controlName": "Redis Requirepass Set",
+    "command": "redis-cli CONFIG GET requirepass",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Redis configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "RDX-005",
+    "technology": "Redis",
+    "controlName": "Redis Protected Mode",
+    "command": "redis-cli CONFIG GET protected-mode",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Redis configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "RDX-006",
+    "technology": "Redis",
+    "controlName": "Redis Bind Address",
+    "command": "redis-cli CONFIG GET bind",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Redis configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "RDX-007",
+    "technology": "Redis",
+    "controlName": "Redis TLS Port",
+    "command": "redis-cli CONFIG GET tls-port",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Redis configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "RDX-008",
+    "technology": "Redis",
+    "controlName": "Redis Maxmemory Policy",
+    "command": "redis-cli CONFIG GET maxmemory-policy",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Redis configuration command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "APX-001",
+    "technology": "Apache HTTPD",
+    "controlName": "Apache Version",
+    "command": "apachectl -v 2>&1 || httpd -v 2>&1 || apache2 -v 2>&1 || echo 'apache not available'",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Apache HTTPD command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "APX-002",
+    "technology": "Apache HTTPD",
+    "controlName": "Apache Config Test",
+    "command": "apachectl -t 2>&1 || httpd -t 2>&1 || echo 'apache not available'",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Apache HTTPD command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "APX-003",
+    "technology": "Apache HTTPD",
+    "controlName": "Apache Loaded Modules",
+    "command": "apachectl -M 2>/dev/null || httpd -M 2>/dev/null || echo 'apache not available'",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Apache HTTPD command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "APX-004",
+    "technology": "Apache HTTPD",
+    "controlName": "Apache ServerTokens",
+    "command": "grep -REi \"^\\s*ServerTokens\" /etc/httpd /etc/apache2 /usr/local/apache2/conf 2>/dev/null || true",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Apache HTTPD command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "APX-005",
+    "technology": "Apache HTTPD",
+    "controlName": "Apache ServerSignature",
+    "command": "grep -REi \"^\\s*ServerSignature\" /etc/httpd /etc/apache2 /usr/local/apache2/conf 2>/dev/null || true",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Apache HTTPD command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "APX-006",
+    "technology": "Apache HTTPD",
+    "controlName": "Apache SSL Protocols",
+    "command": "grep -RanEi \"SSLProtocol\" /etc/httpd /etc/apache2 /usr/local/apache2/conf 2>/dev/null || true",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Apache HTTPD command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "APX-007",
+    "technology": "Apache HTTPD",
+    "controlName": "Apache Access Log Config",
+    "command": "grep -RanEi \"CustomLog|TransferLog\" /etc/httpd /etc/apache2 /usr/local/apache2/conf 2>/dev/null || true",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Apache HTTPD command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "APX-008",
+    "technology": "Apache HTTPD",
+    "controlName": "Apache Error Log Config",
+    "command": "grep -RanEi \"ErrorLog\" /etc/httpd /etc/apache2 /usr/local/apache2/conf 2>/dev/null || true",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Apache HTTPD command output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "TCX-001",
+    "technology": "Tomcat",
+    "controlName": "Tomcat Version",
+    "command": "sh \"$CATALINA_HOME/bin/version.sh\" 2>/dev/null || find / -name version.sh -path '*tomcat*' 2>/dev/null | head -1 | xargs -r sh || echo 'tomcat not available'",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Tomcat command/config output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "TCX-002",
+    "technology": "Tomcat",
+    "controlName": "Tomcat Process Running",
+    "command": "ps -ef 2>/dev/null | grep -i '[c]atalina' || echo 'tomcat process not found'",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Tomcat command/config output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "TCX-003",
+    "technology": "Tomcat",
+    "controlName": "Tomcat server.xml Present",
+    "command": "find / -name server.xml -path '*conf*' 2>/dev/null | head -5 || echo 'server.xml not found'",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Tomcat command/config output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "TCX-004",
+    "technology": "Tomcat",
+    "controlName": "Tomcat HTTP Connectors",
+    "command": "find / -name server.xml -path '*conf*' 2>/dev/null | head -1 | xargs -r grep -Ei \"<Connector\" 2>/dev/null || echo 'not available'",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Tomcat command/config output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "TCX-005",
+    "technology": "Tomcat",
+    "controlName": "Tomcat Manager App Present",
+    "command": "find / -type d -name manager -path '*webapps*' 2>/dev/null || echo 'manager app not found'",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Tomcat command/config output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "TCX-006",
+    "technology": "Tomcat",
+    "controlName": "Tomcat Users Config",
+    "command": "find / -name tomcat-users.xml 2>/dev/null | head -3 || echo 'tomcat-users.xml not found'",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Tomcat command/config output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "TCX-007",
+    "technology": "Tomcat",
+    "controlName": "Tomcat Shutdown Port",
+    "command": "find / -name server.xml -path '*conf*' 2>/dev/null | head -1 | xargs -r grep -Ei \"<Server \" 2>/dev/null || echo 'not available'",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Tomcat command/config output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "TCX-008",
+    "technology": "Tomcat",
+    "controlName": "Tomcat Access Valve Logging",
+    "command": "find / -name server.xml -path '*conf*' 2>/dev/null | head -1 | xargs -r grep -Ei \"AccessLogValve\" 2>/dev/null || echo 'not available'",
+    "frameworks": [
+      "Middleware Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Tomcat command/config output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "K8X-001",
+    "technology": "Kubernetes",
+    "controlName": "Kubernetes Version",
+    "command": "kubectl version -o json",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Kubernetes kubectl output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "K8X-002",
+    "technology": "Kubernetes",
+    "controlName": "Kubernetes Nodes",
+    "command": "kubectl get nodes -o wide",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Kubernetes kubectl output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "K8X-003",
+    "technology": "Kubernetes",
+    "controlName": "Kubernetes Namespaces",
+    "command": "kubectl get namespaces",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Kubernetes kubectl output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "K8X-004",
+    "technology": "Kubernetes",
+    "controlName": "Kubernetes Cluster Roles",
+    "command": "kubectl get clusterroles",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Kubernetes kubectl output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "K8X-005",
+    "technology": "Kubernetes",
+    "controlName": "Kubernetes Cluster Role Bindings",
+    "command": "kubectl get clusterrolebindings",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Kubernetes kubectl output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "K8X-006",
+    "technology": "Kubernetes",
+    "controlName": "Kubernetes Pod Security",
+    "command": "kubectl get pods --all-namespaces -o wide",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Kubernetes kubectl output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "K8X-007",
+    "technology": "Kubernetes",
+    "controlName": "Kubernetes Network Policies",
+    "command": "kubectl get networkpolicies --all-namespaces",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Kubernetes kubectl output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Network Security"
+  },
+  {
+    "controlId": "K8X-008",
+    "technology": "Kubernetes",
+    "controlName": "Kubernetes Secrets Inventory",
+    "command": "kubectl get secrets --all-namespaces",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Kubernetes kubectl output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "K8X-009",
+    "technology": "Kubernetes",
+    "controlName": "Kubernetes Service Accounts",
+    "command": "kubectl get serviceaccounts --all-namespaces",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Kubernetes kubectl output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "K8X-010",
+    "technology": "Kubernetes",
+    "controlName": "Kubernetes PSP/PSA Labels",
+    "command": "kubectl get ns -o jsonpath={.items[*].metadata.labels}",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Kubernetes kubectl output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "OCX-001",
+    "technology": "OpenShift",
+    "controlName": "OpenShift Version",
+    "command": "oc version -o json",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OpenShift oc output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "OCX-002",
+    "technology": "OpenShift",
+    "controlName": "OpenShift Cluster Operators",
+    "command": "oc get clusteroperators",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OpenShift oc output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "OCX-003",
+    "technology": "OpenShift",
+    "controlName": "OpenShift Nodes",
+    "command": "oc get nodes -o wide",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OpenShift oc output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "OCX-004",
+    "technology": "OpenShift",
+    "controlName": "OpenShift Projects",
+    "command": "oc get projects",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OpenShift oc output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "OCX-005",
+    "technology": "OpenShift",
+    "controlName": "OpenShift Cluster Roles",
+    "command": "oc get clusterroles",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OpenShift oc output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "OCX-006",
+    "technology": "OpenShift",
+    "controlName": "OpenShift Role Bindings",
+    "command": "oc get clusterrolebindings",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OpenShift oc output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "OCX-007",
+    "technology": "OpenShift",
+    "controlName": "OpenShift SCC",
+    "command": "oc get scc",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OpenShift oc output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "OCX-008",
+    "technology": "OpenShift",
+    "controlName": "OpenShift OAuth Config",
+    "command": "oc get oauth cluster -o json",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OpenShift oc output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "OCX-009",
+    "technology": "OpenShift",
+    "controlName": "OpenShift Routes",
+    "command": "oc get routes --all-namespaces",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OpenShift oc output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Network Security"
+  },
+  {
+    "controlId": "OCX-010",
+    "technology": "OpenShift",
+    "controlName": "OpenShift Image Policies",
+    "command": "oc get image.config.openshift.io/cluster -o json",
+    "frameworks": [
+      "Container Platform Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "OpenShift oc output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "ASX-001",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Server Version",
+    "command": "asinfo -v \"build\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "ASX-002",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Cluster Status",
+    "command": "asinfo -v \"status\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "ASX-003",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Namespace List",
+    "command": "asinfo -v \"namespaces\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Asset / Inventory"
+  },
+  {
+    "controlId": "ASX-004",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Namespace Config",
+    "command": "asinfo -v \"get-config:context=namespace;id=${AEROSPIKE_NAMESPACE:-test}\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "ASX-005",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Security Config",
+    "command": "asinfo -v \"get-config:context=security\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "ASX-006",
+    "technology": "Aerospike",
+    "controlName": "Aerospike User/Role List",
+    "command": "asadm -e \"show users\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Identity & Privileged Access"
+  },
+  {
+    "controlId": "ASX-007",
+    "technology": "Aerospike",
+    "controlName": "Aerospike TLS Config",
+    "command": "asinfo -v \"get-config:context=network\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Encryption in Transit"
+  },
+  {
+    "controlId": "ASX-008",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Service Ports",
+    "command": "asinfo -v \"get-config:context=service\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "ASX-009",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Storage Engine Config",
+    "command": "asinfo -v \"get-config:context=namespace;id=${AEROSPIKE_NAMESPACE:-test}\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Encryption at Rest"
+  },
+  {
+    "controlId": "ASX-010",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Backup Policy",
+    "command": "asadm -e \"show config\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "ASX-011",
+    "technology": "Aerospike",
+    "controlName": "Aerospike XDR Config",
+    "command": "asinfo -v \"get-config:context=xdr\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "ASX-012",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Audit Logging",
+    "command": "asinfo -v \"get-config:context=security\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Audit Logging"
+  },
+  {
+    "controlId": "ASX-013",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Memory Usage",
+    "command": "asadm -e \"show stat\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Operational / Capacity"
+  },
+  {
+    "controlId": "ASX-014",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Index Usage",
+    "command": "asinfo -v \"statistics\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "ASX-015",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Cluster Node Count",
+    "command": "asinfo -v \"statistics\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "ASX-016",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Namespace Replication Factor",
+    "command": "asinfo -v \"get-config:context=namespace;id=${AEROSPIKE_NAMESPACE:-test}\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "ASX-017",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Strong Consistency",
+    "command": "asinfo -v \"get-config:context=namespace;id=${AEROSPIKE_NAMESPACE:-test}\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "ASX-018",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Expiration/TTL Config",
+    "command": "asinfo -v \"get-config:context=namespace;id=${AEROSPIKE_NAMESPACE:-test}\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Secure Configuration / Baseline"
+  },
+  {
+    "controlId": "ASX-019",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Secondary Index List",
+    "command": "asinfo -v \"sindex\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Other / Framework-specific"
+  },
+  {
+    "controlId": "ASX-020",
+    "technology": "Aerospike",
+    "controlName": "Aerospike Latency / Slow Query",
+    "command": "asinfo -v \"statistics\"",
+    "frameworks": [
+      "DB Baselining",
+      "ISO27001",
+      "RBI Cyber Security"
+    ],
+    "evidenceType": "Aerospike asinfo/asadm output",
+    "executableNow": true,
+    "runtimeStatus": "Ready",
+    "controlFamily": "Operational / Capacity"
+  }
+]

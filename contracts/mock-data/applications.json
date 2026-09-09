@@ -1,0 +1,36 @@
+{
+  "environments": [
+    { "id": "prod", "name": "Production", "tier": "production" },
+    { "id": "uat", "name": "UAT", "tier": "non-production" },
+    { "id": "dr", "name": "Disaster Recovery", "tier": "production" }
+  ],
+  "applications": [
+    {
+      "slug": "net-banking",
+      "name": "Net Banking",
+      "businessUnit": "Retail Banking",
+      "criticality": "HIGH",
+      "owner": "app.owner.netbanking",
+      "technology": ["Java", "Oracle", "NGINX"],
+      "environments": ["prod", "uat"]
+    },
+    {
+      "slug": "mobile-banking",
+      "name": "Mobile Banking",
+      "businessUnit": "Retail Banking",
+      "criticality": "HIGH",
+      "owner": "app.owner.mobile",
+      "technology": ["Kotlin", "PostgreSQL", "Kubernetes"],
+      "environments": ["prod", "uat"]
+    },
+    {
+      "slug": "payments",
+      "name": "Payments",
+      "businessUnit": "Payments",
+      "criticality": "CRITICAL",
+      "owner": "app.owner.payments",
+      "technology": ["Go", "PostgreSQL", "Redis"],
+      "environments": ["prod", "dr", "uat"]
+    }
+  ]
+}

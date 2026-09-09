@@ -1,0 +1,17 @@
+{
+  "frameworks": [
+    { "id": "PCI_DSS", "name": "PCI DSS", "version": "4.0" },
+    { "id": "C-SITE", "name": "C-SITE Baseline", "version": "2023" },
+    { "id": "ITPP", "name": "IT Production Practices", "version": "1.0" },
+    { "id": "DPSC", "name": "Data Protection & Security Controls", "version": "1.0" }
+  ],
+  "controls": [
+    { "id": "PCI-DSS-6.2", "framework": "PCI_DSS", "title": "Bespoke software developed securely", "domain": "Secure Software" },
+    { "id": "DB-TLS-IN-TRANSIT", "framework": "PCI_DSS", "title": "Encrypt cardholder data in transit", "domain": "Cryptography" },
+    { "id": "OS-SSH-ROOT-LOGIN", "framework": "C-SITE", "title": "Disable direct SSH root login", "domain": "OS Hardening" },
+    { "id": "MW-TLS-VERSION", "framework": "C-SITE", "title": "Only TLS 1.2+ protocols enabled", "domain": "Middleware" },
+    { "id": "TLS-CERT-EXPIRY", "framework": "C-SITE", "title": "Certificates renewed before expiry", "domain": "Cryptography" },
+    { "id": "ITPP-CHG-02", "framework": "ITPP", "title": "Approved change ticket for production change", "domain": "Change Management" },
+    { "id": "DPSC-SDLC-04", "framework": "DPSC", "title": "Peer review enforced on code changes", "domain": "Secure SDLC" }
+  ]
+}

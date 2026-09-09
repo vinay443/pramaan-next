@@ -1,0 +1,23 @@
+{
+  "note": "Phase 2 expected-control catalog. Completeness = do we hold current evidence for each expected (application, control)? appliesTo '*' means every onboarded application.",
+  "expectations": [
+    { "framework": "ITPP",    "controlId": "OS-BASELINE-VERSION",   "title": "Supported OS version is identifiable", "appliesTo": ["*"] },
+    { "framework": "C-SITE",  "controlId": "OS-SSH-ROOT-LOGIN",     "title": "SSH root login disabled", "appliesTo": ["*"] },
+    { "framework": "C-SITE",  "controlId": "OS-SSH-PASSWORD-AUTH",  "title": "SSH password authentication disabled", "appliesTo": ["*"] },
+    { "framework": "PCI_DSS", "controlId": "OS-AUDIT-LOGGING",      "title": "Host audit logging enabled", "appliesTo": ["*"] },
+    { "framework": "PCI_DSS", "controlId": "DB-TLS-IN-TRANSIT",     "title": "TLS enabled for database connections", "appliesTo": ["*"] },
+    { "framework": "PCI_DSS", "controlId": "DB-AUDIT-LOGGING",      "title": "Database connection/statement auditing enabled", "appliesTo": ["*"] },
+    { "framework": "C-SITE",  "controlId": "DB-PASSWORD-STORAGE",   "title": "Strong database password hashing", "appliesTo": ["*"] },
+    { "framework": "C-SITE",  "controlId": "DB-AUTH-NO-TRUST",      "title": "No 'trust' authentication in pg_hba", "appliesTo": ["*"] },
+    { "framework": "PCI_DSS", "controlId": "MW-TLS-VERSION",        "title": "Only TLS 1.2+ protocols enabled", "appliesTo": ["*"] },
+    { "framework": "C-SITE",  "controlId": "MW-BANNER-SUPPRESSION", "title": "Server version banner suppressed", "appliesTo": ["*"] },
+    { "framework": "DPSC",    "controlId": "MW-HSTS",               "title": "HSTS response header configured", "appliesTo": ["*"] },
+    { "framework": "PCI_DSS", "controlId": "TLS-PROTOCOL-VERSION",  "title": "Negotiated TLS version is 1.2 or higher", "appliesTo": ["*"] },
+    { "framework": "C-SITE",  "controlId": "TLS-CERT-EXPIRY",       "title": "Leaf certificate has > 30 days remaining", "appliesTo": ["*"] },
+    { "framework": "C-SITE",  "controlId": "TLS-KEY-STRENGTH",      "title": "Certificate key meets minimum strength", "appliesTo": ["*"] },
+    { "framework": "DPSC",    "controlId": "TLS-CERT-TRUST",        "title": "Certificate is CA-issued (not self-signed)", "appliesTo": ["*"] },
+    { "framework": "ITPP",    "controlId": "ITPP-CHG-02",           "title": "Approved change ticket for production change", "appliesTo": ["*"] },
+    { "framework": "DPSC",    "controlId": "DPSC-SDLC-04",          "title": "Peer review enforced on code changes", "appliesTo": ["*"] },
+    { "framework": "PCI_DSS", "controlId": "PCI-DSS-6.2",           "title": "Bespoke software developed securely", "appliesTo": ["*"] }
+  ]
+}

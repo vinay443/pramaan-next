@@ -1,0 +1,34 @@
+# 'dev' profile — run the service with NO external infrastructure.
+#   ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+# H2 stands in for PostgreSQL; the filesystem object store stands in for MinIO;
+# enterprise integrations are the deterministic Phase 1 mocks. Schema is created
+# from the JPA entities (Flyway migrations are PostgreSQL-specific and skipped).
+spring:
+  datasource:
+    url: jdbc:h2:mem:pramaan-dev;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+  h2:
+    console:
+      enabled: true
+
+pramaan:
+  object-store:
+    driver: filesystem
+    filesystem:
+      root: ./target/dev-object-store
+  integrations:
+    mock-enabled: true
+  scheduler:
+    auto-enabled: false
+    dispatch: true
+    default-sources: MOCK_JIRA,MOCK_SERVICENOW,MOCK_GITHUB,MOCK_CONFLUENCE,SIM_POSTGRES,SIM_MYSQL,SIM_NGINX,SIM_TOMCAT
+    stale-after-days: 90
+  seed:
+    applications-enabled: true

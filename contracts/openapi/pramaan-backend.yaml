@@ -1,0 +1,1327 @@
+openapi: 3.1.0
+info:
+  title: Pramaan Next — Backend (Phase 1)
+  version: 0.1.0
+  description: >
+    Evidence ingestion, versioning, integrity, deterministic repository queries,
+    application metadata, and the collection scheduler. Phase 1 uses deterministic
+    mock enterprise integrations. No LLM. Source of truth for backend ⇄ frontend
+    and backend ⇄ agents interfaces — implement against this file, do not hand-roll.
+servers:
+  - url: http://localhost:8080
+    description: Local dev
+
+tags:
+  - name: applications
+  - name: frameworks
+  - name: controls
+  - name: agents
+  - name: checks
+  - name: evidence
+  - name: scheduler
+  - name: insight
+    description: >
+      Phase 2 — evidence completeness, reuse/similarity, AI evidence summaries,
+      natural-language queries, compliance aggregation. AI features run in a
+      deterministic mock mode unless pramaan.ai.mode=live.
+
+paths:
+  /api/v1/insight/completeness:
+    get:
+      tags: [insight]
+      summary: Expected-control coverage for one application (deterministic)
+      parameters:
+        - { name: applicationSlug, in: query, required: true, schema: { type: string } }
+        - { name: framework, in: query, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/CompletenessReport" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/insight/compliance:
+    get:
+      tags: [insight]
+      summary: Compliance posture rollup (check verdicts × expected controls, deterministic)
+      parameters:
+        - { name: applicationSlug, in: query, required: true, schema: { type: string } }
+        - { name: framework, in: query, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ComplianceReport" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/insight/leadership:
+    get:
+      tags: [insight]
+      summary: Leadership compliance dashboard — portfolio rollup of actual results across all applications
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/LeadershipDashboard" } } } }
+
+  /api/v1/insight/comparison:
+    get:
+      tags: [insight]
+      summary: "UC14 — cross-application compliance comparison (matrix + gap list)"
+      parameters:
+        - { name: applications, in: query, required: false, schema: { type: array, items: { type: string } } }
+        - { name: framework, in: query, required: false, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ComparisonReport" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/v1/insight/enterprise:
+    get:
+      tags: [insight]
+      summary: "UC16 — enterprise compliance dashboard (portfolio + business-unit / criticality cuts + top risks)"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EnterpriseDashboard" } } } }
+
+  /api/v1/insight/national:
+    get:
+      tags: [insight]
+      summary: "UC20 — national / pan-India compliance dashboard (mock region map)"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/NationalDashboard" } } } }
+
+  /api/v1/insight/audit-prep:
+    get:
+      tags: [insight]
+      summary: "UC18 — AI-assisted audit-preparation checklist (deterministic findings + grounded narrative)"
+      parameters:
+        - { name: applicationSlug, in: query, required: false, schema: { type: string } }
+        - { name: framework, in: query, required: false, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuditPrepReport" } } } }
+
+  /api/v1/insight/trend:
+    get:
+      tags: [insight]
+      summary: "UC19 — compliance trend (snapshots) + closure metrics + collection throughput"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TrendReport" } } } }
+  /api/v1/insight/trend/snapshot:
+    post:
+      tags: [insight]
+      summary: Take a compliance-posture snapshot now (re-runs the portfolio rollup)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TrendPoint" } } } }
+
+  /api/v1/reports:
+    get:
+      tags: [reports]
+      summary: "UC17 — regulatory report catalogue"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ReportInfo" } }
+  /api/v1/reports/{name}:
+    parameters: [ { name: name, in: path, required: true, schema: { type: string } } ]
+    get:
+      tags: [reports]
+      summary: "Render a report as JSON (default) or CSV — a view over existing insight/evidence data"
+      parameters:
+        - { name: format, in: query, required: false, schema: { type: string, enum: [json, csv], default: json } }
+        - { name: applicationSlug, in: query, required: false, schema: { type: string } }
+        - { name: framework, in: query, required: false, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json: { schema: { type: object } }
+            text/csv: { schema: { type: string } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/insight/evidence/{id}/summary:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [insight]
+      summary: AI summary of one evidence record, grounded in stored content + check verdicts
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceSummary" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/insight/reuse/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: limit, in: query, schema: { type: integer, default: 5 } }
+      - { name: minScore, in: query, schema: { type: number, default: 0.3 } }
+    get:
+      tags: [insight]
+      summary: Evidence similar to the given record (embedding nearest-neighbour + reuse hints)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ReuseResult" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/insight/reuse/search:
+    post:
+      tags: [insight]
+      summary: Evidence similar to a free-text query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+                limit: { type: integer, default: 5 }
+                minScore: { type: number, default: 0.3 }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ReuseResult" } } } }
+
+  /api/v1/insight/nl-query:
+    post:
+      tags: [insight]
+      summary: Natural-language audit query — deterministic routing for structured questions, RAG (embedding/pgvector retrieval, cited + grounded) for "what evidence do we have for X", AI narration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question: { type: string }
+                applicationSlug: { type: string }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/NlQueryResult" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/v1/insight/embeddings/reindex:
+    post:
+      tags: [insight]
+      summary: Rebuild evidence embeddings
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { indexed: { type: integer } } }
+
+  /api/v1/frameworks:
+    get:
+      tags: [frameworks]
+      summary: List compliance frameworks (reference data)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/FrameworkView" } }
+
+  /api/v1/controls:
+    get:
+      tags: [controls]
+      summary: List controls (reference catalog)
+      parameters:
+        - { name: framework, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ControlView" } }
+
+  /api/v1/controls/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+    get:
+      tags: [controls]
+      summary: Get one control
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ControlView" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/agents:
+    get:
+      tags: [agents]
+      summary: List registered collection agents
+      parameters:
+        - { name: applicationSlug, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/AgentDescriptorView" } }
+
+  /api/v1/agents/{agentId}:
+    parameters: [ { name: agentId, in: path, required: true, schema: { type: string } } ]
+    get:
+      tags: [agents]
+      summary: Get one agent descriptor (identity + checks it can run)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AgentDescriptorView" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/checks:
+    get:
+      tags: [checks]
+      summary: List predefined technical checks (collector catalog)
+      parameters:
+        - { name: collector, in: query, schema: { type: string } }
+        - { name: framework, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/CheckDefView" } }
+
+  /api/v1/checks/evaluate:
+    post:
+      tags: [checks]
+      summary: Re-run deterministic rule evaluation over stored evidence (optionally narrowed)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                applicationSlug: { type: string }
+                framework: { type: string }
+                controlId: { type: string }
+                sourceSystem: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  evaluatedAt: { type: string, format: date-time }
+                  evidenceEvaluated: { type: integer }
+                  resultsWritten: { type: integer }
+                  byStatus: { type: object, additionalProperties: { type: integer } }
+
+  /api/v1/check-results:
+    get:
+      tags: [checks]
+      summary: Deterministic technical-check results (PASS / WARNING / FAIL / NOT_APPLICABLE)
+      parameters:
+        - { name: applicationSlug, in: query, schema: { type: string } }
+        - { name: framework, in: query, schema: { type: string } }
+        - { name: controlId, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/CheckStatus" } }
+        - { name: runId, in: query, schema: { type: string, format: uuid } }
+        - { name: page, in: query, schema: { type: integer, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, default: 20, maximum: 500 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Page"
+                  - type: object
+                    properties:
+                      items: { type: array, items: { $ref: "#/components/schemas/CheckResultView" } }
+
+  /api/v1/applications:
+    get:
+      tags: [applications]
+      summary: List applications (metadata)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ApplicationView" }
+    post:
+      tags: [applications]
+      summary: Create or replace an application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApplicationUpsert" }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/ApplicationView" } } } }
+
+  /api/v1/applications/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema: { type: string, pattern: "^[a-z0-9][a-z0-9-]{1,118}$" }
+    get:
+      tags: [applications]
+      summary: Get one application
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ApplicationView" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+    put:
+      tags: [applications]
+      summary: Update an application (slug in path and body must match)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ApplicationUpsert" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ApplicationView" } } } }
+
+  /api/v1/onboarding/plan:
+    get:
+      tags: [applications]
+      summary: "Use Case 12 — what the configuration-driven onboarding catalogue would do (no writes)"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/OnboardingPlan" } } } }
+
+  /api/v1/onboarding/apply:
+    post:
+      tags: [applications]
+      summary: "Apply the onboarding catalogue (idempotent upsert via the application store)"
+      parameters:
+        - { name: collect, in: query, required: false, schema: { type: boolean, default: false },
+            description: "also start one initial scheduler collection run over the catalogued sources" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/OnboardingResult" } } } }
+
+  /api/v1/evidence/ingest:
+    post:
+      tags: [evidence]
+      summary: Ingest a single evidence item (SHA-256 dedup, immutable versioning)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/IngestRequest" } } }
+      responses:
+        "201": { description: Ingested, content: { application/json: { schema: { $ref: "#/components/schemas/IngestResult" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/v1/evidence/bulk:
+    post:
+      tags: [evidence]
+      summary: Bulk ingest (JSON array). Per-item outcomes; partial success allowed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "#/components/schemas/IngestRequest" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/BulkIngestResponse" } } } }
+
+  /api/v1/evidence/bulk/upload:
+    post:
+      tags: [evidence]
+      summary: Bulk upload files — each file becomes one evidence item
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [applicationSlug, framework, controlId, files]
+              properties:
+                applicationSlug: { type: string }
+                framework: { type: string }
+                controlId: { type: string }
+                sourceSystem: { type: string, default: BULK_UPLOAD }
+                collectedBy: { type: string }
+                technology: { type: string, description: "optional; sets the canonical technology tag. Falls back to source-system inference when omitted." }
+                files:
+                  type: array
+                  items: { type: string, format: binary }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/BulkIngestResponse" } } } }
+
+  /api/v1/evidence/dashboard:
+    get:
+      tags: [evidence]
+      summary: Consolidated evidence dashboard + repository-wide SHA-256 integrity check
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceDashboard" } } } }
+
+  /api/v1/evidence:
+    get:
+      tags: [evidence]
+      summary: Deterministic filtered evidence query (stable ordering)
+      parameters:
+        - { name: applicationSlug, in: query, schema: { type: string } }
+        - { name: framework, in: query, schema: { type: string } }
+        - { name: controlId, in: query, schema: { type: string } }
+        - { name: sourceSystem, in: query, schema: { type: string } }
+        - { name: collectedAfter, in: query, schema: { type: string, format: date-time } }
+        - { name: collectedBefore, in: query, schema: { type: string, format: date-time } }
+        - { name: tag, in: query, description: "key or key:value", schema: { type: string } }
+        - { name: technology, in: query, description: "canonical technology tag facet (e.g. postgresql)", schema: { type: string } }
+        - { name: collectionMethod, in: query, description: "canonical collectionMethod tag facet (scheduled | manual | bulk | on-demand)", schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, default: 20, maximum: 500 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Page"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/EvidenceView" }
+
+  /api/v1/evidence/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [evidence]
+      summary: Get one evidence record with its current version
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceView" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/evidence/{id}/lifecycle:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [evidence]
+      summary: "Use Case 13 — evidence lifecycle state, retention/expiry and the transition audit trail"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceLifecycleView" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+    post:
+      tags: [evidence]
+      summary: "Transition evidence lifecycle state (SUBMIT | APPROVE | REJECT | RETIRE | RESET)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [SUBMIT, APPROVE, REJECT, RETIRE, RESET] }
+                actor: { type: string }
+                note: { type: string }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceLifecycleView" } } } }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/v1/evidence/{id}/versions:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [evidence]
+      summary: List all versions of an evidence record
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/EvidenceVersionView" } }
+
+  /api/v1/evidence/{id}/versions/{version}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: version, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [evidence]
+      summary: Get one version
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceVersionView" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/evidence/{id}/verify:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: version, in: query, required: false, schema: { type: integer } }
+    get:
+      tags: [evidence]
+      summary: Recompute SHA-256 from the object store and compare
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/IntegrityReport" } } } }
+
+  /api/v1/evidence/query/{name}:
+    parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [source-breakdown, stale-evidence, latest-per-control, duplicates, freshness]
+      - { name: applicationSlug, in: query, schema: { type: string } }
+      - { name: framework, in: query, schema: { type: string } }
+      - { name: controlId, in: query, schema: { type: string } }
+      - { name: sourceSystem, in: query, schema: { type: string } }
+    get:
+      tags: [evidence]
+      summary: Named deterministic query — structured answer plus rows and counts
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/DeterministicQueryResult" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/v1/scheduler/sources:
+    get:
+      tags: [scheduler]
+      summary: List registered integration source systems
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { type: string } } } } }
+
+  /api/v1/scheduler/runs:
+    post:
+      tags: [scheduler]
+      summary: Start a collection run (async). Empty body = all apps + default sources.
+      requestBody:
+        required: false
+        content: { application/json: { schema: { $ref: "#/components/schemas/RunRequest" } } }
+      responses:
+        "202": { description: Accepted, content: { application/json: { schema: { $ref: "#/components/schemas/RunView" } } } }
+    get:
+      tags: [scheduler]
+      summary: List runs (newest first)
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Page"
+                  - type: object
+                    properties:
+                      items: { type: array, items: { $ref: "#/components/schemas/RunView" } }
+
+  /api/v1/scheduler/runs/{runId}:
+    parameters: [ { name: runId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [scheduler]
+      summary: Run status / progress
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/RunView" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/scheduler/runs/{runId}/retry:
+    parameters: [ { name: runId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [scheduler]
+      summary: Re-run a finished run with the same parameters
+      responses:
+        "202": { description: Accepted, content: { application/json: { schema: { $ref: "#/components/schemas/RunView" } } } }
+        "409": { $ref: "#/components/responses/Error" }
+
+  # ---- Use Case 1 — evidence detail context -----------------------------
+  /api/v1/insight/evidence/{id}/context:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [insight]
+      summary: Source technology, collection method, controls satisfied and frameworks for one evidence record
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceContext" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  # ---- Use Case 5 — ECS Admin (users, roles, applications) --------------
+  # Applications are administered via /api/v1/applications (above) — not duplicated here.
+  /api/v1/admin/roles:
+    get:
+      tags: [admin]
+      summary: Canonical role catalogue (read-only)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/RoleView" } } } } }
+  /api/v1/admin/users:
+    get:
+      tags: [admin]
+      summary: List admin personas (no credentials stored)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminUserView" } } } } }
+    post:
+      tags: [admin]
+      summary: Create or replace a persona
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AdminUserUpsert" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/AdminUserView" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+  /api/v1/admin/users/{username}:
+    parameters: [ { name: username, in: path, required: true, schema: { type: string } } ]
+    get:
+      tags: [admin]
+      summary: Get one persona
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdminUserView" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+    put:
+      tags: [admin]
+      summary: Update a persona (username in path and body must match)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AdminUserUpsert" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdminUserView" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+    delete:
+      tags: [admin]
+      summary: Remove a persona
+      responses:
+        "204": { description: No Content }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/v1/admin/users/{username}/active:
+    parameters: [ { name: username, in: path, required: true, schema: { type: string } } ]
+    put:
+      tags: [admin]
+      summary: Enable or disable a persona
+      parameters: [ { name: value, in: query, required: true, schema: { type: boolean } } ]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdminUserView" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+components:
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorBody" }
+
+  schemas:
+    ErrorBody:
+      type: object
+      properties:
+        timestamp: { type: string, format: date-time }
+        status: { type: integer }
+        error: { type: string }
+        message: { type: string }
+
+    Page:
+      type: object
+      properties:
+        items: { type: array, items: {} }
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer }
+
+    RoleView:
+      type: object
+      properties:
+        id: { type: string }
+        description: { type: string }
+
+    AdminUserUpsert:
+      type: object
+      required: [username, displayName, roles]
+      properties:
+        username: { type: string, pattern: "[a-z0-9][a-z0-9._-]{1,63}" }
+        displayName: { type: string }
+        email: { type: string, format: email, nullable: true }
+        roles: { type: array, items: { type: string } }
+        active: { type: boolean, nullable: true }
+
+    AdminUserView:
+      type: object
+      properties:
+        username: { type: string }
+        displayName: { type: string }
+        email: { type: string, nullable: true }
+        roles: { type: array, items: { type: string } }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ApplicationUpsert:
+      type: object
+      required: [slug, name]
+      properties:
+        slug: { type: string, pattern: "^[a-z0-9][a-z0-9-]{1,118}$" }
+        name: { type: string }
+        businessUnit: { type: string }
+        criticality: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+        owner: { type: string }
+        technology: { type: array, items: { type: string } }
+
+    ApplicationView:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationUpsert"
+        - type: object
+          properties:
+            autoCreated: { type: boolean }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+
+    IngestRequest:
+      type: object
+      required: [applicationSlug, controlId, framework, sourceSystem]
+      description: Exactly one of contentBase64 / contentText is required.
+      properties:
+        applicationSlug: { type: string }
+        controlId: { type: string }
+        framework: { type: string }
+        sourceSystem: { type: string }
+        sourceObjectId: { type: string }
+        title: { type: string }
+        contentType: { type: string }
+        contentBase64: { type: string }
+        contentText: { type: string }
+        collectedAt: { type: string, format: date-time }
+        collectedBy: { type: string }
+        metadata: { type: object, additionalProperties: { type: string } }
+        tags: { type: object, additionalProperties: { type: string } }
+
+    IngestResult:
+      type: object
+      properties:
+        evidenceId: { type: string, format: uuid }
+        evidenceKey: { type: string }
+        applicationSlug: { type: string }
+        controlId: { type: string }
+        framework: { type: string }
+        sourceSystem: { type: string }
+        outcome: { type: string, enum: [CREATED, NEW_VERSION, DUPLICATE] }
+        version: { type: integer }
+        sha256: { type: string }
+        sizeBytes: { type: integer, format: int64 }
+
+    BulkIngestResponse:
+      type: object
+      properties:
+        received: { type: integer }
+        created: { type: integer }
+        newVersions: { type: integer }
+        duplicates: { type: integer }
+        failed: { type: integer }
+        results: { type: array, items: { $ref: "#/components/schemas/IngestResult" } }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              index: { type: integer }
+              message: { type: string }
+
+    EvidenceVersionView:
+      type: object
+      properties:
+        version: { type: integer }
+        sha256: { type: string }
+        contentType: { type: string }
+        sizeBytes: { type: integer, format: int64 }
+        objectKey: { type: string }
+        collectedAt: { type: string, format: date-time }
+        collectedBy: { type: string }
+        ingestionRunId: { type: string, format: uuid, nullable: true }
+        metadata: { type: object, additionalProperties: { type: string } }
+
+    EvidenceView:
+      type: object
+      properties:
+        evidenceId: { type: string, format: uuid }
+        evidenceKey: { type: string }
+        applicationSlug: { type: string }
+        controlId: { type: string }
+        framework: { type: string }
+        sourceSystem: { type: string }
+        sourceObjectId: { type: string, nullable: true }
+        title: { type: string, nullable: true }
+        currentVersion: { type: integer }
+        lifecycleState: { type: string, enum: [DRAFT, SUBMITTED, APPROVED, REJECTED, EXPIRED, SUPERSEDED] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        tags: { type: object, additionalProperties: { type: string } }
+        latest: { $ref: "#/components/schemas/EvidenceVersionView" }
+
+    EvidenceLifecycleView:
+      type: object
+      properties:
+        evidenceId: { type: string, format: uuid }
+        applicationSlug: { type: string }
+        controlId: { type: string }
+        state: { type: string, enum: [DRAFT, SUBMITTED, APPROVED, REJECTED, EXPIRED, SUPERSEDED] }
+        effectiveState: { type: string, description: "state, except APPROVED past retention reads as EXPIRED" }
+        expired: { type: boolean }
+        reviewedBy: { type: string, nullable: true }
+        reviewedAt: { type: string, format: date-time, nullable: true }
+        note: { type: string, nullable: true }
+        retentionDays: { type: integer }
+        ageDays: { type: integer, nullable: true }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        currentVersion: { type: integer }
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              fromState: { type: string, nullable: true }
+              toState: { type: string }
+              action: { type: string }
+              actor: { type: string, nullable: true }
+              note: { type: string, nullable: true }
+              occurredAt: { type: string, format: date-time }
+
+    OnboardingPlan:
+      type: object
+      properties:
+        total: { type: integer }
+        toCreate: { type: integer }
+        existing: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              slug: { type: string }
+              name: { type: string }
+              criticality: { type: string }
+              frameworks: { type: array, items: { type: string } }
+              sources: { type: array, items: { type: string } }
+              unknownSources: { type: array, items: { type: string } }
+              status: { type: string, enum: [NEW, EXISTS] }
+
+    OnboardingResult:
+      type: object
+      properties:
+        applied: { type: integer }
+        created: { type: integer }
+        updated: { type: integer }
+        slugs: { type: array, items: { type: string } }
+        collectionRunId: { type: string, nullable: true }
+
+    IntegrityReport:
+      type: object
+      properties:
+        evidenceId: { type: string, format: uuid }
+        version: { type: integer }
+        expectedSha256: { type: string }
+        actualSha256: { type: string, nullable: true }
+        intact: { type: boolean }
+        detail: { type: string }
+
+    EvidenceDashboard:
+      type: object
+      description: Use Case 4 — one authoritative snapshot of the persisted evidence repository.
+      properties:
+        generatedAt: { type: string, format: date-time }
+        records: { type: integer, format: int64 }
+        versions: { type: integer, format: int64 }
+        applications: { type: integer }
+        frameworks: { type: integer }
+        sources: { type: integer }
+        staleAfterDays: { type: integer }
+        freshness:
+          type: object
+          properties:
+            fresh: { type: integer }
+            aging: { type: integer }
+            stale: { type: integer }
+            unknown: { type: integer }
+        integrity:
+          type: object
+          description: SHA-256 recomputed from the object store for the current version of every record.
+          properties:
+            checked: { type: integer }
+            intact: { type: integer }
+            mismatch: { type: integer }
+            missingObject: { type: integer }
+        duplicateHashes: { type: integer }
+        bySource:
+          type: array
+          items: { type: object, additionalProperties: true }
+
+    DeterministicQueryResult:
+      type: object
+      properties:
+        name: { type: string }
+        answerText: { type: string }
+        generatedAt: { type: string, format: date-time }
+        counts: { type: object, additionalProperties: true }
+        rows:
+          type: array
+          items: { type: object, additionalProperties: true }
+
+    FrameworkView:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        version: { type: string }
+
+    ControlView:
+      type: object
+      properties:
+        id: { type: string }
+        framework: { type: string }
+        title: { type: string }
+        domain: { type: string }
+
+    CheckDefView:
+      type: object
+      description: One predefined technical check an agent collector can run.
+      properties:
+        checkId: { type: string }
+        collector: { type: string, description: "os | database | middleware | tls" }
+        technology: { type: string }
+        controlId: { type: string }
+        framework: { type: string }
+        title: { type: string }
+
+    AgentDescriptorView:
+      type: object
+      properties:
+        agentId: { type: string }
+        agentName: { type: string }
+        host: { type: string }
+        environment: { type: string }
+        simulation: { type: boolean }
+        collectors: { type: array, items: { type: string } }
+        checks: { type: array, items: { $ref: "#/components/schemas/CheckDefView" } }
+
+    CheckStatus:
+      type: string
+      enum: [PASS, WARNING, FAIL, NOT_APPLICABLE]
+
+    CheckResultView:
+      type: object
+      properties:
+        id: { type: string }
+        runId: { type: string, format: uuid, nullable: true }
+        agentId: { type: string, nullable: true }
+        assetId: { type: string, nullable: true }
+        applicationSlug: { type: string }
+        checkId: { type: string }
+        controlId: { type: string }
+        framework: { type: string }
+        status: { $ref: "#/components/schemas/CheckStatus" }
+        observed: { type: string }
+        expected: { type: string }
+        detail: { type: string }
+        evidenceId: { type: string, format: uuid, nullable: true }
+        collectedAt: { type: string, format: date-time }
+
+    ControlCoverage:
+      type: object
+      properties:
+        framework: { type: string }
+        controlId: { type: string }
+        title: { type: string }
+        coverage: { type: string, enum: [COVERED, STALE, MISSING] }
+        evidenceId: { type: string, format: uuid, nullable: true }
+        currentVersion: { type: integer, nullable: true }
+        lastCollectedAt: { type: string, format: date-time, nullable: true }
+        ageDays: { type: integer, nullable: true }
+
+    CompletenessReport:
+      type: object
+      properties:
+        applicationSlug: { type: string }
+        framework: { type: string, nullable: true }
+        generatedAt: { type: string, format: date-time }
+        staleAfterDays: { type: integer }
+        expected: { type: integer }
+        covered: { type: integer }
+        stale: { type: integer }
+        missing: { type: integer }
+        completenessPct: { type: number }
+        controls: { type: array, items: { $ref: "#/components/schemas/ControlCoverage" } }
+
+    SimilarEvidence:
+      type: object
+      properties:
+        evidenceId: { type: string, format: uuid }
+        applicationSlug: { type: string }
+        framework: { type: string }
+        controlId: { type: string }
+        sha256: { type: string, nullable: true }
+        score: { type: number }
+        crossApplication: { type: boolean }
+        sameControl: { type: boolean }
+        exactDuplicate: { type: boolean, description: "byte-identical (same SHA-256) as the query evidence" }
+        reuseHint: { type: string }
+
+    ReuseResult:
+      type: object
+      properties:
+        queryEvidenceId: { type: string, format: uuid, nullable: true }
+        queryText: { type: string, nullable: true }
+        embeddingModel: { type: string }
+        vectorStore: { type: string, enum: [memory, pgvector] }
+        indexed: { type: integer }
+        querySha256: { type: string, nullable: true }
+        exactDuplicates:
+          type: array
+          description: Other persisted records whose current version has the identical SHA-256.
+          items: { $ref: "#/components/schemas/SimilarEvidence" }
+        matches: { type: array, items: { $ref: "#/components/schemas/SimilarEvidence" } }
+
+    EvidenceSummary:
+      type: object
+      properties:
+        evidenceId: { type: string, format: uuid }
+        applicationSlug: { type: string }
+        framework: { type: string }
+        controlId: { type: string }
+        model: { type: string }
+        simulated: { type: boolean }
+        summary: { type: string }
+        groundedOn: { type: array, items: { type: string } }
+        generatedAt: { type: string, format: date-time }
+
+    NlQueryResult:
+      type: object
+      properties:
+        question: { type: string }
+        interpretedAs: { type: string }
+        matchedQuery: { type: string }
+        answer: { type: object, additionalProperties: true }
+        narrative: { type: string }
+        model: { type: string }
+        simulated: { type: boolean }
+        generatedAt: { type: string, format: date-time }
+
+    FrameworkPosture:
+      type: object
+      properties:
+        framework: { type: string }
+        expected: { type: integer }
+        compliant: { type: integer }
+        partiallyCompliant: { type: integer }
+        nonCompliant: { type: integer }
+        notAssessed: { type: integer }
+        missingEvidence: { type: integer }
+        compliancePct: { type: number }
+
+    ControlPosture:
+      type: object
+      properties:
+        framework: { type: string }
+        controlId: { type: string }
+        status:
+          type: string
+          enum: [COMPLIANT, PARTIALLY_COMPLIANT, NON_COMPLIANT, NOT_ASSESSED, MISSING_EVIDENCE]
+        detail: { type: string }
+
+    ComplianceReport:
+      type: object
+      properties:
+        applicationSlug: { type: string }
+        generatedAt: { type: string, format: date-time }
+        expected: { type: integer }
+        compliant: { type: integer }
+        compliancePct: { type: number }
+        byFramework: { type: array, items: { $ref: "#/components/schemas/FrameworkPosture" } }
+        controls: { type: array, items: { $ref: "#/components/schemas/ControlPosture" } }
+
+    AppPosture:
+      type: object
+      properties:
+        applicationSlug: { type: string }
+        name: { type: string }
+        criticality: { type: string }
+        expected: { type: integer }
+        compliant: { type: integer }
+        compliancePct: { type: number }
+        covered: { type: integer }
+        missing: { type: integer }
+        completenessPct: { type: number }
+        nonCompliant: { type: integer }
+        missingEvidence: { type: integer }
+
+    LeadershipDashboard:
+      type: object
+      description: Use Case 11 — portfolio rollup of actual compliance + completeness results across all applications.
+      properties:
+        generatedAt: { type: string, format: date-time }
+        applications: { type: integer }
+        expected: { type: integer }
+        compliant: { type: integer }
+        compliancePct: { type: number }
+        covered: { type: integer }
+        stale: { type: integer }
+        missing: { type: integer }
+        completenessPct: { type: number }
+        checkVerdicts:
+          type: object
+          additionalProperties: { type: integer }
+          description: Actual persisted check-verdict tally (PASS / WARNING / FAIL / NOT_APPLICABLE) across the estate.
+        byApplication: { type: array, items: { $ref: "#/components/schemas/AppPosture" } }
+        byFramework: { type: array, items: { $ref: "#/components/schemas/FrameworkPosture" } }
+
+    ComparisonReport:
+      type: object
+      properties:
+        generatedAt: { type: string, format: date-time }
+        framework: { type: string, nullable: true }
+        applications: { type: array, items: { type: string } }
+        frameworks:
+          type: array
+          items:
+            type: object
+            properties:
+              framework: { type: string }
+              compliancePctByApp: { type: object, additionalProperties: { type: number } }
+              minPct: { type: number }
+              maxPct: { type: number }
+              spreadPct: { type: number }
+        controls:
+          type: array
+          items:
+            type: object
+            properties:
+              framework: { type: string }
+              controlId: { type: string }
+              statusByApp: { type: object, additionalProperties: { type: string } }
+              consistent: { type: boolean }
+        gaps:
+          type: array
+          items:
+            type: object
+            properties:
+              applicationSlug: { type: string }
+              framework: { type: string }
+              controlId: { type: string }
+              status: { type: string }
+
+    GroupPosture:
+      type: object
+      properties:
+        key: { type: string }
+        applications: { type: integer }
+        expected: { type: integer }
+        compliant: { type: integer }
+        compliancePct: { type: number }
+        completenessPct: { type: number }
+
+    EnterpriseDashboard:
+      type: object
+      properties:
+        generatedAt: { type: string, format: date-time }
+        portfolio: { $ref: "#/components/schemas/LeadershipDashboard" }
+        byBusinessUnit: { type: array, items: { $ref: "#/components/schemas/GroupPosture" } }
+        byCriticality: { type: array, items: { $ref: "#/components/schemas/GroupPosture" } }
+        topRisks: { type: array, items: { $ref: "#/components/schemas/AppPosture" } }
+
+    NationalDashboard:
+      type: object
+      properties:
+        generatedAt: { type: string, format: date-time }
+        nationalCompliancePct: { type: number }
+        nationalCompletenessPct: { type: number }
+        applications: { type: integer }
+        regions:
+          type: array
+          items:
+            type: object
+            properties:
+              region: { type: string }
+              applications: { type: array, items: { type: string } }
+              expected: { type: integer }
+              compliant: { type: integer }
+              compliancePct: { type: number }
+              completenessPct: { type: number }
+              rag: { type: string, enum: [GREEN, AMBER, RED] }
+
+    AuditPrepReport:
+      type: object
+      properties:
+        generatedAt: { type: string, format: date-time }
+        scope: { type: string }
+        readinessScore: { type: number }
+        totalFindings: { type: integer }
+        bySeverity: { type: object, additionalProperties: { type: integer } }
+        findings:
+          type: array
+          items:
+            type: object
+            properties:
+              category: { type: string }
+              severity: { type: string, enum: [HIGH, MEDIUM, LOW] }
+              applicationSlug: { type: string }
+              framework: { type: string }
+              controlId: { type: string }
+              detail: { type: string }
+              action: { type: string }
+        narrative: { type: string }
+        model: { type: string }
+        simulated: { type: boolean }
+
+    TrendPoint:
+      type: object
+      properties:
+        takenAt: { type: string, format: date-time }
+        expected: { type: integer }
+        compliant: { type: integer }
+        compliancePct: { type: number }
+        completenessPct: { type: number }
+        approvedEvidence: { type: integer }
+        openFindings: { type: integer }
+
+    TrendReport:
+      type: object
+      properties:
+        generatedAt: { type: string, format: date-time }
+        current:
+          allOf: [ { $ref: "#/components/schemas/TrendPoint" } ]
+          description: Live portfolio rollup (headline figure) — not the last, possibly synthetic, snapshot.
+        points: { type: array, items: { $ref: "#/components/schemas/TrendPoint" } }
+        closure:
+          type: object
+          properties:
+            approvals: { type: integer }
+            rejections: { type: integer }
+            resubmissions: { type: integer }
+            avgDaysToApprove: { type: number, nullable: true }
+            approvalsByWeek: { type: object, additionalProperties: { type: integer } }
+        collection:
+          type: array
+          items:
+            type: object
+            properties:
+              at: { type: string, format: date-time }
+              ingested: { type: integer }
+              duplicates: { type: integer }
+              failed: { type: integer }
+
+    ReportInfo:
+      type: object
+      properties:
+        name: { type: string }
+        title: { type: string }
+        formats: { type: array, items: { type: string } }
+        params: { type: array, items: { type: string } }
+
+    RunRequest:
+      type: object
+      properties:
+        applications: { type: array, items: { type: string } }
+        frameworks: { type: array, items: { type: string } }
+        sources: { type: array, items: { type: string } }
+        requestedBy: { type: string }
+
+    RunView:
+      type: object
+      properties:
+        runId: { type: string, format: uuid }
+        trigger: { type: string, enum: [MANUAL, SCHEDULED, BULK] }
+        status: { type: string, enum: [PENDING, RUNNING, COMPLETED, FAILED] }
+        requestedBy: { type: string }
+        applications: { type: array, items: { type: string } }
+        frameworks: { type: array, items: { type: string } }
+        sources: { type: array, items: { type: string } }
+        received: { type: integer }
+        ingested: { type: integer }
+        duplicates: { type: integer }
+        failed: { type: integer }
+        message: { type: string }
+        perSource: { type: object, additionalProperties: { type: string } }
+        createdAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time, nullable: true }
+        finishedAt: { type: string, format: date-time, nullable: true }
+
+    # ---- Use Case 1 — evidence context ----
+    EvidenceContext:
+      type: object
+      properties:
+        evidenceId: { type: string, format: uuid }
+        applicationSlug: { type: string }
+        controlId: { type: string }
+        technology: { type: string }
+        collectionMethod: { type: string }
+        sourceSystem: { type: string }
+        collectedAt: { type: string, format: date-time, nullable: true }
+        currentVersion: { type: integer }
+        satisfiesControls: { type: array, items: { type: string } }
+        frameworks: { type: array, items: { type: string } }

@@ -4,8 +4,21 @@ Single source of truth for cross-service interfaces shared by `backend-java`,
 `agents-go`, and `frontend-react`.
 
 - `openapi/` — REST API definitions (OpenAPI 3.1 YAML).
-- `proto/` — gRPC / protobuf definitions for backend ⇄ agents communication.
+  - `pramaan-backend.yaml` — backend API.
+    - Phase 1: applications, frameworks, controls, agents, technical checks +
+      check-results, evidence (ingest / bulk / upload / versions / verify /
+      deterministic queries), scheduler.
+    - Phase 2 (`insight` tag): evidence completeness, reuse/similarity, AI evidence
+      summaries, natural-language queries, compliance aggregation. AI features run
+      deterministically unless `pramaan.ai.mode=live`.
+- `proto/` — gRPC / protobuf for backend ⇄ agents.
+  - `agent.proto` — `AgentCollector` service: `Describe` + `RunChecks` streaming
+    deterministic `CheckResult`s.
 
-No contracts are defined yet. Add them here before implementing the services that
-produce or consume them, and generate client/server stubs from these files rather
-than hand-writing them.
+## Rules
+
+- Define or update the contract here **before** implementing either side of it.
+- Generate client/server types from these files; do not hand-write DTOs that
+  duplicate a contract.
+- The backend is the reference implementation of `pramaan-backend.yaml` — if code
+  and contract disagree, fix the mismatch, don't fork the shape.

@@ -1,0 +1,34 @@
+{
+  "applications": [
+    {
+      "slug": "net-banking",
+      "name": "Net Banking",
+      "businessUnit": "Retail Banking",
+      "criticality": "HIGH",
+      "owner": "app.owner.netbanking",
+      "technology": ["Java", "Oracle", "NGINX"],
+      "frameworks": ["PCI_DSS", "C-SITE", "DPSC"],
+      "sources": ["SIM_NGINX", "SIM_POSTGRES", "MOCK_GITHUB", "SHAREPOINT", "SERVICENOW"]
+    },
+    {
+      "slug": "mobile-banking",
+      "name": "Mobile Banking",
+      "businessUnit": "Retail Banking",
+      "criticality": "HIGH",
+      "owner": "app.owner.mobile",
+      "technology": ["Kotlin", "PostgreSQL", "Kubernetes"],
+      "frameworks": ["PCI_DSS", "DPSC"],
+      "sources": ["SIM_POSTGRES", "MOCK_GITHUB", "MOCK_CONFLUENCE", "SHAREPOINT", "SERVICENOW"]
+    },
+    {
+      "slug": "payments",
+      "name": "Payments",
+      "businessUnit": "Payments",
+      "criticality": "CRITICAL",
+      "owner": "app.owner.payments",
+      "technology": ["Go", "PostgreSQL", "Redis"],
+      "frameworks": ["PCI_DSS", "ITPP", "C-SITE"],
+      "sources": ["SIM_POSTGRES", "SIM_MYSQL", "MOCK_JIRA", "SHAREPOINT", "SERVICENOW"]
+    }
+  ]
+}

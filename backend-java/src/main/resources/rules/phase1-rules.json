@@ -1,0 +1,46 @@
+[
+  {
+    "checkId": "RULE-EVIDENCE-COLLECTED",
+    "framework": "*",
+    "controlId": "*",
+    "collector": "integration",
+    "technology": "any",
+    "title": "Evidence bundle reports a completed collection",
+    "expected": "every technical check in the bundle passed",
+    "defaultStatus": "WARNING",
+    "clauses": [
+      { "contains": "\"status\": \"FAILED\"", "status": "FAIL", "detail": "collection reported FAILED" },
+      { "contains": "\"status\": \"fail\"", "status": "FAIL", "detail": "a technical check in the bundle failed" },
+      { "contains": "\"status\": \"error\"", "status": "FAIL", "detail": "a technical check could not be evaluated" },
+      { "contains": "\"status\": \"collected\"", "status": "PASS", "detail": "collection reported COLLECTED" },
+      { "contains": "\"status\": \"pass\"", "status": "PASS", "detail": "all technical checks in the bundle passed" },
+      { "contains": "\"status\": \"not_applicable\"", "status": "NOT_APPLICABLE", "detail": "checks in the bundle are not applicable to this target" }
+    ]
+  },
+  {
+    "checkId": "RULE-CHANGE-TICKET-PRESENT",
+    "framework": "ITPP",
+    "controlId": "ITPP-CHG-02",
+    "collector": "integration",
+    "technology": "jira",
+    "title": "Production change is backed by an approved change ticket",
+    "expected": "objectType = change_ticket",
+    "defaultStatus": "FAIL",
+    "clauses": [
+      { "contains": "\"objectType\": \"change_ticket\"", "status": "PASS", "detail": "linked change ticket found" }
+    ]
+  },
+  {
+    "checkId": "RULE-INCIDENT-OPEN",
+    "framework": "ITPP",
+    "controlId": "ITPP-INC-01",
+    "collector": "integration",
+    "technology": "servicenow",
+    "title": "No unresolved incident affecting the control",
+    "expected": "no open incident_record",
+    "defaultStatus": "PASS",
+    "clauses": [
+      { "contains": "\"objectType\": \"incident_record\"", "status": "WARNING", "detail": "incident record present; confirm it is resolved" }
+    ]
+  }
+]

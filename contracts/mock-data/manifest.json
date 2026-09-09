@@ -1,0 +1,16 @@
+{
+  "name": "pramaan-next prototype mock data",
+  "version": "1",
+  "referenceNow": "2026-09-05T09:00:00Z",
+  "note": "Single shared fixture set. Java, Go and React all read THESE files. Do not copy this data into component code.",
+  "datasets": {
+    "applications": "applications.json",
+    "agents": "agents.json",
+    "frameworks": "frameworks.json",
+    "evidence": "evidence.json",
+    "schedulerRuns": "scheduler-runs.json",
+    "results": "results.json"
+  },
+  "applications": ["net-banking", "mobile-banking", "payments"],
+  "freshness": { "staleAfterDays": 90, "buckets": { "fresh": "<=30d", "aging": "<=90d", "stale": ">90d" } }
+}

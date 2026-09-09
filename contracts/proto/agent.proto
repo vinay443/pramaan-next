@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+// Phase 1 contract for backend (Java) <-> agent (Go) collection.
+// Keep this minimal. Agents run predefined technical checks against assets and
+// return deterministic PASS / WARNING / FAIL / NOT_APPLICABLE results plus an
+// evidence bundle. No business logic, no scoring here.
+
+package pramaan.agent.v1;
+
+option go_package = "github.com/pramaan/agents-go/gen/agentv1";
+option java_package = "com.pramaan.contracts.agent.v1";
+option java_multiple_file = true;
+
+// AgentCollector is implemented by each Go agent and called by the backend
+// scheduler. In Phase 1 calls may also be simulated (simulation = true).
+service AgentCollector {
+  // Describe returns the agent identity and the checks it can run.
+  rpc Describe(DescribeRequest) returns (AgentDescriptor);
+
+  // RunChecks executes the requested checks (or all applicable ones) against
+  // the given assets and streams one result per check.
+  rpc RunChecks(RunChecksRequest) returns (stream CheckResult);
+}
+
+message DescribeRequest {}
+
+message AgentDescriptor {
+  string agent_id = 1;
+  string agent_name = 2;
+  string host = 3;
+  string environment = 4;
+  bool simulation = 5;
+  repeated string collectors = 6;      // e.g. "os", "database", "middleware", "tls"
+  repeated CheckDef checks = 7;
+}
+
+// CheckDef is one predefined technical check a collector knows how to run.
+message CheckDef {
+  string check_id = 1;                 // e.g. "OS-LNX-02"
+  string collector = 2;                // e.g. "os"
+  string technology = 3;               // e.g. "linux"
+  string control_id = 4;               // maps to a control, e.g. "OS-SSH-ROOT-LOGIN"
+  string framework = 5;                // e.g. "C-SITE"
+  string title = 6;
+}
+
+message Asset {
+  string asset_id = 1;
+  string application_slug = 2;
+  string environment = 3;
+  string kind = 4;                     // os | database | middleware | tls
+  string technology = 5;
+  string address = 6;
+}
+
+message RunChecksRequest {
+  string run_id = 1;                   // scheduler run correlation id
+  repeated Asset assets = 2;
+  repeated string check_ids = 3;       // empty = all applicable checks
+  bool simulation = 4;
+}
+
+enum CheckStatus {
+  CHECK_STATUS_UNSPECIFIED = 0;
+  PASS = 1;
+  WARNING = 2;
+  FAIL = 3;
+  NOT_APPLICABLE = 4;
+}
+
+message CheckResult {
+  string result_id = 1;
+  string run_id = 2;
+  string agent_id = 3;
+  string asset_id = 4;
+  string application_slug = 5;
+  string check_id = 6;
+  string control_id = 7;
+  string framework = 8;
+  CheckStatus status = 9;
+  string observed = 10;
+  string expected = 11;
+  string detail = 12;
+  string collected_at = 13;            // RFC3339
+  // Raw evidence bundle for this check, ingested by the backend as one evidence item.
+  bytes evidence_json = 14;
+}

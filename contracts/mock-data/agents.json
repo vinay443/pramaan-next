@@ -1,0 +1,43 @@
+{
+  "agents": [
+    { "agentId": "agent-nb-01", "agentName": "pramaan-agent-netbanking", "host": "nb-collector-01", "environment": "prod", "simulation": true, "collectors": ["os", "database", "middleware", "tls"] },
+    { "agentId": "agent-mb-01", "agentName": "pramaan-agent-mobile", "host": "mb-collector-01", "environment": "prod", "simulation": true, "collectors": ["os", "database", "tls"] },
+    { "agentId": "agent-pay-01", "agentName": "pramaan-agent-payments", "host": "pay-collector-01", "environment": "prod", "simulation": true, "collectors": ["os", "database", "middleware", "tls"] }
+  ],
+  "assets": [
+    { "id": "asset-nb-app-01", "application": "net-banking", "environment": "prod", "kind": "os", "technology": "linux", "address": "nb-app-01.internal", "agentId": "agent-nb-01" },
+    { "id": "asset-nb-pg-01", "application": "net-banking", "environment": "prod", "kind": "database", "technology": "postgresql", "address": "nb-pg-01.internal:5432", "agentId": "agent-nb-01" },
+    { "id": "asset-nb-edge", "application": "net-banking", "environment": "prod", "kind": "tls", "technology": "tls", "address": "netbanking.example.com:443", "agentId": "agent-nb-01" },
+    { "id": "asset-mb-app-01", "application": "mobile-banking", "environment": "prod", "kind": "os", "technology": "linux", "address": "mb-app-01.internal", "agentId": "agent-mb-01" },
+    { "id": "asset-mb-pg-01", "application": "mobile-banking", "environment": "prod", "kind": "database", "technology": "postgresql", "address": "mb-pg-01.internal:5432", "agentId": "agent-mb-01" },
+    { "id": "asset-pay-app-01", "application": "payments", "environment": "prod", "kind": "os", "technology": "linux", "address": "pay-app-01.internal", "agentId": "agent-pay-01" },
+    { "id": "asset-pay-nginx-01", "application": "payments", "environment": "prod", "kind": "middleware", "technology": "nginx", "address": "pay-nginx-01.internal", "agentId": "agent-pay-01" },
+    { "id": "asset-pay-edge", "application": "payments", "environment": "prod", "kind": "tls", "technology": "tls", "address": "payments.example.com:443", "agentId": "agent-pay-01" }
+  ],
+  "collectorCatalog": [
+    { "type": "os", "technologies": ["linux"], "checks": [
+      { "id": "OS-LNX-01", "controlId": "OS-BASELINE-VERSION", "framework": "ITPP", "title": "Supported OS version is identifiable" },
+      { "id": "OS-LNX-02", "controlId": "OS-SSH-ROOT-LOGIN", "framework": "C-SITE", "title": "SSH root login disabled" },
+      { "id": "OS-LNX-03", "controlId": "OS-SSH-PASSWORD-AUTH", "framework": "C-SITE", "title": "SSH password authentication disabled" },
+      { "id": "OS-LNX-04", "controlId": "OS-AUDIT-LOGGING", "framework": "PCI_DSS", "title": "Host audit logging enabled" }
+    ] },
+    { "type": "database", "technologies": ["postgresql"], "checks": [
+      { "id": "DB-PG-01", "controlId": "DB-TLS-IN-TRANSIT", "framework": "PCI_DSS", "title": "TLS enabled for database connections" },
+      { "id": "DB-PG-02", "controlId": "DB-AUDIT-LOGGING", "framework": "PCI_DSS", "title": "Connection / statement auditing enabled" },
+      { "id": "DB-PG-03", "controlId": "DB-PASSWORD-STORAGE", "framework": "C-SITE", "title": "Strong password hashing" },
+      { "id": "DB-PG-04", "controlId": "DB-AUTH-NO-TRUST", "framework": "C-SITE", "title": "No 'trust' authentication in pg_hba" }
+    ] },
+    { "type": "middleware", "technologies": ["nginx", "tomcat"], "checks": [
+      { "id": "MW-01", "controlId": "MW-TLS-VERSION", "framework": "PCI_DSS", "title": "Only TLS 1.2+ protocols enabled" },
+      { "id": "MW-02", "controlId": "MW-BANNER-SUPPRESSION", "framework": "C-SITE", "title": "Server version banner suppressed" },
+      { "id": "MW-03", "controlId": "MW-HSTS", "framework": "DPSC", "title": "HSTS response header configured" },
+      { "id": "MW-04", "controlId": "MW-AUTODEPLOY", "framework": "C-SITE", "title": "Hot auto-deploy disabled (Tomcat)" }
+    ] },
+    { "type": "tls", "technologies": ["tls"], "checks": [
+      { "id": "TLS-01", "controlId": "TLS-PROTOCOL-VERSION", "framework": "PCI_DSS", "title": "Negotiated TLS version is 1.2 or higher" },
+      { "id": "TLS-02", "controlId": "TLS-CERT-EXPIRY", "framework": "C-SITE", "title": "Leaf certificate has > 30 days remaining" },
+      { "id": "TLS-03", "controlId": "TLS-KEY-STRENGTH", "framework": "C-SITE", "title": "Certificate key meets minimum strength" },
+      { "id": "TLS-04", "controlId": "TLS-CERT-TRUST", "framework": "DPSC", "title": "Certificate is CA-issued (not self-signed)" }
+    ] }
+  ]
+}

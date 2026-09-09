@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:pramaan;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate.hbm2ddl.auto: create-drop
+  flyway:
+    enabled: false
+  sql:
+    init:
+      mode: never
+
+pramaan:
+  object-store:
+    driver: memory
+  integrations:
+    mock-enabled: true
+  scheduler:
+    auto-enabled: false
+    dispatch: false
+    default-sources: MOCK_JIRA,MOCK_SERVICENOW,MOCK_GITHUB,MOCK_CONFLUENCE,SIM_POSTGRES,SIM_MYSQL,SIM_NGINX,SIM_TOMCAT
+    stale-after-days: 90
+  seed:
+    applications-enabled: false
+    trend-enabled: false

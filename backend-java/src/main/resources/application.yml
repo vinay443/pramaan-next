@@ -1,20 +1,89 @@
 spring:
   application:
     name: pramaan-next-backend
+  datasource:
+    url: ${PRAMAAN_DB_URL:jdbc:postgresql://localhost:5433/pramaan}
+    username: ${PRAMAAN_DB_USER:pramaan}
+    password: ${PRAMAAN_DB_PASSWORD:pramaan}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 100MB
 
 server:
   port: 8080
-
-# Infra endpoints (see root docker-compose.yml). Datasource wiring is intentionally
-# left commented out until persistence work begins.
-# spring:
-#   datasource:
-#     url: jdbc:postgresql://localhost:5433/pramaan
-#     username: pramaan
-#     password: pramaan
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+
+pramaan:
+  # Object storage abstraction. driver: filesystem (default) | memory
+  object-store:
+    driver: ${PRAMAAN_OBJECT_STORE_DRIVER:filesystem}
+    filesystem:
+      root: ${PRAMAAN_OBJECT_STORE_ROOT:./data/object-store}
+  integrations:
+    # Phase 1 ships mock enterprise integrations only.
+    mock-enabled: true
+    # Use Case 15 — SharePoint / ServiceNow. Mock by default; base URLs only, never credentials.
+    sharepoint:
+      mock: ${PRAMAAN_SHAREPOINT_MOCK:true}
+      base-url: ${PRAMAAN_SHAREPOINT_SITE_URL:https://contoso.sharepoint.com/sites/compliance}
+    servicenow:
+      mock: ${PRAMAAN_SERVICENOW_MOCK:true}
+      base-url: ${PRAMAAN_SERVICENOW_URL:https://dev00000.service-now.com}
+
+  # Use Case 12 — configuration-driven multi-application onboarding.
+  onboarding:
+    catalog: ${PRAMAAN_ONBOARDING_CATALOG:classpath:phase2/onboarding.json}
+
+  # Use Case 13 — evidence lifecycle: retention window for APPROVED evidence.
+  evidence:
+    retention-days: ${PRAMAAN_EVIDENCE_RETENTION_DAYS:365}
+  scheduler:
+    # Background @Scheduled trigger. Off by default; runs are normally API-triggered.
+    auto-enabled: ${PRAMAAN_SCHEDULER_AUTO:false}
+    # When true, POST /scheduler/runs immediately dispatches the run to the async executor.
+    dispatch: ${PRAMAAN_SCHEDULER_DISPATCH:true}
+    cron: ${PRAMAAN_SCHEDULER_CRON:0 0 * * * *}
+    default-sources: MOCK_JIRA,MOCK_SERVICENOW,MOCK_GITHUB,MOCK_CONFLUENCE,SIM_POSTGRES,SIM_MYSQL,SIM_NGINX,SIM_TOMCAT,SHAREPOINT,SERVICENOW
+    stale-after-days: 90
+  seed:
+    # Insert demo applications on startup if the table is empty.
+    applications-enabled: ${PRAMAAN_SEED_APPS:true}
+
+  # Use Case 5 — ECS Admin. Canonical role catalogue; the persona registry is
+  # in-memory (no credentials stored) and seeded with demo users on startup.
+  admin:
+    roles: ADMIN,AUDITOR,APP_OWNER,COMPLIANCE_OFFICER,VIEWER
+
+  # Phase 2 AI features (evidence summaries, NL queries, reuse/similarity).
+  ai:
+    # mode: mock (deterministic, no external calls) | live (call the HTTP model APIs)
+    mode: ${PRAMAAN_AI_MODE:mock}
+    # vector-store: memory (default) | pgvector (needs the pgvector/pgvector image)
+    vector-store: ${PRAMAAN_AI_VECTOR_STORE:memory}
+    chat:
+      provider: ${PRAMAAN_AI_CHAT_PROVIDER:openai}   # openai | anthropic
+      base-url: ${PRAMAAN_AI_CHAT_BASE_URL:}
+      api-key: ${PRAMAAN_AI_CHAT_API_KEY:}
+      model: ${PRAMAAN_AI_CHAT_MODEL:gpt-4o-mini}
+      timeout-seconds: 30
+    embedding:
+      provider: ${PRAMAAN_AI_EMBED_PROVIDER:openai}
+      base-url: ${PRAMAAN_AI_EMBED_BASE_URL:}
+      api-key: ${PRAMAAN_AI_EMBED_API_KEY:}
+      model: ${PRAMAAN_AI_EMBED_MODEL:text-embedding-3-small}
+      dimension: ${PRAMAAN_AI_EMBED_DIMENSION:256}
