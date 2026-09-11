@@ -48,6 +48,7 @@ import type {
   PredefinedQueryCatalog,
   PredefinedQueryRunResult,
   PredefinedQueryRunSummary,
+  RegulatoryFiling,
   ReuseResult,
   RunRequest,
   RunView,
@@ -537,6 +538,18 @@ export function listReports(): Promise<ReportInfo[]> {
 /** Report URL for the current backend, so the UI can link to a JSON/CSV download. */
 export function reportUrl(name: string, format: 'json' | 'csv', applicationSlug?: string, framework?: string): string {
   return `${apiBaseUrl()}/api/v1/reports/${encodeURIComponent(name)}${buildQuery({ format, applicationSlug, framework })}`
+}
+
+/** UC17 — regulator-ready filing (fixed cover-page schema), rendered inline as a preview. */
+export function getRegulatoryFiling(applicationSlug?: string, framework?: string): Promise<RegulatoryFiling> {
+  return withFallback(
+    () =>
+      apiFetch<RegulatoryFiling>(
+        `/api/v1/reports/regulatory-filing${buildQuery({ applicationSlug, framework })}`,
+      ),
+    () => mock.mockRegulatoryFiling(applicationSlug, framework),
+    true,
+  )
 }
 
 export function getCompliance(applicationSlug: string, framework?: string): Promise<ComplianceReport> {

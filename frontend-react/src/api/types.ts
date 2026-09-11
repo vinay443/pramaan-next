@@ -434,6 +434,38 @@ export interface IntegrityReport {
   detail: string
 }
 
+// ---- UC17 regulator-ready filing (distinct from the generic reports) -------
+
+export interface FrameworkFiling {
+  framework: string
+  regulator: string
+  expected: number
+  compliant: number
+  nonCompliant: number
+  missingEvidence: number
+  compliancePct: number
+}
+
+export interface RegulatoryFiling {
+  reportId: string
+  title: string
+  regulator: string
+  scope: string
+  framework: string
+  periodStart: string
+  periodEnd: string
+  generatedAt: string
+  preparedBy: string
+  applicationsInScope: number
+  controlsExpected: number
+  controlsCompliant: number
+  compliancePct: number
+  evidenceRecords: number
+  openGaps: number
+  frameworks: FrameworkFiling[]
+  attestation: string
+}
+
 export interface DeterministicQueryResult {
   name: string
   answerText: string

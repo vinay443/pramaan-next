@@ -35,6 +35,7 @@ import type {
   EvidenceSummary,
   EvidenceQueryParams,
   EvidenceView,
+  FrameworkFiling,
   FrameworkPosture,
   AuditPrepReport,
   ComparisonReport,
@@ -52,6 +53,7 @@ import type {
   OnboardingResult,
   OnboardingScanRequest,
   OnboardingScanView,
+  RegulatoryFiling,
   ReportInfo,
   TrendReport,
   Page,
@@ -782,7 +784,89 @@ export const mockReports: ReportInfo[] = [
   { name: 'gap-report', title: 'Cross-application control gap report', formats: ['json', 'csv'], params: ['framework'] },
   { name: 'audit-readiness', title: 'AI-assisted audit-readiness checklist', formats: ['json', 'csv'], params: ['applicationSlug', 'framework'] },
   { name: 'pan-india', title: 'National / pan-India compliance report', formats: ['json', 'csv'], params: [] },
+  { name: 'regulatory-filing', title: 'Regulator-ready compliance filing', formats: ['json', 'csv'], params: ['applicationSlug', 'framework'] },
 ]
+
+// ---- UC17 regulator-ready filing (fixed cover-page schema) --------------
+
+const REGULATOR_BY_FRAMEWORK: Record<string, string> = {
+  PCI_DSS: 'PCI Security Standards Council',
+  ITPP: 'Internal IT Policy & Procedures Board',
+  DPSC: 'Data Protection Supervisory Council',
+}
+const DEFAULT_REGULATOR = 'Compliance Authority'
+const FILING_PERIOD_DAYS = 90
+
+export function mockRegulatoryFiling(applicationSlug?: string, framework?: string): RegulatoryFiling {
+  const scoped = !!applicationSlug
+  const now = NOW
+  const periodStart = new Date(Date.parse(now) - FILING_PERIOD_DAYS * dayMs).toISOString()
+
+  let byFramework: FrameworkPosture[]
+  let applicationsInScope: number
+  let expected: number
+  let compliant: number
+  let evidenceRecords: number
+  let openGaps: number
+
+  if (scoped) {
+    const cr = mockCompliance(applicationSlug!, framework)
+    byFramework = cr.byFramework
+    applicationsInScope = 1
+    expected = cr.expected
+    compliant = cr.compliant
+    evidenceRecords = mockEvidencePage({ applicationSlug, framework, page: 0, size: 100_000 }).totalItems
+    openGaps = cr.controls.filter((c) => c.status !== 'COMPLIANT').length
+  } else {
+    const portfolio = mockLeadershipDashboard()
+    byFramework = framework
+      ? portfolio.byFramework.filter((f) => f.framework.toUpperCase() === framework.toUpperCase())
+      : portfolio.byFramework
+    applicationsInScope = portfolio.applications
+    expected = byFramework.reduce((s, f) => s + f.expected, 0)
+    compliant = byFramework.reduce((s, f) => s + f.compliant, 0)
+    evidenceRecords = mockEvidenceDashboard().records
+    openGaps = byFramework.reduce((s, f) => s + f.nonCompliant + f.missingEvidence, 0)
+  }
+
+  const compliancePct = expected === 0 ? 0 : round1((100 * compliant) / expected)
+  const filings: FrameworkFiling[] = byFramework.map((f) => ({
+    framework: f.framework,
+    regulator: REGULATOR_BY_FRAMEWORK[f.framework.toUpperCase()] ?? DEFAULT_REGULATOR,
+    expected: f.expected,
+    compliant: f.compliant,
+    nonCompliant: f.nonCompliant,
+    missingEvidence: f.missingEvidence,
+    compliancePct: f.compliancePct,
+  }))
+
+  const scope = scoped ? applicationSlug! : 'PORTFOLIO'
+  const scopedFramework = framework ? framework.toUpperCase() : 'ALL'
+  const reportId = `REG-${now.slice(0, 10).replace(/-/g, '')}-${shortDigest(`${scope}|${scopedFramework}|${now}`)}`
+  const regulator = filings.length === 1 ? filings[0].regulator : 'Multiple Regulatory Bodies'
+
+  return {
+    reportId,
+    title: 'Regulatory Compliance Filing',
+    regulator,
+    scope,
+    framework: scopedFramework,
+    periodStart,
+    periodEnd: now,
+    generatedAt: now,
+    preparedBy: 'Pramaan Next (automated)',
+    applicationsInScope,
+    controlsExpected: expected,
+    controlsCompliant: compliant,
+    compliancePct,
+    evidenceRecords,
+    openGaps,
+    frameworks: filings,
+    attestation:
+      `This filing reflects deterministic evidence and control-verdict data held by Pramaan Next as of ${now}. ` +
+      'Figures are computed, not model-generated.',
+  }
+}
 
 // ---- Use Case 13 — evidence lifecycle --------------------------------
 

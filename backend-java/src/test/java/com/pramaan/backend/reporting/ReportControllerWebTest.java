@@ -68,6 +68,32 @@ class ReportControllerWebTest {
     }
 
     @Test
+    void regulatoryFilingReportRendersAScopedAndPortfolioWideFiling() throws Exception {
+        ingestion.ingest(new IngestRequest("payments", "ITPP-DOC-03", "ITPP", "SHAREPOINT",
+                "p2", "policy", "application/json", null, "{\"doc\":\"policy\"}", Instant.now(),
+                "owner", Map.of(), Map.of()));
+
+        mvc.perform(get("/api/v1/reports/regulatory-filing").param("applicationSlug", "payments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reportId").value(Matchers.startsWith("REG-")))
+                .andExpect(jsonPath("$.scope").value("payments"))
+                .andExpect(jsonPath("$.applicationsInScope").value(1))
+                .andExpect(jsonPath("$.attestation").isNotEmpty());
+
+        mvc.perform(get("/api/v1/reports/regulatory-filing"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scope").value("PORTFOLIO"))
+                .andExpect(jsonPath("$.framework").value("ALL"));
+
+        mvc.perform(get("/api/v1/reports/regulatory-filing")
+                        .param("applicationSlug", "payments").param("format", "csv"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("text/csv"))
+                .andExpect(header().string("Content-Disposition", Matchers.containsString("regulatory-filing")))
+                .andExpect(content().string(Matchers.containsString("reportId")));
+    }
+
+    @Test
     void unknownReportIs404() throws Exception {
         mvc.perform(get("/api/v1/reports/nope")).andExpect(status().isNotFound());
     }
