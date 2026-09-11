@@ -4,7 +4,7 @@ import { listEvidence } from '../api/endpoints'
 import { onDataEvent } from '../api/events'
 import type { EvidenceQueryParams } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
-import { DataTable, Empty, ErrorNote, Loading, Section } from '../components/ui'
+import { DataTable, Empty, ErrorNote, Loading, Section, StatusPill } from '../components/ui'
 
 const PAGE_SIZE = 20
 
@@ -144,6 +144,7 @@ export function EvidenceRepository() {
               { header: 'Method', cell: (r) => r.tags.collectionMethod ?? '—' },
               { header: 'Ver', cell: (r) => r.currentVersion, align: 'right' },
               { header: 'Collected', cell: (r) => (r.latest ? new Date(r.latest.collectedAt).toLocaleDateString() : '—') },
+              { header: 'Integrity', cell: (r) => <StatusPill status={r.integrityStatus ?? 'UNKNOWN'} /> },
             ]}
           />
         ) : null}

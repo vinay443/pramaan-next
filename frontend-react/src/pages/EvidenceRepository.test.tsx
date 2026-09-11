@@ -37,6 +37,14 @@ describe('EvidenceRepository', () => {
     await waitFor(() => expect(screen.getByText('Results — 5')).toBeInTheDocument())
   })
 
+  it('shows a per-row integrity badge (UC04), flagging the tampered demo record', async () => {
+    renderOffline(<EvidenceRepository />)
+    expect(await screen.findByText('Results — 6')).toBeInTheDocument()
+
+    expect(screen.getAllByText('VERIFIED').length).toBe(5)
+    expect(screen.getByText('TAMPERED')).toBeInTheDocument()
+  })
+
   it('offers "predefined-query" as a collection-method option (backend already supports it)', async () => {
     renderOffline(<EvidenceRepository />)
     const select = (await screen.findByLabelText('Collection method')) as HTMLSelectElement

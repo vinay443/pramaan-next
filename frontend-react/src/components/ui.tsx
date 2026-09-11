@@ -35,11 +35,11 @@ export function Section({ title, actions, children }: { title: string; actions?:
 
 const PILL_OK = new Set([
   'COMPLETED', 'PASS', 'CREATED', 'COVERED', 'COMPLIANT', 'ONBOARDED', 'APPROVED',
-  'GREEN', 'ACTIVE', 'READY', 'INTACT', 'SUCCESS', 'DONE',
+  'GREEN', 'ACTIVE', 'READY', 'INTACT', 'SUCCESS', 'DONE', 'VERIFIED',
 ])
 const PILL_BAD = new Set([
   'FAILED', 'FAIL', 'ERROR', 'MISSING', 'MISSING_EVIDENCE', 'NON_COMPLIANT',
-  'REJECTED', 'RED', 'EXPIRED', 'CRITICAL', 'MISMATCH',
+  'REJECTED', 'RED', 'EXPIRED', 'CRITICAL', 'MISMATCH', 'TAMPERED',
 ])
 const PILL_MUTED = new Set([
   'DUPLICATE', 'NOT_APPLICABLE', 'NOT_ASSESSED', 'NOT ONBOARDED', 'NOT_ONBOARDED',

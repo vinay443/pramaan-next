@@ -145,6 +145,9 @@ function withNamingConvention(e: EvidenceView): EvidenceView {
       name,
       ...(e.title ? { sourceTitle: e.title } : {}),
     },
+    // UC04 — mock evidence is trustworthy by default, mirroring a healthy repository
+    // where every stored hash still matches its object. See the TAMPERED demo seam below.
+    integrityStatus: 'VERIFIED',
   }
 }
 
@@ -158,6 +161,14 @@ export const mockEvidence: EvidenceView[] = (evidenceRaw.evidence as unknown as 
 {
   const partial = mockEvidence.find((e) => e.evidenceId === 'ev-002')
   if (partial) partial.tags = { ...partial.tags, frameworks: partial.framework }
+}
+
+// Demo seam for the UC04 integrity badge: one record's stored hash no longer matches
+// its object, same as a real EvidenceQueryService.verify() mismatch, so the
+// "tampered" state is visible offline instead of every record always reading VERIFIED.
+{
+  const tampered = mockEvidence.find((e) => e.evidenceId === 'ev-006')
+  if (tampered) tampered.integrityStatus = 'TAMPERED'
 }
 
 function ageDays(iso: string | undefined): number {

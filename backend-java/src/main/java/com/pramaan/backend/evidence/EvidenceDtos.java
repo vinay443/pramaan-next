@@ -73,6 +73,14 @@ public final class EvidenceDtos {
         }
     }
 
+    /**
+     * Per-record hash-integrity verdict (UC04). {@code VERIFIED} — current version's
+     * SHA-256 was just (re)computed and matches the stored value; {@code TAMPERED} —
+     * recomputed hash does not match; {@code UNKNOWN} — no version, or the object is
+     * missing from the store, so nothing could be verified.
+     */
+    public enum IntegrityStatus { VERIFIED, TAMPERED, UNKNOWN }
+
     public record EvidenceView(
             String evidenceId,
             String evidenceKey,
@@ -87,9 +95,15 @@ public final class EvidenceDtos {
             Instant createdAt,
             Instant updatedAt,
             Map<String, String> tags,
-            EvidenceVersionView latest) {
+            EvidenceVersionView latest,
+            IntegrityStatus integrityStatus) {
 
+        /** Integrity unverified — caller has no object-store access at this call site (e.g. right after ingest). */
         public static EvidenceView from(EvidenceRecord r) {
+            return from(r, IntegrityStatus.UNKNOWN);
+        }
+
+        public static EvidenceView from(EvidenceRecord r, IntegrityStatus integrityStatus) {
             Map<String, String> tags = new TreeMap<>();
             r.getTags().forEach(t -> tags.put(t.getTagKey(), t.getTagValue()));
             EvidenceVersion latest = r.latestVersion();
@@ -97,7 +111,8 @@ public final class EvidenceDtos {
                     r.getControlId(), r.getFramework(), r.getSourceSystem(), r.getSourceObjectId(),
                     r.getTitle(), r.getCurrentVersion(), r.getLifecycleState().name(),
                     r.getCreatedAt(), r.getUpdatedAt(), tags,
-                    latest == null ? null : EvidenceVersionView.from(latest));
+                    latest == null ? null : EvidenceVersionView.from(latest),
+                    integrityStatus);
         }
     }
 

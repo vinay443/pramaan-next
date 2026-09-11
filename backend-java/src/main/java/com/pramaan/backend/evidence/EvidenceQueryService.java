@@ -8,6 +8,7 @@ import com.pramaan.backend.evidence.EvidenceDtos.EvidenceDashboard;
 import com.pramaan.backend.evidence.EvidenceDtos.EvidenceVersionView;
 import com.pramaan.backend.evidence.EvidenceDtos.EvidenceView;
 import com.pramaan.backend.evidence.EvidenceDtos.IntegrityReport;
+import com.pramaan.backend.evidence.EvidenceDtos.IntegrityStatus;
 import com.pramaan.backend.evidence.domain.EvidenceRecord;
 import com.pramaan.backend.evidence.domain.EvidenceVersion;
 import com.pramaan.backend.evidence.repo.EvidenceRecordRepository;
@@ -88,11 +89,31 @@ public class EvidenceQueryService {
         if (facets != null && facets.collectionMethod() != null && !facets.collectionMethod().isBlank()) {
             spec = spec.and(EvidenceSpecs.tagPair("collectionMethod", facets.collectionMethod()));
         }
-        return PageResponse.of(records.findAll(spec, pageable).map(EvidenceView::from));
+        return PageResponse.of(records.findAll(spec, pageable).map(r -> EvidenceView.from(r, integrityStatusOf(r))));
     }
 
     public EvidenceView get(UUID id) {
-        return EvidenceView.from(require(id));
+        EvidenceRecord r = require(id);
+        return EvidenceView.from(r, integrityStatusOf(r));
+    }
+
+    /**
+     * UC04 hash-integrity verdict for one record's current version: recomputes
+     * SHA-256 from the object store and compares it to the value stamped at
+     * ingestion. Same check as {@link #verify} and the dashboard's repository-wide
+     * scan, run for a single record so list/get responses can carry a badge.
+     */
+    private IntegrityStatus integrityStatusOf(EvidenceRecord r) {
+        EvidenceVersion v = r.latestVersion();
+        if (v == null) {
+            return IntegrityStatus.UNKNOWN;
+        }
+        byte[] bytes = objectStore.get(v.getObjectKey()).orElse(null);
+        if (bytes == null) {
+            return IntegrityStatus.UNKNOWN;
+        }
+        return Hashing.sha256Hex(bytes).equalsIgnoreCase(v.getSha256())
+                ? IntegrityStatus.VERIFIED : IntegrityStatus.TAMPERED;
     }
 
     public List<EvidenceVersionView> versions(UUID id) {

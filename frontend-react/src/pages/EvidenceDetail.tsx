@@ -70,7 +70,8 @@ export function EvidenceDetail() {
         <Link to="/evidence">← Evidence Repository</Link>
       </p>
       <h1>
-        {ev.controlId} <span className="muted">/ {ev.framework}</span>
+        {ev.controlId} <span className="muted">/ {ev.framework}</span>{' '}
+        <StatusPill status={ev.integrityStatus ?? 'UNKNOWN'} />
       </h1>
 
       <Section title="Record">
@@ -177,6 +178,12 @@ export function EvidenceDetail() {
           </button>
         }
       >
+        <p>
+          <StatusPill status={ev.integrityStatus ?? 'UNKNOWN'} />{' '}
+          <span className="muted small">
+            as of the last load — recomputed from the object store on every read.
+          </span>
+        </p>
         {verifyErr ? <ErrorNote message={verifyErr} /> : null}
         {report ? (
           <div className={`verify ${report.intact ? 'ok' : 'bad'}`}>

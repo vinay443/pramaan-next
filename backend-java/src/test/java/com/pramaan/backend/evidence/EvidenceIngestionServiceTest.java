@@ -6,6 +6,7 @@ import com.pramaan.backend.evidence.EvidenceDtos.EvidenceView;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestOutcome;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestRequest;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestResult;
+import com.pramaan.backend.evidence.EvidenceDtos.IntegrityStatus;
 import static org.mockito.Mockito.doReturn;
 
 import com.pramaan.backend.evidence.EvidenceQueryService.EvidenceFilter;
@@ -48,6 +49,7 @@ class EvidenceIngestionServiceTest {
         assertThat(v.currentVersion()).isEqualTo(1);
         assertThat(v.tags()).containsEntry("stage", "collected");
         assertThat(v.latest().metadata()).containsEntry("k", "v");
+        assertThat(v.integrityStatus()).isEqualTo(IntegrityStatus.VERIFIED);
     }
 
     @Test
@@ -92,6 +94,11 @@ class EvidenceIngestionServiceTest {
         var integrity = queries.dashboard().integrity();
         assertThat(integrity.mismatch()).isEqualTo(1);
         assertThat(integrity.intact()).isZero();
+
+        assertThat(queries.get(id).integrityStatus()).isEqualTo(IntegrityStatus.TAMPERED);
+        assertThat(queries.search(new EvidenceFilter(null, null, null, null, null, null, null, 0, 10))
+                .items().stream().filter(e -> e.evidenceId().equals(id.toString())).findFirst().orElseThrow()
+                .integrityStatus()).isEqualTo(IntegrityStatus.TAMPERED);
     }
 
     @Test

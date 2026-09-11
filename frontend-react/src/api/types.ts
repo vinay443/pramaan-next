@@ -126,7 +126,11 @@ export interface EvidenceView {
   updatedAt: string
   tags: Record<string, string>
   latest?: EvidenceVersionView | null
+  integrityStatus?: IntegrityStatus
 }
+
+/** UC04 hash-integrity verdict for a record's current version (SHA-256 recomputed from the object store). */
+export type IntegrityStatus = 'VERIFIED' | 'TAMPERED' | 'UNKNOWN'
 
 export type LifecycleAction = 'SUBMIT' | 'APPROVE' | 'REJECT' | 'RETIRE' | 'RESET'
 
