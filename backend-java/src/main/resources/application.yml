@@ -44,6 +44,10 @@ pramaan:
     servicenow:
       mock: ${PRAMAAN_SERVICENOW_MOCK:true}
       base-url: ${PRAMAAN_SERVICENOW_URL:https://dev00000.service-now.com}
+    # Outbound GRC sync target (evidence + control-status summaries). Mock by default.
+    grc:
+      mock: ${PRAMAAN_GRC_MOCK:true}
+      base-url: ${PRAMAAN_GRC_URL:https://grc.example.com/api/ingest}
 
   # Use Case 12 — configuration-driven multi-application onboarding.
   onboarding:

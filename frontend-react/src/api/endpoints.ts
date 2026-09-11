@@ -34,6 +34,7 @@ import type {
   EvidenceVersionView,
   EvidenceLifecycleView,
   EvidenceView,
+  GrcSyncStatus,
   IngestRequest,
   IntegrityReport,
   LeadershipDashboard,
@@ -362,6 +363,25 @@ export function ingestBulk(items: IngestRequest[]): Promise<BulkIngestResponse> 
   return withFallback(
     () => apiFetch<BulkIngestResponse>('/api/v1/evidence/bulk', { method: 'POST', body: items }),
     () => mock.mockBulkIngest(items),
+  )
+}
+
+// ---- outbound GRC sync --------------------------------------------------
+// A Phase 1 backend may not implement /api/v1/grc/* yet — fall back to mock fixtures.
+
+export function getGrcStatus(): Promise<GrcSyncStatus> {
+  return withFallback(
+    () => apiFetch<GrcSyncStatus>('/api/v1/grc/status'),
+    () => mock.mockGrcStatus(),
+    true,
+  )
+}
+
+export function triggerGrcSync(): Promise<GrcSyncStatus> {
+  return withFallback(
+    () => apiFetch<GrcSyncStatus>('/api/v1/grc/sync', { method: 'POST' }),
+    () => mock.mockGrcSync(),
+    true,
   )
 }
 

@@ -160,6 +160,23 @@ export interface EvidenceLifecycleView {
   history: LifecycleEventView[]
 }
 
+// ---- outbound GRC sync (evidence + control-status summary) --------------
+
+export type GrcSyncOutcome = 'SUCCESS' | 'FAILED'
+
+export interface GrcSyncStatus {
+  everSynced: boolean
+  lastSyncedAt?: string | null
+  lastOutcome?: GrcSyncOutcome | string | null
+  externalReference?: string | null
+  mock: boolean
+  endpoint: string
+  evidenceRecords: number
+  controlsEvaluated: number
+  compliancePct: number
+  detail: string
+}
+
 export interface OnboardingPlanItem {
   slug: string
   name: string

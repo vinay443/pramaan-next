@@ -33,7 +33,7 @@ public record PramaanProperties(
         public record Filesystem(String root) {}
     }
 
-    public record Integrations(boolean mockEnabled, Endpoint sharepoint, Endpoint servicenow) {
+    public record Integrations(boolean mockEnabled, Endpoint sharepoint, Endpoint servicenow, Endpoint grc) {
 
         /** Connection info for an external system. Never holds credentials. */
         public record Endpoint(Boolean mock, String baseUrl) {
@@ -51,6 +51,11 @@ public record PramaanProperties(
 
         public Endpoint servicenowOrDefault() {
             return servicenow != null ? servicenow : new Endpoint(true, null);
+        }
+
+        /** Outbound GRC sync target. Mock by default — see {@code GrcSyncService}. */
+        public Endpoint grcOrDefault() {
+            return grc != null ? grc : new Endpoint(true, null);
         }
     }
 

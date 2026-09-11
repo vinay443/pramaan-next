@@ -40,6 +40,7 @@ import type {
   ComparisonReport,
   EnterpriseDashboard,
   EvidenceLifecycleView,
+  GrcSyncStatus,
   IngestRequest,
   IntegrityReport,
   LeadershipDashboard,
@@ -1633,6 +1634,56 @@ export const mockAdminUsers: AdminUserView[] = [
     updatedAt: NOW,
   },
 ]
+
+// ---- outbound GRC sync (evidence + control-status summary) --------------
+// Mirrors GrcSyncService: mock only, deterministic reference derived from the
+// current portfolio snapshot rather than a real network call.
+
+let grcSync: GrcSyncStatus | undefined
+
+function shortDigest(input: string): string {
+  let h = 0
+  for (let i = 0; i < input.length; i++) {
+    h = (Math.imul(31, h) + input.charCodeAt(i)) | 0
+  }
+  return (h >>> 0).toString(16).padStart(8, '0')
+}
+
+export function mockGrcStatus(): GrcSyncStatus {
+  return (
+    grcSync ?? {
+      everSynced: false,
+      lastSyncedAt: null,
+      lastOutcome: null,
+      externalReference: null,
+      mock: true,
+      endpoint: 'https://grc.example.com/api/ingest',
+      evidenceRecords: 0,
+      controlsEvaluated: 0,
+      compliancePct: 0,
+      detail: 'no sync has run yet',
+    }
+  )
+}
+
+export function mockGrcSync(): GrcSyncStatus {
+  const evidence = mockEvidenceDashboard()
+  const posture = mockLeadershipDashboard()
+  const reference = `grc-${shortDigest(`${evidence.records}:${posture.expected}:${posture.compliancePct}:${NOW}`)}`
+  grcSync = {
+    everSynced: true,
+    lastSyncedAt: NOW,
+    lastOutcome: 'SUCCESS',
+    externalReference: reference,
+    mock: true,
+    endpoint: 'https://grc.example.com/api/ingest',
+    evidenceRecords: evidence.records,
+    controlsEvaluated: posture.expected,
+    compliancePct: posture.compliancePct,
+    detail: `synced ${evidence.records} evidence record(s) and ${posture.expected} control result(s) (mock)`,
+  }
+  return grcSync
+}
 
 export function mockAdminUpsert(body: AdminUserUpsert): AdminUserView {
   return {
