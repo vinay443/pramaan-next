@@ -4,10 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pramaan.backend.application.ApplicationDtos.ApplicationView;
 import com.pramaan.backend.application.ApplicationService;
 import com.pramaan.backend.insight.InsightDtos.AppPosture;
+import com.pramaan.backend.insight.InsightDtos.ComplianceReport;
 import com.pramaan.backend.insight.InsightDtos.EnterpriseDashboard;
+import com.pramaan.backend.insight.InsightDtos.FrameworkPosture;
 import com.pramaan.backend.insight.InsightDtos.GroupPosture;
 import com.pramaan.backend.insight.InsightDtos.LeadershipDashboard;
 import com.pramaan.backend.insight.InsightDtos.NationalDashboard;
+import com.pramaan.backend.insight.InsightDtos.NationalRollup;
+import com.pramaan.backend.insight.InsightDtos.RegionFrameworkRow;
+import com.pramaan.backend.insight.InsightDtos.RegionGap;
 import com.pramaan.backend.insight.InsightDtos.RegionPosture;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,6 +23,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,6 +46,7 @@ public class EnterpriseDashboardService {
 
     private final LeadershipService leadership;
     private final ApplicationService applications;
+    private final ComplianceService compliance;
     private final Clock clock;
     private final List<Region> regions;
 
@@ -47,11 +54,12 @@ public class EnterpriseDashboardService {
     private record RegionsFile(List<Region> regions) {}
 
     public EnterpriseDashboardService(LeadershipService leadership, ApplicationService applications,
-                                      Clock clock, ObjectMapper mapper,
+                                      ComplianceService compliance, Clock clock, ObjectMapper mapper,
                                       @Value("${pramaan.national.regions:classpath:phase2/national-regions.json}")
                                       Resource regionsResource) {
         this.leadership = leadership;
         this.applications = applications;
+        this.compliance = compliance;
         this.clock = clock;
         try (InputStream in = regionsResource.getInputStream()) {
             this.regions = List.copyOf(mapper.readValue(in, RegionsFile.class).regions());
@@ -116,6 +124,53 @@ public class EnterpriseDashboardService {
         double natCov = totalExpected == 0 ? 0.0 : round(100.0 * totalCovered / totalExpected);
         int appCount = (int) out.stream().flatMap(rp -> rp.applications().stream()).distinct().count();
         return new NationalDashboard(clock.instant(), natPct, natCov, appCount, out);
+    }
+
+    /**
+     * UC20+ — a nationally-aggregated rollup distinct from {@link #national()}'s flat
+     * per-region table: a region x framework compliance breakdown, plus regions ranked
+     * by how far they trail the national average (furthest-behind first). Built over
+     * the same region mapping and {@link ComplianceService} per-application posture
+     * already used elsewhere — no new scoring.
+     */
+    public NationalRollup nationalRollup() {
+        NationalDashboard nationalDash = national();
+        Set<String> knownSlugs = leadership.dashboard().byApplication().stream()
+                .map(AppPosture::applicationSlug).collect(Collectors.toSet());
+
+        Map<String, int[]> byRegionFramework = new LinkedHashMap<>(); // "region|framework" -> [expected, compliant]
+        for (Region r : regions) {
+            for (String slug : r.applications()) {
+                if (!knownSlugs.contains(slug)) {
+                    continue;
+                }
+                ComplianceReport cr = compliance.forApplication(slug, null);
+                for (FrameworkPosture f : cr.byFramework()) {
+                    int[] a = byRegionFramework.computeIfAbsent(r.name() + "|" + f.framework(), k -> new int[2]);
+                    a[0] += f.expected();
+                    a[1] += f.compliant();
+                }
+            }
+        }
+        List<RegionFrameworkRow> rows = byRegionFramework.entrySet().stream()
+                .map(e -> {
+                    String[] parts = e.getKey().split("\\|", 2);
+                    int expected = e.getValue()[0];
+                    int compliant = e.getValue()[1];
+                    double pct = expected == 0 ? 0.0 : round(100.0 * compliant / expected);
+                    return new RegionFrameworkRow(parts[0], parts[1], expected, compliant, pct);
+                })
+                .sorted(Comparator.comparing(RegionFrameworkRow::region).thenComparing(RegionFrameworkRow::framework))
+                .toList();
+
+        double nationalPct = nationalDash.nationalCompliancePct();
+        List<RegionGap> laggingRegions = nationalDash.regions().stream()
+                .map(r -> new RegionGap(r.region(), r.compliancePct(), round(r.compliancePct() - nationalPct), r.rag()))
+                .sorted(Comparator.comparingDouble(RegionGap::gapVsNationalPct))
+                .toList();
+
+        return new NationalRollup(clock.instant(), nationalPct, nationalDash.nationalCompletenessPct(),
+                nationalDash.applications(), rows, laggingRegions);
     }
 
     private static List<GroupPosture> group(List<AppPosture> apps, Function<AppPosture, String> key) {

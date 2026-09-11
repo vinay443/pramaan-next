@@ -16,6 +16,7 @@ import type {
   ComparisonReport,
   EnterpriseDashboard,
   NationalDashboard,
+  NationalRollup,
   ReportInfo,
   TrendReport,
   BulkIngestResponse,
@@ -507,6 +508,15 @@ export function getNationalDashboard(): Promise<NationalDashboard> {
   return withFallback(
     () => apiFetch<NationalDashboard>('/api/v1/insight/national'),
     () => mock.mockNational(),
+    true,
+  )
+}
+
+/** Region x framework breakdown + regions ranked by gap to the national average — distinct from the flat national() table above. */
+export function getNationalRollup(): Promise<NationalRollup> {
+  return withFallback(
+    () => apiFetch<NationalRollup>('/api/v1/insight/national/rollup'),
+    () => mock.mockNationalRollup(),
     true,
   )
 }

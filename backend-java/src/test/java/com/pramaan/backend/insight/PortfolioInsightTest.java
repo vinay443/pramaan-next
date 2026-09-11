@@ -89,6 +89,21 @@ class PortfolioInsightTest {
     }
 
     @Test
+    void nationalRollupBreaksDownByRegionAndFrameworkAndRanksLaggingRegions() {
+        var rollup = enterprise.nationalRollup();
+        assertThat(rollup.byRegionFramework()).isNotEmpty();
+        assertThat(rollup.byRegionFramework()).allSatisfy(row -> {
+            assertThat(row.region()).isNotBlank();
+            assertThat(row.framework()).isNotBlank();
+            assertThat(row.compliancePct()).isBetween(0.0, 100.0);
+        });
+        assertThat(rollup.laggingRegions()).isNotEmpty();
+        // sorted so the furthest-behind region (most negative gap) comes first
+        assertThat(rollup.laggingRegions().get(0).gapVsNationalPct())
+                .isLessThanOrEqualTo(rollup.laggingRegions().get(rollup.laggingRegions().size() - 1).gapVsNationalPct());
+    }
+
+    @Test
     void uc18_auditPrepChecklistIsDeterministicAndGrounded() {
         AuditPrepReport r = auditPrep.prepare("net-banking", null);
         assertThat(r.simulated()).isTrue();

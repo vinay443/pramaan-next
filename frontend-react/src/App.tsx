@@ -19,6 +19,7 @@ import { Compliance } from './pages/Compliance'
 import { Leadership } from './pages/Leadership'
 import { Comparison } from './pages/Comparison'
 import { Enterprise } from './pages/Enterprise'
+import { NationalDashboard } from './pages/NationalDashboard'
 import { AuditPrep } from './pages/AuditPrep'
 import { Trend } from './pages/Trend'
 import { Reports } from './pages/Reports'
@@ -44,6 +45,7 @@ export function App() {
         <Route path="leadership" element={<Leadership />} />
         <Route path="comparison" element={<Comparison />} />
         <Route path="enterprise" element={<Enterprise />} />
+        <Route path="national" element={<NationalDashboard />} />
         <Route path="audit-prep" element={<AuditPrep />} />
         <Route path="trend" element={<Trend />} />
         <Route path="reports" element={<Reports />} />

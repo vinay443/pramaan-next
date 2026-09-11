@@ -42,6 +42,7 @@ const I = {
   cpu: <path d="M7 7h10v10H7zM4 10h3M4 14h3M17 10h3M17 14h3M10 4v3M14 4v3M10 17v3M14 17v3" />,
   box: <path d="M4 8l8-4 8 4-8 4-8-4ZM4 8v8l8 4 8-4V8M12 12v8" />,
   sync: <path d="M4 12a8 8 0 0 1 14-5M20 12a8 8 0 0 1-14 5M16 4v4h-4M8 20v-4h4" />,
+  globe: <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3 12h18M12 3a13 13 0 0 1 0 18M12 3a13 13 0 0 0 0 18" />,
 }
 
 function Icon({ d }: { d: ReactNode }) {
@@ -85,6 +86,7 @@ const NAV: NavGroup[] = [
       { to: '/leadership', label: 'Leadership', icon: <Icon d={I.crown} /> },
       { to: '/comparison', label: 'Comparison', icon: <Icon d={I.columns} /> },
       { to: '/enterprise', label: 'Enterprise', icon: <Icon d={I.building} /> },
+      { to: '/national', label: 'National Rollup', icon: <Icon d={I.globe} /> },
       { to: '/trend', label: 'Trend', icon: <Icon d={I.trend} /> },
       { to: '/nl-query', label: 'NL Queries', icon: <Icon d={I.chat} /> },
     ],

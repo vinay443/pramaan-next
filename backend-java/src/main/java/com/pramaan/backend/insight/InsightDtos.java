@@ -218,6 +218,19 @@ public final class InsightDtos {
                                     double nationalCompletenessPct, int applications,
                                     List<RegionPosture> regions) {}
 
+    // ---- national rollup (region x framework breakdown + lagging-region ranking) ----
+
+    public record RegionFrameworkRow(String region, String framework, int expected, int compliant,
+                                     double compliancePct) {}
+
+    /** {@code gapVsNationalPct} is negative when the region trails the national average. */
+    public record RegionGap(String region, double compliancePct, double gapVsNationalPct, String rag) {}
+
+    public record NationalRollup(Instant generatedAt, double nationalCompliancePct,
+                                 double nationalCompletenessPct, int applications,
+                                 List<RegionFrameworkRow> byRegionFramework,
+                                 List<RegionGap> laggingRegions) {}
+
     // ---- UC18 AI-assisted audit preparation ----------------------------
 
     public record PrepFinding(String category, String severity, String applicationSlug,

@@ -319,6 +319,33 @@ export interface NationalDashboard {
   regions: RegionPosture[]
 }
 
+// ---- national rollup (region x framework breakdown + lagging-region ranking) ----
+
+export interface RegionFrameworkRow {
+  region: string
+  framework: string
+  expected: number
+  compliant: number
+  compliancePct: number
+}
+
+/** gapVsNationalPct is negative when the region trails the national average. */
+export interface RegionGap {
+  region: string
+  compliancePct: number
+  gapVsNationalPct: number
+  rag: 'GREEN' | 'AMBER' | 'RED'
+}
+
+export interface NationalRollup {
+  generatedAt: string
+  nationalCompliancePct: number
+  nationalCompletenessPct: number
+  applications: number
+  byRegionFramework: RegionFrameworkRow[]
+  laggingRegions: RegionGap[]
+}
+
 // ---- UC18 AI-assisted audit preparation ------------------------------
 
 export interface PrepFinding {

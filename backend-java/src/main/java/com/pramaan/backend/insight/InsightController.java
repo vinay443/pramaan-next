@@ -11,6 +11,7 @@ import com.pramaan.backend.insight.InsightDtos.EvidenceContext;
 import com.pramaan.backend.insight.InsightDtos.EvidenceSummary;
 import com.pramaan.backend.insight.InsightDtos.LeadershipDashboard;
 import com.pramaan.backend.insight.InsightDtos.NationalDashboard;
+import com.pramaan.backend.insight.InsightDtos.NationalRollup;
 import com.pramaan.backend.insight.InsightDtos.NlQueryRequest;
 import com.pramaan.backend.insight.InsightDtos.NlQueryResult;
 import com.pramaan.backend.insight.InsightDtos.ReuseResult;
@@ -100,6 +101,12 @@ public class InsightController {
     @GetMapping("/national")
     public NationalDashboard national() {
         return enterprise.national();
+    }
+
+    /** National rollup — region x framework breakdown + regions ranked by gap to the national average. */
+    @GetMapping("/national/rollup")
+    public NationalRollup nationalRollup() {
+        return enterprise.nationalRollup();
     }
 
     /** UC18 — AI-assisted audit preparation checklist. */

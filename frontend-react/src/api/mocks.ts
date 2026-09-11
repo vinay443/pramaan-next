@@ -47,6 +47,9 @@ import type {
   LeadershipDashboard,
   LifecycleAction,
   NationalDashboard,
+  NationalRollup,
+  RegionFrameworkRow,
+  RegionGap,
   NlQueryResult,
   OnboardingPhaseKey,
   OnboardingPlan,
@@ -604,6 +607,52 @@ export function mockNational(): NationalDashboard {
     nationalCompletenessPct: te === 0 ? 0 : round1((100 * tcov) / te),
     applications: regions.flatMap((r) => r.applications).length,
     regions,
+  }
+}
+
+/** Region x framework breakdown + regions ranked by gap to the national average — distinct from mockNational()'s flat table. */
+export function mockNationalRollup(): NationalRollup {
+  const national = mockNational()
+  const byRegionFramework: RegionFrameworkRow[] = []
+  const acc = new Map<string, [number, number]>() // "region|framework" -> [expected, compliant]
+  for (const [region, slugs] of Object.entries(NAT_REGIONS)) {
+    for (const slug of slugs) {
+      const cr = mockCompliance(slug)
+      for (const f of cr.byFramework) {
+        const key = `${region}|${f.framework}`
+        const [e, c] = acc.get(key) ?? [0, 0]
+        acc.set(key, [e + f.expected, c + f.compliant])
+      }
+    }
+  }
+  for (const [key, [expected, compliant]] of [...acc.entries()].sort()) {
+    const [region, framework] = key.split('|')
+    byRegionFramework.push({
+      region,
+      framework,
+      expected,
+      compliant,
+      compliancePct: expected === 0 ? 0 : round1((100 * compliant) / expected),
+    })
+  }
+
+  const nationalPct = national.nationalCompliancePct
+  const laggingRegions: RegionGap[] = [...national.regions]
+    .map((r) => ({
+      region: r.region,
+      compliancePct: r.compliancePct,
+      gapVsNationalPct: round1(r.compliancePct - nationalPct),
+      rag: r.rag,
+    }))
+    .sort((a, b) => a.gapVsNationalPct - b.gapVsNationalPct)
+
+  return {
+    generatedAt: NOW,
+    nationalCompliancePct: national.nationalCompliancePct,
+    nationalCompletenessPct: national.nationalCompletenessPct,
+    applications: national.applications,
+    byRegionFramework,
+    laggingRegions,
   }
 }
 
