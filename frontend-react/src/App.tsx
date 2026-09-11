@@ -4,6 +4,7 @@ import { Dashboard } from './pages/Dashboard'
 import { EvidenceRepository } from './pages/EvidenceRepository'
 import { EvidenceDetail } from './pages/EvidenceDetail'
 import { EvidenceQuery } from './pages/EvidenceQuery'
+import { EvidenceLifecycle } from './pages/EvidenceLifecycle'
 import { PredefinedQueries } from './pages/PredefinedQueries'
 import { BulkUpload } from './pages/BulkUpload'
 import { Scheduler } from './pages/Scheduler'
@@ -30,6 +31,7 @@ export function App() {
         <Route index element={<Dashboard />} />
         <Route path="evidence" element={<EvidenceRepository />} />
         <Route path="evidence/query" element={<EvidenceQuery />} />
+        <Route path="evidence-lifecycle" element={<EvidenceLifecycle />} />
         <Route path="predefined-queries" element={<PredefinedQueries />} />
         <Route path="evidence/:id" element={<EvidenceDetail />} />
         <Route path="bulk-upload" element={<BulkUpload />} />

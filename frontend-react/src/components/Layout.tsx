@@ -40,6 +40,7 @@ const I = {
   power: <path d="M12 4v8M7.5 7a7 7 0 1 0 9 0" />,
   users: <path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM3 20c0-3 2.7-5 6-5s6 2 6 5M16 4.5a3.5 3.5 0 0 1 0 7M21 20c0-2.4-1.6-4.2-4-4.8" />,
   cpu: <path d="M7 7h10v10H7zM4 10h3M4 14h3M17 10h3M17 14h3M10 4v3M14 4v3M10 17v3M14 17v3" />,
+  box: <path d="M4 8l8-4 8 4-8 4-8-4ZM4 8v8l8 4 8-4V8M12 12v8" />,
 }
 
 function Icon({ d }: { d: ReactNode }) {
@@ -64,6 +65,7 @@ const NAV: NavGroup[] = [
       { to: '/bulk-upload', label: 'Bulk Upload', icon: <Icon d={I.upload} /> },
       { to: '/scheduler', label: 'Scheduler', icon: <Icon d={I.clock} /> },
       { to: '/reuse', label: 'Evidence Reuse', icon: <Icon d={I.recycle} /> },
+      { to: '/evidence-lifecycle', label: 'Evidence Lifecycle', icon: <Icon d={I.box} /> },
     ],
   },
   {
