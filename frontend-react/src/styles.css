@@ -146,6 +146,19 @@ code {
   font-weight: 500;
 }
 
+.persona-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px 14px;
+}
+
+.persona-logout {
+  padding: 4px 9px;
+  font-size: var(--fs-xs);
+}
+
 .sidebar nav {
   display: flex;
   flex-direction: column;
@@ -1027,5 +1040,102 @@ pre.json {
 
   .item-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ---- persona login -------------------------------------------- */
+
+.persona-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 40px 20px;
+}
+
+.persona-login-panel {
+  width: 100%;
+  max-width: 920px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+  padding: 36px 40px 32px;
+}
+
+.persona-login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.persona-login-brand .brand-mark {
+  width: 34px;
+  height: 34px;
+  font-size: 17px;
+  border-radius: 9px;
+}
+
+.persona-login-title {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.persona-login-subtitle {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.persona-login-heading {
+  margin: 0 0 4px;
+  font-size: var(--fs-title);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.persona-login-lead {
+  margin: 0 0 22px;
+}
+
+.persona-login-panel select {
+  width: 100%;
+  max-width: 360px;
+}
+
+.persona-login-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.persona-login-actions .primary {
+  padding: 9px 20px;
+}
+
+.persona-login-footer {
+  margin-top: 22px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .persona-login-panel {
+    padding: 26px 20px 24px;
+  }
+
+  .persona-login-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .persona-login-actions .primary {
+    width: 100%;
   }
 }

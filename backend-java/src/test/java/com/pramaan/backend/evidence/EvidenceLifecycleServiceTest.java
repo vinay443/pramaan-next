@@ -44,23 +44,27 @@ class EvidenceLifecycleServiceTest {
     @Test
     void draftSubmitApproveWithReviewerAndTrail() {
         UUID id = ingest("OS-AUDIT-LOGGING", "{\"status\":\"PASS\"}", Instant.now());
-        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.SUBMIT, "owner", "ready for review"));
+        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.SUBMIT, "owner", "ready for review"),
+                "APP_OWNER", null);
         EvidenceLifecycleView v = lifecycle.transition(id,
-                new LifecycleTransitionRequest(LifecycleAction.APPROVE, "auditor", "looks good"));
+                new LifecycleTransitionRequest(LifecycleAction.APPROVE, "auditor", "looks good"),
+                "AUDITOR", null);
         assertThat(v.state()).isEqualTo("APPROVED");
         assertThat(v.reviewedBy()).isEqualTo("auditor");
         assertThat(v.history()).hasSize(3);
 
         assertThatThrownBy(() -> lifecycle.transition(id,
-                new LifecycleTransitionRequest(LifecycleAction.APPROVE, "x", null)))
+                new LifecycleTransitionRequest(LifecycleAction.APPROVE, "x", null), "AUDITOR", null))
                 .isInstanceOf(ApiException.class);
     }
 
     @Test
     void newVersionOfApprovedEvidenceForcesReReview() {
         UUID id = ingest("MW-HSTS", "{\"v\":1}", Instant.now());
-        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.SUBMIT, "o", null));
-        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.APPROVE, "a", null));
+        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.SUBMIT, "o", null),
+                "APP_OWNER", null);
+        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.APPROVE, "a", null),
+                "AUDITOR", null);
         // same evidence key, different content -> new version
         UUID same = ingest("MW-HSTS", "{\"v\":2}", Instant.now());
         assertThat(same).isEqualTo(id);
@@ -71,8 +75,10 @@ class EvidenceLifecycleServiceTest {
     void approvedEvidencePastRetentionReadsAsExpired() {
         UUID id = ingest("OS-AUTH-NO-TRUST", "{\"old\":true}",
                 Instant.now().minus(500, ChronoUnit.DAYS));
-        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.SUBMIT, "o", null));
-        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.APPROVE, "a", null));
+        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.SUBMIT, "o", null),
+                "APP_OWNER", null);
+        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.APPROVE, "a", null),
+                "AUDITOR", null);
         EvidenceLifecycleView v = lifecycle.get(id);
         assertThat(v.effectiveState()).isEqualTo("EXPIRED");
         assertThat(v.expired()).isTrue();

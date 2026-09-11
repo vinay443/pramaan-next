@@ -142,8 +142,10 @@ class PortfolioInsightTest {
     @Test
     void uc19_trendSnapshotsAndClosureMetrics() {
         UUID id = ingest("payments", "TLS-CERT-EXPIRY", "C-SITE", "{\"v\":1}");
-        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.SUBMIT, "o", null));
-        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.APPROVE, "a", null));
+        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.SUBMIT, "o", null),
+                "APP_OWNER", null);
+        lifecycle.transition(id, new LifecycleTransitionRequest(LifecycleAction.APPROVE, "a", null),
+                "AUDITOR", null);
 
         trend.snapshot();
         trend.snapshot();

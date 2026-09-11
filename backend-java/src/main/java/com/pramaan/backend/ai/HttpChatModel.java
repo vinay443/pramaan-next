@@ -5,6 +5,7 @@ import com.pramaan.backend.ai.AiProperties.Chat;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -33,8 +34,12 @@ public class HttpChatModel implements ChatModel {
 
     @Override
     public String complete(String systemPrompt, String userPrompt) {
-        return "anthropic".equals(cfg.providerOrDefault()) ? anthropic(systemPrompt, userPrompt)
-                : openai(systemPrompt, userPrompt);
+        try {
+            return "anthropic".equals(cfg.providerOrDefault()) ? anthropic(systemPrompt, userPrompt)
+                    : openai(systemPrompt, userPrompt);
+        } catch (ResourceAccessException e) {
+            throw new AiUnavailableException("chat model (" + name() + ") unreachable at " + cfg.baseUrl(), e);
+        }
     }
 
     private String openai(String system, String user) {

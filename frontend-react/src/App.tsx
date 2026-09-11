@@ -1,5 +1,11 @@
 import { Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { AppOwnerLayout } from './components/AppOwnerLayout'
+import { PersonaLogin } from './pages/PersonaLogin'
+import { AppOwnerDashboard } from './pages/AppOwnerDashboard'
+import { CompliancePending } from './pages/CompliancePending'
+import { AppOwnerNotifications } from './pages/AppOwnerNotifications'
+import { AppOwnerReports } from './pages/AppOwnerReports'
 import { Dashboard } from './pages/Dashboard'
 import { EvidenceRepository } from './pages/EvidenceRepository'
 import { EvidenceDetail } from './pages/EvidenceDetail'
@@ -29,8 +35,16 @@ import { NlQuery } from './pages/NlQuery'
 export function App() {
   return (
     <Routes>
+      <Route path="/" element={<PersonaLogin />} />
+      <Route path="login" element={<PersonaLogin />} />
+      <Route element={<AppOwnerLayout />}>
+        <Route path="app-owner" element={<AppOwnerDashboard />} />
+        <Route path="app-owner/compliance-pending" element={<CompliancePending />} />
+        <Route path="app-owner/notifications" element={<AppOwnerNotifications />} />
+        <Route path="app-owner/reports" element={<AppOwnerReports />} />
+      </Route>
       <Route element={<Layout />}>
-        <Route index element={<Dashboard />} />
+        <Route path="dashboard" element={<Dashboard />} />
         <Route path="evidence" element={<EvidenceRepository />} />
         <Route path="evidence/query" element={<EvidenceQuery />} />
         <Route path="evidence-lifecycle" element={<EvidenceLifecycle />} />

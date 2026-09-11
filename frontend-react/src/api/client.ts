@@ -4,13 +4,23 @@ export class ApiError extends Error {
   status: number
   /** True when the backend could not be reached at all (network / DNS / refused). */
   offline: boolean
+  /**
+   * True when the backend responded (it is up, data is live) but a configured
+   * AI/embedding service it depends on is unreachable — distinct from `offline`.
+   * See GlobalExceptionHandler.AiErrorBody on the backend.
+   */
+  aiUnavailable: boolean
   body?: unknown
 
-  constructor(message: string, opts: { status?: number; offline?: boolean; body?: unknown } = {}) {
+  constructor(
+    message: string,
+    opts: { status?: number; offline?: boolean; aiUnavailable?: boolean; body?: unknown } = {},
+  ) {
     super(message)
     this.name = 'ApiError'
     this.status = opts.status ?? 0
     this.offline = opts.offline ?? false
+    this.aiUnavailable = opts.aiUnavailable ?? false
     this.body = opts.body
   }
 }
@@ -40,6 +50,8 @@ export interface RequestOptions {
   body?: unknown
   signal?: AbortSignal
   timeoutMs?: number
+  /** Extra request headers (e.g. the App-Owner identity headers) merged over the defaults. */
+  headers?: Record<string, string>
 }
 
 export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
@@ -51,7 +63,12 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
   try {
     res = await fetch(url, {
       method: opts.method ?? 'GET',
-      headers: opts.body !== undefined ? { 'Content-Type': 'application/json', Accept: 'application/json' } : { Accept: 'application/json' },
+      headers: {
+        ...(opts.body !== undefined
+          ? { 'Content-Type': 'application/json', Accept: 'application/json' }
+          : { Accept: 'application/json' }),
+        ...opts.headers,
+      },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       signal: opts.signal ?? controller.signal,
     })
@@ -69,7 +86,11 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
       parsed && typeof parsed === 'object' && parsed !== null && 'message' in parsed
         ? String((parsed as { message: unknown }).message)
         : `${res.status} ${res.statusText}`
-    throw new ApiError(msg, { status: res.status, body: parsed })
+    const aiUnavailable =
+      parsed !== null &&
+      typeof parsed === 'object' &&
+      (parsed as { aiUnavailable?: unknown }).aiUnavailable === true
+    throw new ApiError(msg, { status: res.status, aiUnavailable, body: parsed })
   }
   return parsed as T
 }

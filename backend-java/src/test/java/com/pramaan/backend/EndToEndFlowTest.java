@@ -114,11 +114,13 @@ class EndToEndFlowTest {
                 .andExpect(jsonPath("$.matchedQuery").value("evidence-lookup"))
                 .andExpect(jsonPath("$.simulated").value(true));
 
-        // 11. LIFECYCLE — review workflow + audit trail
+        // 11. LIFECYCLE — review workflow + audit trail (RBAC via X-User-Role)
         mvc.perform(post("/api/v1/evidence/{id}/lifecycle", evidenceId).contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Role", "APP_OWNER")
                         .content("{\"action\":\"SUBMIT\",\"actor\":\"owner\"}"))
                 .andExpect(jsonPath("$.state").value("SUBMITTED"));
         mvc.perform(post("/api/v1/evidence/{id}/lifecycle", evidenceId).contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Role", "AUDITOR")
                         .content("{\"action\":\"APPROVE\",\"actor\":\"auditor\"}"))
                 .andExpect(jsonPath("$.state").value("APPROVED"))
                 .andExpect(jsonPath("$.history[0].action").value("INGESTED"));

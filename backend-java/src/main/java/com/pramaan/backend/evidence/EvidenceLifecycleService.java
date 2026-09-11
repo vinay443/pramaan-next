@@ -48,14 +48,17 @@ public class EvidenceLifecycleService {
 
     private final EvidenceRecordRepository records;
     private final EvidenceLifecycleEventRepository events;
+    private final EvidenceApprovalAuthorizer authorizer;
     private final Clock clock;
     private final int retentionDays;
 
     public EvidenceLifecycleService(EvidenceRecordRepository records,
                                     EvidenceLifecycleEventRepository events,
+                                    EvidenceApprovalAuthorizer authorizer,
                                     Clock clock, PramaanProperties props) {
         this.records = records;
         this.events = events;
+        this.authorizer = authorizer;
         this.clock = clock;
         this.retentionDays = props.evidenceOrDefault().retentionDaysOrDefault();
     }
@@ -78,8 +81,15 @@ public class EvidenceLifecycleService {
         }
     }
 
+    /**
+     * @param userRole RBAC — the {@code X-User-Role} request header. Required for
+     *     SUBMIT / APPROVE / REJECT; ignored for RETIRE / RESET.
+     * @param userFramework RBAC — the optional {@code X-User-Framework} header, checked
+     *     for consistency against a scoped role's own configured scope.
+     */
     @Transactional
-    public EvidenceLifecycleView transition(UUID evidenceId, LifecycleTransitionRequest req) {
+    public EvidenceLifecycleView transition(UUID evidenceId, LifecycleTransitionRequest req,
+                                            String userRole, String userFramework) {
         if (req == null || req.action() == null) {
             throw ApiException.badRequest("action is required (SUBMIT | APPROVE | REJECT | RETIRE | RESET)");
         }
@@ -89,6 +99,7 @@ public class EvidenceLifecycleService {
         if (!ALLOWED_FROM.get(req.action()).contains(from)) {
             throw ApiException.conflict("cannot " + req.action() + " evidence in state " + from);
         }
+        authorizer.authorize(req.action(), r, userRole, userFramework);
         Instant now = clock.instant();
         EvidenceLifecycleState to = TARGET.get(req.action());
         r.applyLifecycle(to, req.actor(), req.note(), now);

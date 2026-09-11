@@ -1,5 +1,6 @@
 package com.pramaan.backend.common;
 
+import com.pramaan.backend.ai.AiUnavailableException;
 import jakarta.validation.ConstraintViolationException;
 import java.time.Instant;
 import java.util.Map;
@@ -20,9 +21,33 @@ public class GlobalExceptionHandler {
         }
     }
 
+    /**
+     * Same shape as {@link ErrorBody} plus {@code aiUnavailable: true} — a signal the
+     * frontend can key off to show "AI service unavailable" instead of treating this
+     * like the whole backend being down (see {@code withFallback} in api/endpoints.ts).
+     */
+    public record AiErrorBody(Instant timestamp, int status, String error, String message,
+                              boolean aiUnavailable) {}
+
     @ExceptionHandler(ApiException.class)
     ResponseEntity<ErrorBody> handleApi(ApiException ex) {
         return ResponseEntity.status(ex.status()).body(ErrorBody.of(ex.status(), ex.getMessage()));
+    }
+
+    /**
+     * The configured AI/embedding HTTP endpoint (e.g. a local Ollama) is unreachable.
+     * 503, not 500 — the backend and evidence data are fine, only the AI feature is
+     * degraded.
+     */
+    @ExceptionHandler(AiUnavailableException.class)
+    ResponseEntity<AiErrorBody> handleAiUnavailable(AiUnavailableException ex) {
+        String msg = "The configured AI/embedding service is unreachable right now. "
+                + "The backend and evidence data are working normally — this only disables "
+                + "AI-generated features (summaries, NL query, audit-prep narrative, similarity search). "
+                + "Check that the service is running and reachable, then retry.";
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new AiErrorBody(Instant.now(), HttpStatus.SERVICE_UNAVAILABLE.value(),
+                        "AI Service Unavailable", msg, true));
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})

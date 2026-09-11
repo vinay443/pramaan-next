@@ -143,6 +143,13 @@ public final class EvidenceDtos {
 
     public enum LifecycleAction { SUBMIT, APPROVE, REJECT, RETIRE, RESET }
 
+    /**
+     * {@code REJECT} (-> {@link com.pramaan.backend.evidence.domain.EvidenceLifecycleState#REJECTED})
+     * and {@code note} already cover, respectively, evidence-approval RBAC's required
+     * REJECTED state and reviewer "observation" text — not duplicated as separate
+     * fields. {@code note} is what a REJECT-ing AUDITOR / *_AUDITOR / *_OFFICER
+     * records as their observation; see {@code EvidenceApprovalAuthorizer}.
+     */
     public record LifecycleTransitionRequest(LifecycleAction action, String actor, String note) {}
 
     public record LifecycleEventView(String fromState, String toState, String action,

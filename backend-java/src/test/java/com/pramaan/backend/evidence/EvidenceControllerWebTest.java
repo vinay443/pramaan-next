@@ -71,17 +71,20 @@ class EvidenceControllerWebTest {
                 .andExpect(jsonPath("$.history[0].action").value("INGESTED"));
 
         mvc.perform(post("/api/v1/evidence/{id}/lifecycle", id).contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Role", "APP_OWNER")
                         .content("{\"action\":\"SUBMIT\",\"actor\":\"owner\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("SUBMITTED"));
 
         mvc.perform(post("/api/v1/evidence/{id}/lifecycle", id).contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Role", "AUDITOR")
                         .content("{\"action\":\"APPROVE\",\"actor\":\"auditor\",\"note\":\"ok\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("APPROVED"))
                 .andExpect(jsonPath("$.reviewedBy").value("auditor"));
 
         mvc.perform(post("/api/v1/evidence/{id}/lifecycle", id).contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Role", "AUDITOR")
                         .content("{\"action\":\"APPROVE\",\"actor\":\"x\"}"))
                 .andExpect(status().isConflict());
     }

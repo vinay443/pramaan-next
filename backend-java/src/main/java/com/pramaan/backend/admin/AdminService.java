@@ -5,6 +5,10 @@ import com.pramaan.backend.admin.AdminDtos.UserUpsertRequest;
 import com.pramaan.backend.admin.AdminDtos.UserView;
 import com.pramaan.backend.common.ApiException;
 import com.pramaan.backend.config.PramaanProperties;
+import com.pramaan.backend.evidence.domain.ApprovalRoleScope;
+import com.pramaan.backend.evidence.domain.ApprovalUser;
+import com.pramaan.backend.evidence.repo.ApprovalRoleScopeRepository;
+import com.pramaan.backend.evidence.repo.ApprovalUserRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -44,9 +48,14 @@ public class AdminService {
     private final List<String> roles;
     private final Set<String> roleLookup;
     private final Clock clock;
+    private final ApprovalRoleScopeRepository approvalRoleScopes;
+    private final ApprovalUserRepository approvalUsers;
 
-    public AdminService(PramaanProperties props, Clock clock) {
+    public AdminService(PramaanProperties props, Clock clock, ApprovalRoleScopeRepository approvalRoleScopes,
+                        ApprovalUserRepository approvalUsers) {
         this.clock = clock;
+        this.approvalRoleScopes = approvalRoleScopes;
+        this.approvalUsers = approvalUsers;
         List<String> configured = props.admin() == null ? null : props.admin().roles();
         this.roles = configured == null || configured.isEmpty()
                 ? DEFAULT_ROLES
@@ -68,24 +77,45 @@ public class AdminService {
         log.info("admin registry seeded: {} users, {} roles", users.size(), roles.size());
     }
 
+    /**
+     * The configured admin role catalogue, plus the evidence-approval RBAC roles
+     * ({@code ApprovalRoleScope} — seeded by {@code ApprovalRbacSeedRunner}) not
+     * already present. Reuses this one Users & Roles surface rather than adding a
+     * second roles endpoint for the approval feature.
+     */
     public List<RoleView> roles() {
-        return roles.stream()
+        List<RoleView> out = new ArrayList<>(roles.stream()
                 .map(r -> new RoleView(r, ROLE_DESCRIPTIONS.getOrDefault(r, "")))
-                .toList();
+                .toList());
+        for (ApprovalRoleScope s : approvalRoleScopes.findAll()) {
+            if (roleLookup.contains(s.getRole())) {
+                continue; // already in the configured catalogue (e.g. AUDITOR, APP_OWNER)
+            }
+            out.add(new RoleView(s.getRole(), s.getDescription()));
+        }
+        return out;
     }
 
+    /** In-memory personas, plus the evidence-approval RBAC demo users (same reuse rationale as {@link #roles()}). */
     public List<UserView> listUsers() {
         List<UserView> out = new ArrayList<>(users.values());
+        for (ApprovalUser u : approvalUsers.findAllByOrderByUsernameAsc()) {
+            out.add(new UserView(u.getUsername(), u.getDisplayName(), null,
+                    List.of(u.getRole()), true, u.getCreatedAt(), u.getCreatedAt()));
+        }
         out.sort((a, b) -> a.username().compareTo(b.username()));
         return out;
     }
 
     public UserView getUser(String username) {
         UserView u = users.get(key(username));
-        if (u == null) {
-            throw ApiException.notFound("Unknown user: " + username);
+        if (u != null) {
+            return u;
         }
-        return u;
+        return approvalUsers.findById(key(username))
+                .map(a -> new UserView(a.getUsername(), a.getDisplayName(), null,
+                        List.of(a.getRole()), true, a.getCreatedAt(), a.getCreatedAt()))
+                .orElseThrow(() -> ApiException.notFound("Unknown user: " + username));
     }
 
     public UserView upsert(UserUpsertRequest req) {
@@ -128,7 +158,7 @@ public class AdminService {
                 continue;
             }
             String norm = r.trim().toUpperCase(Locale.ROOT);
-            if (!roleLookup.contains(norm)) {
+            if (!roleLookup.contains(norm) && !approvalRoleScopes.existsById(norm)) {
                 throw ApiException.badRequest("unknown role '" + r + "'; allowed: " + roles);
             }
             seen.putIfAbsent(norm, Boolean.TRUE);

@@ -3,6 +3,7 @@ package com.pramaan.backend.ai;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.pramaan.backend.ai.AiProperties.Embedding;
 import java.util.Map;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -21,13 +22,18 @@ public class HttpEmbeddingModel implements EmbeddingModel {
 
     @Override
     public float[] embed(String text) {
-        JsonNode resp = http.post()
-                .uri(cfg.baseUrl() + "/embeddings")
-                .header("Authorization", "Bearer " + cfg.apiKey())
-                .header("Content-Type", "application/json")
-                .body(Map.of("model", cfg.model(), "input", text == null ? "" : text))
-                .retrieve()
-                .body(JsonNode.class);
+        JsonNode resp;
+        try {
+            resp = http.post()
+                    .uri(cfg.baseUrl() + "/embeddings")
+                    .header("Authorization", "Bearer " + cfg.apiKey())
+                    .header("Content-Type", "application/json")
+                    .body(Map.of("model", cfg.model(), "input", text == null ? "" : text))
+                    .retrieve()
+                    .body(JsonNode.class);
+        } catch (ResourceAccessException e) {
+            throw new AiUnavailableException("embedding model (" + name() + ") unreachable at " + cfg.baseUrl(), e);
+        }
         JsonNode arr = resp == null ? null : resp.at("/data/0/embedding");
         if (arr == null || !arr.isArray()) {
             throw new IllegalStateException("embeddings API returned no vector");

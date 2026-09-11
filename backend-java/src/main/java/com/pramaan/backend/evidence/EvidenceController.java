@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -146,10 +147,18 @@ public class EvidenceController {
         return lifecycle.get(id);
     }
 
+    /**
+     * RBAC — identity is simulated (no login) via {@code X-User-Role}, required for
+     * SUBMIT / APPROVE / REJECT; {@code X-User-Framework} is optional, for a scoped
+     * role to declare its framework (checked against the role's own scope).
+     */
     @PostMapping("/{id}/lifecycle")
     public EvidenceLifecycleView transition(@PathVariable UUID id,
-                                            @RequestBody LifecycleTransitionRequest req) {
-        return lifecycle.transition(id, req);
+                                            @RequestBody LifecycleTransitionRequest req,
+                                            @RequestHeader(value = "X-User-Role", required = false) String userRole,
+                                            @RequestHeader(value = "X-User-Framework", required = false)
+                                            String userFramework) {
+        return lifecycle.transition(id, req, userRole, userFramework);
     }
 
     @GetMapping("/{id}/verify")

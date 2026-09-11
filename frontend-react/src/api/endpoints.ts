@@ -86,6 +86,14 @@ const RETRY_FIRST_PROBE = (() => {
 let firstProbePending = true
 
 function isRecoverable(e: unknown, fallbackOnHttpError: boolean): e is ApiError {
+  // An AI-unavailable failure means the backend IS up and the data IS live — only a
+  // configured AI/embedding service is unreachable. Falling back to mock here would
+  // both mislabel a live backend as "unavailable" and (for endpoints keyed by a
+  // specific record, e.g. evidence summary) substitute an unrelated fixture. Let it
+  // propagate so the caller shows the real "AI service unavailable" message instead.
+  if (e instanceof ApiError && e.aiUnavailable) {
+    return false
+  }
   return e instanceof ApiError && (e.offline || (fallbackOnHttpError && e.status >= 400))
 }
 

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getDataSource } from './dataSource'
-import { listAgents, listApplications, listEvidence, runEvidenceQuery } from './endpoints'
+import { getEvidenceSummary, listAgents, listApplications, listEvidence, runEvidenceQuery } from './endpoints'
 
 function okJson(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
@@ -45,6 +45,44 @@ describe('endpoint mock fallback', () => {
     )
 
     await expect(runEvidenceQuery('bogus')).rejects.toThrow(/unknown query/)
+  })
+
+  it('does NOT fall back to mock on an AI-unavailable (503) response — backend is live, only AI is down', async () => {
+    // First, a genuine live success — establishes dataSource === 'live'.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        okJson({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 1 }),
+      ),
+    )
+    await listEvidence({ applicationSlug: 'payments' })
+    expect(getDataSource()).toBe('live')
+
+    // Now the AI-dependent call fails with the backend's distinct 503 shape.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            status: 503,
+            error: 'AI Service Unavailable',
+            message: 'The configured AI/embedding service is unreachable right now.',
+            aiUnavailable: true,
+          }),
+          { status: 503 },
+        ),
+      ),
+    )
+
+    // Must reject with the backend's real message — not silently substitute a
+    // hardcoded, unrelated fixture (the bug: evidence summary for a live evidenceId
+    // used to come back as ev-001 / OS-SSH-ROOT-LOGIN / net-banking).
+    await expect(getEvidenceSummary('a-real-evidence-id-from-postgres')).rejects.toThrow(
+      /AI\/embedding service is unreachable/,
+    )
+    // The backend is up and evidence data is live — this specific AI failure must
+    // not flip the global "Backend unavailable" banner.
+    expect(getDataSource()).toBe('live')
   })
 
   it('listAgents falls back to shared fixtures when the backend returns 404', async () => {

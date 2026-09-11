@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useDataSource } from '../hooks/useDataSource'
+import { PERSONA_STORAGE_KEY, PERSONAS } from '../pages/PersonaLogin'
 
 interface NavItem {
   to: string
@@ -56,12 +57,12 @@ function Icon({ d }: { d: ReactNode }) {
 const NAV: NavGroup[] = [
   {
     heading: 'Overview',
-    items: [{ to: '/', label: 'Dashboard', end: true, icon: <Icon d={I.gauge} /> }],
+    items: [{ to: '/dashboard', label: 'Dashboard', end: true, icon: <Icon d={I.gauge} /> }],
   },
   {
     heading: 'Evidence',
     items: [
-      { to: '/evidence', label: 'Repository', icon: <Icon d={I.archive} /> },
+      { to: '/evidence', label: 'Repository', end: true, icon: <Icon d={I.archive} /> },
       { to: '/evidence/query', label: 'Evidence Query', icon: <Icon d={I.search} /> },
       { to: '/predefined-queries', label: 'Predefined Queries', icon: <Icon d={I.list} /> },
       { to: '/bulk-upload', label: 'Bulk Upload', icon: <Icon d={I.upload} /> },
@@ -105,6 +106,15 @@ const NAV: NavGroup[] = [
 
 export function Layout() {
   const source = useDataSource()
+  const navigate = useNavigate()
+  const personaCode = localStorage.getItem(PERSONA_STORAGE_KEY)
+  const persona = PERSONAS.find((p) => p.code === personaCode)
+
+  function handleLogout() {
+    localStorage.removeItem(PERSONA_STORAGE_KEY)
+    navigate('/login')
+  }
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -112,6 +122,16 @@ export function Layout() {
           <span className="brand-mark">P</span>
           Pramaan <span className="brand-dim">Next</span>
         </div>
+        {persona ? (
+          <div className="persona-bar">
+            <span className="pill pill-muted">
+              {persona.name} ({persona.code})
+            </span>
+            <button type="button" className="ghost persona-logout" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
+        ) : null}
         <nav aria-label="Primary">
           {NAV.map((group) => (
             <div className="nav-group" key={group.heading}>

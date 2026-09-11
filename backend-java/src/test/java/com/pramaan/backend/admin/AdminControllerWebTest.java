@@ -26,8 +26,25 @@ class AdminControllerWebTest {
     void rolesCatalogueIsCanonicalAndReadOnly() throws Exception {
         mvc.perform(get("/api/v1/admin/roles"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(5))
+                .andExpect(jsonPath("$.length()").value(8))
                 .andExpect(jsonPath("$[?(@.id=='ADMIN')].description").exists());
+    }
+
+    /**
+     * The evidence-approval RBAC roles are reused into this same catalogue — not a
+     * second endpoint. Exactly 3 new ids (ISG_OFFICER, PCIDSS_AUDITOR, DPSC_AUDITOR)
+     * are appended; AUDITOR / APP_OWNER already exist in the configured catalogue and
+     * are not duplicated — proven by the total staying at 8 (5 configured + 3 new),
+     * asserted in {@link #rolesCatalogueIsCanonicalAndReadOnly()}.
+     */
+    @Test
+    void evidenceApprovalRolesAreMergedIntoTheSameCatalogue() throws Exception {
+        mvc.perform(get("/api/v1/admin/roles"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(8))
+                .andExpect(jsonPath("$[?(@.id=='ISG_OFFICER')].description").exists())
+                .andExpect(jsonPath("$[?(@.id=='PCIDSS_AUDITOR')].description").exists())
+                .andExpect(jsonPath("$[?(@.id=='DPSC_AUDITOR')].description").exists());
     }
 
     @Test
@@ -35,6 +52,22 @@ class AdminControllerWebTest {
         mvc.perform(get("/api/v1/admin/users"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.username=='admin')].roles[0]").value("ADMIN"));
+    }
+
+    /** The 5 evidence-approval RBAC demo users are reused into this same roster. */
+    @Test
+    void evidenceApprovalDemoUsersAreMergedIntoTheSameRoster() throws Exception {
+        mvc.perform(get("/api/v1/admin/users"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.username=='app.owner.demo')].roles[0]").value("APP_OWNER"))
+                .andExpect(jsonPath("$[?(@.username=='auditor.demo')].roles[0]").value("AUDITOR"))
+                .andExpect(jsonPath("$[?(@.username=='isg.officer.demo')].roles[0]").value("ISG_OFFICER"))
+                .andExpect(jsonPath("$[?(@.username=='pcidss.auditor.demo')].roles[0]").value("PCIDSS_AUDITOR"))
+                .andExpect(jsonPath("$[?(@.username=='dpsc.auditor.demo')].roles[0]").value("DPSC_AUDITOR"));
+
+        mvc.perform(get("/api/v1/admin/users/isg.officer.demo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("Demo ISG Officer"));
     }
 
     @Test
