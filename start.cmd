@@ -1,6 +1,10 @@
 @echo off
 REM Pramaan Next startup helper (Windows wrapper).
 REM Runs start.sh with Git Bash. Requires Git for Windows.
+REM
+REM Demo mode: start.sh prompts "Enable demo mode? [y/N]" after the D/L/R choice
+REM and, if enabled, auto-seeds demo evidence. To skip the prompt, set it first:
+REM     set DEMO_MODE=true  &  start.cmd      (this env var is passed through to bash)
 setlocal
 set "HERE=%~dp0"
 

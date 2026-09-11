@@ -127,6 +127,37 @@ export function DataTable<T>({
   )
 }
 
+/** Horizontal progress bar (0-100%). Same visual language as the pipeline stepper's
+ *  markers/fills — used for overall progress where a stepper is too granular. */
+export function Meter({
+  value,
+  max = 100,
+  label,
+  tone = 'accent',
+}: {
+  value: number
+  max?: number
+  label?: string
+  tone?: 'accent' | 'ok' | 'bad'
+}) {
+  const pct = max <= 0 ? 0 : Math.max(0, Math.min(100, (value / max) * 100))
+  return (
+    <div className="meter">
+      <div
+        className="meter-track"
+        role="progressbar"
+        aria-valuenow={Math.round(pct)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={label}
+      >
+        <div className={`meter-fill meter-${tone}`} style={{ width: `${pct}%` }} />
+      </div>
+      {label ? <div className="meter-label">{label}</div> : null}
+    </div>
+  )
+}
+
 export function JsonBlock({ value }: { value: unknown }) {
   return <pre className="json">{JSON.stringify(value, null, 2)}</pre>
 }

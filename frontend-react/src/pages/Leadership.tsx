@@ -41,7 +41,14 @@ export function Leadership() {
               rows={d.byApplication}
               rowKey={(a) => a.applicationSlug}
               columns={[
-                { header: 'Application', cell: (a) => <Link to={`/compliance`}>{a.name}</Link> },
+                {
+                  header: 'Application',
+                  cell: (a) => (
+                    <Link to={`/compliance?applicationSlug=${encodeURIComponent(a.applicationSlug)}`}>
+                      {a.name}
+                    </Link>
+                  ),
+                },
                 { header: 'Criticality', cell: (a) => <StatusPill status={a.criticality} /> },
                 { header: 'Compliance %', cell: (a) => `${a.compliancePct}%`, align: 'right' },
                 { header: 'Completeness %', cell: (a) => `${a.completenessPct}%`, align: 'right' },

@@ -1,12 +1,23 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { getCompliance, listApplications } from '../api/endpoints'
 import { useAsync } from '../hooks/useAsync'
 import { DataTable, Empty, ErrorNote, Loading, Section, StatCard, StatusPill } from '../components/ui'
 
 export function Compliance() {
   const apps = useAsync(() => listApplications(), [])
+  // ?applicationSlug= seeds the picker so the Leadership drill-down lands on the
+  // application that was clicked, not on whichever app happens to sort first.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const fromUrl = searchParams.get('applicationSlug') ?? ''
   const [slug, setSlug] = useState('')
-  const effectiveSlug = slug || apps.data?.[0]?.slug || ''
+  const effectiveSlug = slug || fromUrl || apps.data?.[0]?.slug || ''
+
+  function pick(next: string) {
+    setSlug(next)
+    // Keep the URL in step so the view stays shareable / reloadable.
+    setSearchParams(next ? { applicationSlug: next } : {}, { replace: true })
+  }
 
   const report = useAsync(
     () => (effectiveSlug ? getCompliance(effectiveSlug) : Promise.resolve(undefined)),
@@ -25,7 +36,7 @@ export function Compliance() {
         <div className="filter-row">
           <label>
             Application
-            <select aria-label="Application" value={effectiveSlug} onChange={(e) => setSlug(e.target.value)}>
+            <select aria-label="Application" value={effectiveSlug} onChange={(e) => pick(e.target.value)}>
               {(apps.data ?? []).map((a) => (
                 <option key={a.slug} value={a.slug}>
                   {a.name}
@@ -44,7 +55,11 @@ export function Compliance() {
           <div className="stat-grid">
             <StatCard label="Expected controls" value={report.data.expected} />
             <StatCard label="Compliant" value={report.data.compliant} />
-            <StatCard label="Compliance" value={`${report.data.compliancePct}%`} />
+            <StatCard
+              label="Compliance"
+              value={`${report.data.compliancePct}%`}
+              hint={`${report.data.compliant} compliant / ${report.data.expected} expected`}
+            />
           </div>
 
           <Section title="By framework">

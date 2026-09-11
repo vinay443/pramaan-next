@@ -78,16 +78,34 @@ export function NlQuery() {
 
       {error ? <ErrorNote message={error} /> : null}
 
-      {result ? (
+      {result && !result.supported ? (
+        <Section title="Unsupported question">
+          <div className="banner banner-warn" role="status">
+            <span>{result.narrative}</span>
+          </div>
+          <p className="muted small">Supported question types:</p>
+          <ul>
+            {result.supportedQuestionTypes.map((t) => (
+              <li key={t} className="small">
+                {t}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      ) : null}
+
+      {result && result.supported ? (
         <>
           <Section title="Answer">
             <p>
               <span className="muted">Interpreted as:</span> {result.interpretedAs}{' '}
               <StatusPill status={result.matchedQuery} />
               {result.simulated ? <StatusPill status="simulated" /> : null}
+              <StatusPill status={result.modelGenerated ? 'model-generated' : 'prompt digest'} />
             </p>
             <p className="answer">{result.narrative}</p>
             <p className="muted small">model {result.model}</p>
+            <RetrievalProvenance answer={result.answer} />
             {Array.isArray((result.answer as Record<string, unknown>).evidenceCitations) ? (
               <p className="muted small">
                 grounded in{' '}
@@ -108,5 +126,25 @@ export function NlQuery() {
         </>
       ) : null}
     </div>
+  )
+}
+
+/**
+ * Retrieval provenance for the RAG path. Rendered only when the answer actually
+ * carries these fields, so nothing is displayed that the backend did not compute.
+ */
+function RetrievalProvenance({ answer }: { answer: Record<string, unknown> }) {
+  const vectorStore = answer.vectorStore
+  const embeddingModel = answer.embeddingModel
+  const indexed = answer.indexed
+  if (typeof vectorStore !== 'string' && typeof embeddingModel !== 'string') {
+    return null
+  }
+  return (
+    <p className="muted small">
+      retrieval: vector store <code>{String(vectorStore)}</code>, embedding model{' '}
+      <code>{String(embeddingModel)}</code>
+      {typeof indexed === 'number' ? `, ${indexed} record(s) indexed` : ''}
+    </p>
   )
 }

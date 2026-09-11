@@ -82,4 +82,9 @@ public class HttpChatModel implements ChatModel {
     public boolean deterministic() {
         return false;
     }
+
+    @Override
+    public boolean modelGenerated() {
+        return true;
+    }
 }

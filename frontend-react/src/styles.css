@@ -531,6 +531,190 @@ p.muted.small,
   }
 }
 
+/* ---- run pipeline stepper --------------------------------- */
+
+.pipeline {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 4px 0 8px;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+}
+
+.pipeline-step {
+  flex: 1 0 116px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 0 6px;
+  position: relative;
+}
+
+.pipeline-step::before {
+  content: '';
+  position: absolute;
+  top: 11px;
+  left: -50%;
+  width: 100%;
+  height: 2px;
+  background: var(--line-strong);
+  z-index: 0;
+}
+
+.pipeline-step:first-child::before {
+  display: none;
+}
+
+.pipeline-marker {
+  position: relative;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  border: 2px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.pipeline-marker .state-spinner {
+  width: 13px;
+  height: 13px;
+}
+
+.pipeline-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.pipeline-detail {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.pipeline-step.is-pending .pipeline-label {
+  color: var(--muted);
+}
+
+.pipeline-step.is-done .pipeline-marker {
+  border-color: var(--ok);
+  background: var(--ok-tint);
+  color: var(--ok);
+}
+
+.pipeline-step.is-done::before {
+  background: var(--ok);
+}
+
+.pipeline-step.is-active .pipeline-marker {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pipeline-step.is-failed .pipeline-marker {
+  border-color: var(--bad);
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+
+.pipeline-step.is-failed::before {
+  background: var(--bad);
+}
+
+/* ---- progress meter ----------------------------------------------- */
+
+.meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.meter-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--neutral-tint);
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.meter-accent {
+  background: var(--accent);
+}
+
+.meter-ok {
+  background: var(--ok);
+}
+
+.meter-bad {
+  background: var(--bad);
+}
+
+.meter-label {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+/* ---- modal ---------------------------------------------------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(29, 29, 31, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+  padding: 22px 24px;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.modal-head h2 {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
 /* ---- forms ------------------------------------------------- */
 
 .filter-row {

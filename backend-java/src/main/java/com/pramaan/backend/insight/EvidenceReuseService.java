@@ -3,12 +3,19 @@ package com.pramaan.backend.insight;
 import com.pramaan.backend.ai.EmbeddingModel;
 import com.pramaan.backend.ai.EmbeddingStore;
 import com.pramaan.backend.common.ApiException;
+import com.pramaan.backend.evidence.ControlFrameworkCatalog;
+import com.pramaan.backend.evidence.EvidenceNaming;
 import com.pramaan.backend.evidence.EvidenceQueryService;
 import com.pramaan.backend.evidence.domain.EvidenceRecord;
+import com.pramaan.backend.evidence.domain.EvidenceTag;
 import com.pramaan.backend.evidence.repo.EvidenceVersionRepository;
+import com.pramaan.backend.insight.InsightDtos.ControlReuseEvidence;
+import com.pramaan.backend.insight.InsightDtos.ControlReuseResult;
 import com.pramaan.backend.insight.InsightDtos.ReuseResult;
 import com.pramaan.backend.insight.InsightDtos.SimilarEvidence;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,14 +41,60 @@ public class EvidenceReuseService {
     private final EvidenceEmbeddingIndexer indexer;
     private final EmbeddingModel model;
     private final EmbeddingStore store;
+    private final ControlFrameworkCatalog controlFrameworks;
 
     public EvidenceReuseService(EvidenceQueryService evidence, EvidenceVersionRepository versions,
-                                EvidenceEmbeddingIndexer indexer, EmbeddingModel model, EmbeddingStore store) {
+                                EvidenceEmbeddingIndexer indexer, EmbeddingModel model, EmbeddingStore store,
+                                ControlFrameworkCatalog controlFrameworks) {
         this.evidence = evidence;
         this.versions = versions;
         this.indexer = indexer;
         this.model = model;
         this.store = store;
+        this.controlFrameworks = controlFrameworks;
+    }
+
+    // ---- reuse by control (deterministic, cross-framework) --------------------
+
+    /** The UC03 control→frameworks catalogue — the control picker for "browse by control". */
+    public List<ControlFrameworkCatalog.ControlFrameworks> controlCatalogue() {
+        return controlFrameworks.all();
+    }
+
+    /**
+     * For one control code: the frameworks it satisfies (UC03) and every evidence
+     * record already held for it, with the frameworks each record is tagged to.
+     * A control required by several frameworks can then reuse existing evidence
+     * instead of prompting re-collection.
+     */
+    public ControlReuseResult reuseByControl(String controlId) {
+        if (controlId == null || controlId.isBlank()) {
+            throw ApiException.badRequest("controlId is required");
+        }
+        String cid = controlId.trim();
+        List<String> frameworks = controlFrameworks.frameworksFor(cid, null);
+        List<ControlReuseEvidence> held = evidence.recordsMatching(new EvidenceQueryService.EvidenceFilter(
+                        null, null, cid, null, null, null, null, 0, 100_000))
+                .stream()
+                .map(this::toControlReuseEvidence)
+                .toList();
+        return new ControlReuseResult(cid.toUpperCase(Locale.ROOT), frameworks, held);
+    }
+
+    private ControlReuseEvidence toControlReuseEvidence(EvidenceRecord r) {
+        String frameworksTag = tagValue(r, EvidenceNaming.TAG_FRAMEWORKS);
+        List<String> mapped = frameworksTag == null || frameworksTag.isBlank()
+                ? (r.getFramework() == null ? List.of() : List.of(r.getFramework()))
+                : Arrays.stream(frameworksTag.split(",")).map(String::trim).filter(s -> !s.isBlank())
+                        .map(s -> s.toUpperCase(Locale.ROOT)).distinct().toList();
+        return new ControlReuseEvidence(r.getId().toString(), r.getApplicationSlug(), r.getControlId(),
+                r.getSourceSystem(), tagValue(r, EvidenceNaming.TAG_COLLECTION_METHOD),
+                r.getLatestCollectedAt(), r.getLatestSha256(), mapped);
+    }
+
+    private static String tagValue(EvidenceRecord r, String key) {
+        return r.getTags().stream().filter(t -> key.equals(t.getTagKey()))
+                .map(EvidenceTag::getTagValue).findFirst().orElse(null);
     }
 
     public ReuseResult similarTo(UUID evidenceId, int limit, double minScore) {

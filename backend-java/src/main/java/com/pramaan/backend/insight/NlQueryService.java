@@ -28,6 +28,11 @@ import org.springframework.transaction.annotation.Transactional;
  * records (evidence ids cited; "No evidence found in the ECS repository." when
  * retrieval is empty). The chat model only phrases the already-computed answer
  * and is deterministic under {@code pramaan.ai.mode=mock}.
+ *
+ * <p>A question that matches no intent returns {@code supported=false} plus
+ * {@link #SUPPORTED_QUESTION_TYPES}. It is <b>not</b> routed to a generic fallback
+ * query, and the model is not invoked — this router is a keyword matcher, not a
+ * general-purpose assistant, and it says so rather than guessing.
  */
 @Service
 @Transactional(readOnly = true)
@@ -64,6 +69,17 @@ public class NlQueryService {
         Map<String, Object> answer = new LinkedHashMap<>();
         String matched;
 
+        // No intent matched. Say so plainly and stop — do NOT fall through to a
+        // generic query, and do NOT let the model phrase an answer it has no data for.
+        if (intent == Intent.UNSUPPORTED) {
+            answer.put("supported", false);
+            answer.put("supportedQuestionTypes", SUPPORTED_QUESTION_TYPES);
+            answer.put("answerText", UNSUPPORTED_TEXT);
+            return new NlQueryResult(question, intent.label, "unsupported", answer, UNSUPPORTED_TEXT,
+                    chat.name(), chat.deterministic(), chat.modelGenerated(),
+                    false, SUPPORTED_QUESTION_TYPES, clock.instant());
+        }
+
         switch (intent) {
             case COMPLETENESS -> {
                 matched = "completeness";
@@ -87,12 +103,33 @@ public class NlQueryService {
             }
         }
 
+        answer.put("supported", true);
         String narrative = narrate(question, intent, answer);
         return new NlQueryResult(question, intent.label, matched, answer, narrative,
-                chat.name(), chat.deterministic(), clock.instant());
+                chat.name(), chat.deterministic(), chat.modelGenerated(),
+                true, SUPPORTED_QUESTION_TYPES, clock.instant());
     }
 
     // ---- deterministic routing ------------------------------------------
+
+    /**
+     * What this router can actually answer. Surfaced verbatim to the caller when a
+     * question matches nothing, so the UI never has to guess at the supported set.
+     */
+    static final List<String> SUPPORTED_QUESTION_TYPES = List.of(
+            "Missing / incomplete control coverage — e.g. \"which controls are missing evidence?\"",
+            "Overall compliance posture — e.g. \"what is our compliance posture?\"",
+            "Stale evidence — e.g. \"what evidence is out of date?\"",
+            "Evidence freshness — e.g. \"how recent is our evidence?\"",
+            "Duplicate evidence — e.g. \"is any evidence duplicated?\"",
+            "Latest evidence per control — e.g. \"what is the current evidence?\"",
+            "Evidence source breakdown — e.g. \"where does our evidence come from?\"",
+            "Evidence lookup by topic — e.g. \"what evidence do we have for SSH root login?\"");
+
+    private static final String UNSUPPORTED_TEXT =
+            "This question isn't supported. Question routing is a deterministic keyword "
+                    + "router, not a general-purpose model — it answers only the question types "
+                    + "listed in supportedQuestionTypes.";
 
     private enum Intent {
         STALE("evidence older than the freshness window", "stale-evidence"),
@@ -102,7 +139,8 @@ public class NlQueryService {
         LATEST("the current evidence per control", "latest-per-control"),
         COMPLETENESS("which expected controls lack current evidence", null),
         COMPLIANCE("overall compliance posture", null),
-        EVIDENCE_LOOKUP("evidence records matching the question (semantic retrieval)", null);
+        EVIDENCE_LOOKUP("evidence records matching the question (semantic retrieval)", null),
+        UNSUPPORTED("no supported question type matched", null);
 
         final String label;
         final String query;
@@ -138,7 +176,13 @@ public class NlQueryService {
                 "evidence supporting", "evidence showing")) {
             return Intent.EVIDENCE_LOOKUP;
         }
-        return Intent.SOURCES;
+        // Source breakdown is now matched explicitly rather than being the catch-all,
+        // so that a genuinely unrecognised question can be reported as unsupported.
+        if (contains(q, "come from", "comes from", "came from", "where does", "where do",
+                "source", "sources", "which system", "what system", "collected from", "origin")) {
+            return Intent.SOURCES;
+        }
+        return Intent.UNSUPPORTED;
     }
 
     private static boolean contains(String haystack, String... needles) {

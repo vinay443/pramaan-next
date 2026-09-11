@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -28,6 +29,9 @@ import org.springframework.stereotype.Component;
 public class ControlFrameworkCatalog {
 
     private record MappingFile(String note, Map<String, List<String>> mappings) {}
+
+    /** One control code and every framework it helps satisfy (UC03 mapping). */
+    public record ControlFrameworks(String controlId, List<String> frameworks) {}
 
     private final Map<String, List<String>> byControl;
 
@@ -61,5 +65,19 @@ public class ControlFrameworkCatalog {
             }
         }
         return out;
+    }
+
+    /** Whether this control code is present in the UC03 mapping. */
+    public boolean isMapped(String controlId) {
+        return controlId != null
+                && byControl.containsKey(controlId.trim().toUpperCase(Locale.ROOT));
+    }
+
+    /** The whole catalogue — every control code and its framework list, control-id order. */
+    public List<ControlFrameworks> all() {
+        return byControl.entrySet().stream()
+                .map(e -> new ControlFrameworks(e.getKey(), e.getValue()))
+                .sorted(Comparator.comparing(ControlFrameworks::controlId))
+                .toList();
     }
 }

@@ -46,6 +46,13 @@ FRONTEND_PID=""
 STARTED_COMPOSE=""        # non-empty => we ran `docker compose up`
 COMPOSE_SERVICES=()       # services we brought up
 
+# --- demo mode ----------------------------------------------------------
+# Resolved once, up front (env var or interactive prompt), then exported so the
+# backend JVM inherits it. Never left implicit.
+DEMO_MODE_ON="no"          # "yes" | "no" — for terminal output
+DEMO_SEED_STATUS=""        # "" | "ok" | "failed"
+DEMO_SEED_DETAIL=""        # human-readable seed summary
+
 # --- helpers -------------------------------------------------------------
 have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -186,27 +193,74 @@ EOF
 }
 trap cleanup EXIT INT TERM
 
+# --- demo mode: resolve + seed ----------------------------------------
+resolve_demo_mode() {
+  # Precedence: an explicit DEMO_MODE in the environment wins and skips the
+  # prompt; otherwise ask, defaulting to N (current behaviour on bare Enter).
+  if [[ -n "${DEMO_MODE:-}" ]]; then
+    case "${DEMO_MODE,,}" in
+      1|true|yes|on) DEMO_MODE=true;  DEMO_MODE_ON="yes" ;;
+      *)             DEMO_MODE=false; DEMO_MODE_ON="no"  ;;
+    esac
+    echo ""
+    echo "Demo mode: ${DEMO_MODE_ON^^}  (from environment: DEMO_MODE=$DEMO_MODE)"
+  else
+    local ans=""
+    read -rp $'\nEnable demo mode (seeds demo evidence, adds POST /api/v1/dev/seed-demo-evidence)? [y/N] ' ans || true
+    case "${ans,,}" in
+      y|yes) DEMO_MODE=true;  DEMO_MODE_ON="yes" ;;
+      *)     DEMO_MODE=false; DEMO_MODE_ON="no"  ;;
+    esac
+    echo "Demo mode: ${DEMO_MODE_ON^^}"
+  fi
+  export DEMO_MODE
+}
+
+seed_demo_evidence() {
+  local url="$BACKEND_URL/api/v1/dev/seed-demo-evidence" body
+  echo "Demo mode on — seeding demo evidence (POST $url)"
+  if ! body="$(curl -s -f -m 20 -X POST -H 'Content-Type: application/json' "$url" 2>/dev/null)"; then
+    DEMO_SEED_STATUS="failed"
+    DEMO_SEED_DETAIL="backend unreachable or endpoint returned an error"
+    echo "  WARNING: demo-evidence seed failed ($DEMO_SEED_DETAIL) — continuing anyway." >&2
+    return 0
+  fi
+  local seeded created dups
+  seeded="$(printf '%s' "$body"  | grep -oE '"seeded":[0-9]+'     | grep -oE '[0-9]+')"
+  created="$(printf '%s' "$body" | grep -oE '"created":[0-9]+'    | grep -oE '[0-9]+')"
+  dups="$(printf '%s' "$body"    | grep -oE '"duplicates":[0-9]+' | grep -oE '[0-9]+')"
+  DEMO_SEED_STATUS="ok"
+  DEMO_SEED_DETAIL="seeded=${seeded:-?} created=${created:-?} duplicates=${dups:-?}"
+  echo "  demo-evidence seed OK — $DEMO_SEED_DETAIL"
+}
+
 # --- service starters ---------------------------------------------------
 start_backend() {
   local profile="$1"   # "" for the default (Docker) profile, or "dev"
   local mvn="./mvnw"; [[ -x "$BACKEND_DIR/mvnw" ]] || mvn="./mvnw.cmd"
+  local demo="${DEMO_MODE:-false}"
+  # Always activate the "local" profile so a developer's gitignored
+  # backend-java/config/application-local.yml (if present) is picked up. It is a
+  # no-op when that file doesn't exist, so this changes nothing for a fresh clone.
+  local profiles="local"; [[ -n "$profile" ]] && profiles="$profile,local"
   if [[ -n "$DRYRUN" ]]; then
-    if [[ -n "$profile" ]]; then
-      echo "[dry-run] (cd backend-java && $mvn -q spring-boot:run -Dspring-boot.run.profiles=$profile) >> $BACKEND_LOG 2>&1 &"
-    else
-      echo "[dry-run] (cd backend-java && $mvn -q spring-boot:run) >> $BACKEND_LOG 2>&1 &"
-    fi
+    local prof_dry=" -Dspring-boot.run.profiles=$profiles"
+    local demo_arg_dry=""; [[ "$demo" == "true" ]] && demo_arg_dry=" -Dspring-boot.run.jvmArguments=-DDEMO_MODE=true"
+    echo "[dry-run] (cd backend-java && $mvn -q spring-boot:run${prof_dry}${demo_arg_dry}) >> $BACKEND_LOG 2>&1 &"
     BACKEND_PID="dryrun"; return 0
   fi
   echo "Starting backend (${profile:-default profile}) -> $BACKEND_LOG"
+  # DEMO_MODE was resolved by resolve_demo_mode and exported, so the plugin fork
+  # inherits it. We ALSO pass it as a JVM system property so it survives the
+  # mvnw.cmd -> cmd.exe hop on Windows; Spring resolves application.yml's
+  # ${DEMO_MODE:false} from system properties too.
+  echo "  demo-mode: $demo  -> pramaan.demo-mode"
+  local run_args=(-q spring-boot:run -Dspring-boot.run.profiles="$profiles")
+  [[ "$demo" == "true" ]] && run_args+=(-Dspring-boot.run.jvmArguments="-DDEMO_MODE=true")
   : > "$BACKEND_LOG"
   (
     cd "$BACKEND_DIR"
-    if [[ -n "$profile" ]]; then
-      exec "$mvn" -q spring-boot:run -Dspring-boot.run.profiles="$profile"
-    else
-      exec "$mvn" -q spring-boot:run
-    fi
+    exec "$mvn" "${run_args[@]}"
   ) >>"$BACKEND_LOG" 2>&1 &
   BACKEND_PID=$!
   echo "  backend pid $BACKEND_PID"
@@ -244,9 +298,25 @@ start_app_layer() {
   local profile="$1"
   start_backend "$profile"
   [[ -n "$DRYRUN" ]] || wait_for_http "$BACKEND_URL/actuator/health" "backend" 180 || exit 1
+  if [[ "${DEMO_MODE:-false}" == "true" ]]; then
+    if [[ -n "$DRYRUN" ]]; then
+      echo "[dry-run] would POST $BACKEND_URL/api/v1/dev/seed-demo-evidence"
+    else
+      seed_demo_evidence
+    fi
+  fi
   start_frontend
   [[ -n "$DRYRUN" ]] || wait_for_http "$FRONTEND_URL" "frontend" 120 || exit 1
   if [[ -n "$DRYRUN" ]]; then echo "[dry-run] would poll $BACKEND_URL and $FRONTEND_URL, then wait for Ctrl+C"; return 0; fi
+
+  local demo_line="    Demo    : off"
+  if [[ "$DEMO_MODE_ON" == "yes" ]]; then
+    case "$DEMO_SEED_STATUS" in
+      ok)     demo_line="    Demo    : ON — evidence seeded ($DEMO_SEED_DETAIL)" ;;
+      failed) demo_line="    Demo    : ON — seed FAILED ($DEMO_SEED_DETAIL); retry: curl -X POST $BACKEND_URL/api/v1/dev/seed-demo-evidence" ;;
+      *)      demo_line="    Demo    : ON" ;;
+    esac
+  fi
 
   cat <<EOF
 
@@ -255,6 +325,7 @@ start_app_layer() {
     Backend : $BACKEND_URL        (log: $BACKEND_LOG)
     Frontend: $FRONTEND_URL        (log: $FRONTEND_LOG)
 $( [[ -n "$STARTED_COMPOSE" ]] && echo "    Docker  : ${COMPOSE_SERVICES[*]}" )
+$demo_line
 
   Press Ctrl+C to stop everything this script started.
 ────────────────────────────────────────────────────────
@@ -338,6 +409,9 @@ Pramaan Next — choose startup mode
 EOF
 
 read -rp $'\nChoice: ' choice
+case "${choice^^}" in
+  D|L|R) resolve_demo_mode ;;
+esac
 case "${choice^^}" in
   D) run_demo ;;
   L) run_lowmem ;;

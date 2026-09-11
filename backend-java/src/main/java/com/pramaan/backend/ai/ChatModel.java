@@ -15,4 +15,13 @@ public interface ChatModel {
 
     /** True when this model is deterministic (mock). Used to mark AI output as simulated. */
     boolean deterministic();
+
+    /**
+     * True only when the text came from an actual generative model.
+     *
+     * <p>{@link MockChatModel} returns {@code false}: it is a prompt <em>digest</em> —
+     * it re-emits lines from the grounded prompt it was handed and generates nothing.
+     * Callers must not present its output as model-written; the UI labels it explicitly.
+     */
+    boolean modelGenerated();
 }

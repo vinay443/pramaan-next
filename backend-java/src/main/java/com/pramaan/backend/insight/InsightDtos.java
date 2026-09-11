@@ -59,6 +59,25 @@ public final class InsightDtos {
             List<SimilarEvidence> exactDuplicates,
             List<SimilarEvidence> matches) {}
 
+    // ---- reuse by control (cross-framework) ---------------------------
+
+    /** One evidence record held for a control, with the frameworks it is already tagged to. */
+    public record ControlReuseEvidence(
+            String evidenceId,
+            String applicationSlug,
+            String controlId,
+            String sourceSystem,
+            String collectionMethod,
+            Instant collectedAt,
+            String sha256,
+            List<String> mappedFrameworks) {}
+
+    /** For a control: every framework it satisfies (UC03) + the evidence already held for it. */
+    public record ControlReuseResult(
+            String controlId,
+            List<String> frameworks,
+            List<ControlReuseEvidence> evidence) {}
+
     // ---- AI summary ---------------------------------------------------
 
     public record EvidenceSummary(
@@ -68,6 +87,8 @@ public final class InsightDtos {
             String controlId,
             String model,
             boolean simulated,
+            /** False when the text is a deterministic prompt digest rather than model output. */
+            boolean modelGenerated,
             String summary,
             List<String> groundedOn,
             Instant generatedAt) {}
@@ -98,6 +119,12 @@ public final class InsightDtos {
             String narrative,
             String model,
             boolean simulated,
+            /** False when the narrative is a deterministic prompt digest, not model output. */
+            boolean modelGenerated,
+            /** False when the question matched no supported intent — see {@code supportedQuestionTypes}. */
+            boolean supported,
+            /** The question types this deterministic router can actually answer. */
+            List<String> supportedQuestionTypes,
             Instant generatedAt) {}
 
     // ---- compliance aggregation ------------------------------------

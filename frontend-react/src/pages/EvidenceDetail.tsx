@@ -11,6 +11,7 @@ import type { IntegrityReport, LifecycleAction } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
 import { DataTable, ErrorNote, JsonBlock, Loading, Section, StatusPill } from '../components/ui'
 import { EvidenceSummaryPanel } from '../components/EvidenceSummaryPanel'
+import { MetadataTaggingPanel } from '../components/MetadataTaggingPanel'
 
 export function EvidenceDetail() {
   const { id = '' } = useParams()
@@ -120,6 +121,8 @@ export function EvidenceDetail() {
           </dd>
         </dl>
       </Section>
+
+      <MetadataTaggingPanel evidence={ev} onUpdated={() => evidence.reload()} />
 
       <Section
         title="Lifecycle"

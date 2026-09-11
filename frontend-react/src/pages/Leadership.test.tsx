@@ -20,4 +20,19 @@ describe('Leadership (UC11)', () => {
     const verdicts = screen.getByText('Check verdicts (actual results)').closest('.card') as HTMLElement
     expect(within(verdicts).getByText('PASS', { selector: '.stat-label' })).toBeInTheDocument()
   })
+
+  it('drills each application row down to that application, not a bare /compliance (UC-P2-5)', async () => {
+    renderOffline(<Leadership />)
+    await screen.findByText('Portfolio compliance')
+
+    const byApp = screen.getByText(/By application —/).closest('.card') as HTMLElement
+    expect(within(byApp).getByRole('link', { name: 'Payments' })).toHaveAttribute(
+      'href',
+      '/compliance?applicationSlug=payments',
+    )
+    expect(within(byApp).getByRole('link', { name: 'Net Banking' })).toHaveAttribute(
+      'href',
+      '/compliance?applicationSlug=net-banking',
+    )
+  })
 })

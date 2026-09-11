@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 public final class ApplicationDtos {
 
@@ -27,7 +28,8 @@ public final class ApplicationDtos {
             boolean autoCreated,
             boolean active,
             Instant createdAt,
-            Instant updatedAt) {
+            Instant updatedAt,
+            Map<String, Object> onboardingProfile) {
 
         static ApplicationView from(ApplicationEntity e) {
             List<String> tech = (e.getTechnology() == null || e.getTechnology().isBlank())
@@ -35,7 +37,7 @@ public final class ApplicationDtos {
                     : List.of(e.getTechnology().split("\\s*,\\s*"));
             return new ApplicationView(e.getSlug(), e.getName(), e.getBusinessUnit(),
                     e.getCriticality(), e.getOwner(), tech, e.isAutoCreated(), e.isActive(),
-                    e.getCreatedAt(), e.getUpdatedAt());
+                    e.getCreatedAt(), e.getUpdatedAt(), e.getOnboardingProfile());
         }
     }
 }

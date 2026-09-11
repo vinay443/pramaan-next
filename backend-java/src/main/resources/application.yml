@@ -49,6 +49,12 @@ pramaan:
   onboarding:
     catalog: ${PRAMAAN_ONBOARDING_CATALOG:classpath:phase2/onboarding.json}
 
+  # Staged onboarding scan (register app, resolve frameworks/controls, validate
+  # sources, trigger baseline collection, compute initial posture).
+  onboarding-scan:
+    # When true, POST /onboarding/scans immediately dispatches the scan to the async executor.
+    dispatch: ${PRAMAAN_ONBOARDING_SCAN_DISPATCH:true}
+
   # Use Case 13 — evidence lifecycle: retention window for APPROVED evidence.
   evidence:
     retention-days: ${PRAMAAN_EVIDENCE_RETENTION_DAYS:365}
@@ -63,6 +69,10 @@ pramaan:
   seed:
     # Insert demo applications on startup if the table is empty.
     applications-enabled: ${PRAMAAN_SEED_APPS:true}
+
+  # Dev/demo only. Gates throwaway helpers (e.g. POST /api/v1/dev/seed-demo-evidence).
+  # Defaults to false — never enable in production.
+  demo-mode: ${DEMO_MODE:false}
 
   # Use Case 5 — ECS Admin. Canonical role catalogue; the persona registry is
   # in-memory (no credentials stored) and seeded with demo users on startup.

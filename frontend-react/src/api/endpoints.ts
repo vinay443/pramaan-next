@@ -24,6 +24,8 @@ import type {
   CheckResultView,
   CompletenessReport,
   ComplianceReport,
+  ControlFrameworks,
+  ControlReuseResult,
   DeterministicQueryResult,
   EvidenceDashboard,
   EvaluationSummary,
@@ -39,6 +41,8 @@ import type {
   NlQueryResult,
   OnboardingPlan,
   OnboardingResult,
+  OnboardingScanRequest,
+  OnboardingScanView,
   Page,
   PredefinedQueryCatalog,
   PredefinedQueryRunResult,
@@ -161,6 +165,26 @@ export function applyOnboarding(slugs?: string[], collect = false): Promise<Onbo
   return withFallback(
     () => apiFetch<OnboardingResult>(`/api/v1/onboarding/apply${q ? `?${q}` : ''}`, { method: 'POST' }),
     () => mock.mockOnboardingResult(slugs),
+    true,
+  )
+}
+
+/** Staged onboarding: rich intake form -> 5-phase async scan (register app, resolve
+ *  frameworks/controls, validate sources, trigger baseline collection, compute initial
+ *  posture). A Phase 1 backend may not implement this yet — fall back to mock fixtures. */
+export function startOnboardingScan(req: OnboardingScanRequest): Promise<OnboardingScanView> {
+  return withFallback(
+    () => apiFetch<OnboardingScanView>('/api/v1/onboarding/scans', { method: 'POST', body: req }),
+    () => mock.mockStartOnboardingScan(req),
+    true,
+  )
+}
+
+/** Poll a staged onboarding scan by id. */
+export function getOnboardingScan(scanId: string): Promise<OnboardingScanView> {
+  return withFallback(
+    () => apiFetch<OnboardingScanView>(`/api/v1/onboarding/scans/${encodeURIComponent(scanId)}`),
+    () => mock.mockOnboardingScanById(scanId),
     true,
   )
 }
@@ -561,6 +585,31 @@ export function searchEvidenceReuse(text: string, limit = 5, minScore = 0.3): Pr
     () => apiFetch<ReuseResult>('/api/v1/insight/reuse/search', { method: 'POST', body: { text, limit, minScore } }),
     () => mock.mockReuseByText(text, limit, minScore),
     true,
+  )
+}
+
+// ---- reuse by control (cross-framework) ---------------------------
+
+export function listReuseControls(): Promise<ControlFrameworks[]> {
+  return withFallback(
+    () => apiFetch<ControlFrameworks[]>('/api/v1/insight/reuse/controls'),
+    () => mock.mockReuseControls(),
+    true,
+  )
+}
+
+export function getReuseByControl(controlId: string): Promise<ControlReuseResult> {
+  return withFallback(
+    () => apiFetch<ControlReuseResult>(`/api/v1/insight/reuse/by-control${buildQuery({ controlId })}`),
+    () => mock.mockReuseByControl(controlId),
+    true,
+  )
+}
+
+export function addEvidenceFramework(id: string, framework: string): Promise<EvidenceView> {
+  return withFallback(
+    () => apiFetch<EvidenceView>(`/api/v1/evidence/${id}/frameworks`, { method: 'POST', body: { framework } }),
+    () => mock.mockAddEvidenceFramework(id, framework),
   )
 }
 

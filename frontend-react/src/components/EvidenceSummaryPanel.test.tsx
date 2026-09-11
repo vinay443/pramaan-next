@@ -19,4 +19,22 @@ describe('EvidenceSummaryPanel', () => {
     expect(screen.getByText('simulated')).toBeInTheDocument()
     expect(screen.getByText(/grounded on \d+ facts/)).toBeInTheDocument()
   })
+
+  it('labels a prompt digest loudly as NOT model-generated (UC-P2-3)', async () => {
+    renderOffline(<EvidenceSummaryPanel evidenceId="ev-001" />)
+    await userEvent.click(screen.getByRole('button', { name: 'Generate summary' }))
+
+    const banner = await screen.findByRole('status')
+    expect(banner).toHaveClass('banner-warn')
+    expect(banner).toHaveTextContent('Not model-generated.')
+    expect(banner).toHaveTextContent('deterministic digest')
+    expect(screen.getByText('prompt digest')).toBeInTheDocument()
+  })
+
+  it('names the evidence record the summary was built from (UC-P2-3)', async () => {
+    renderOffline(<EvidenceSummaryPanel evidenceId="ev-001" />)
+    await userEvent.click(screen.getByRole('button', { name: 'Generate summary' }))
+
+    expect(await screen.findByText('ev-001')).toBeInTheDocument()
+  })
 })

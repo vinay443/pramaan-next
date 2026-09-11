@@ -6,6 +6,7 @@ import com.pramaan.backend.common.ApiException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -69,6 +70,15 @@ public class ApplicationService {
     @Transactional(readOnly = true)
     public boolean anyOnboarded() {
         return repository.existsByActiveTrue();
+    }
+
+    /** Replaces the additive onboarding-profile JSON blob (see {@link ApplicationEntity#getOnboardingProfile()}). */
+    @Transactional
+    public ApplicationView setOnboardingProfile(String slug, Map<String, Object> profile) {
+        ApplicationEntity e = require(slug);
+        e.setOnboardingProfile(profile);
+        e.touch(clock.instant());
+        return ApplicationView.from(repository.save(e));
     }
 
     /** Used by ingestion/scheduler so evidence for an unknown app is never silently dropped. */

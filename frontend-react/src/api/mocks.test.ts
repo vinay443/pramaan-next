@@ -47,7 +47,24 @@ describe('Phase 2 mock adapters', () => {
     expect(mockNlQuery('which controls are missing?').matchedQuery).toBe('completeness')
     expect(mockNlQuery('how is our compliance posture?').matchedQuery).toBe('compliance')
     expect(mockNlQuery('what evidence is stale?').matchedQuery).toBe('stale-evidence')
-    expect(mockNlQuery('anything else').narrative.startsWith('[mock-ai]')).toBe(true)
+    expect(mockNlQuery('where does our evidence come from?').matchedQuery).toBe('source-breakdown')
+    expect(mockNlQuery('which controls are missing?').narrative.startsWith('[mock-ai]')).toBe(true)
+  })
+
+  // UC-P2-4: source-breakdown used to be the catch-all, which meant every unrecognised
+  // question silently got a source answer. An unmatched question now says so.
+  it('an unmatched NL question is reported as unsupported, not silently rerouted', () => {
+    const r = mockNlQuery('anything else')
+    expect(r.matchedQuery).toBe('unsupported')
+    expect(r.supported).toBe(false)
+    expect(r.supportedQuestionTypes.length).toBeGreaterThan(0)
+    expect(r.narrative).toContain("isn't supported")
+    expect(r.answer).not.toHaveProperty('counts')
+  })
+
+  it('mock AI output is flagged as a prompt digest, not model-generated', () => {
+    expect(mockNlQuery('which controls are missing?').modelGenerated).toBe(false)
+    expect(mockSummary('ev-001').modelGenerated).toBe(false)
   })
 
   it('summary is grounded only in the evidence record', () => {

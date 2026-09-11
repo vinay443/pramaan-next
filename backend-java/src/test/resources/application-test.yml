@@ -20,6 +20,8 @@ pramaan:
     driver: memory
   integrations:
     mock-enabled: true
+  onboarding-scan:
+    dispatch: false
   scheduler:
     auto-enabled: false
     dispatch: false
@@ -28,3 +30,5 @@ pramaan:
   seed:
     applications-enabled: false
     trend-enabled: false
+  # deterministic regardless of an ambient DEMO_MODE env var; DemoSeedModeTest overrides
+  demo-mode: false

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getCompleteness, listApplications } from '../api/endpoints'
 import { useAsync } from '../hooks/useAsync'
 import { DataTable, Empty, ErrorNote, Loading, Section, StatCard, StatusPill } from '../components/ui'
@@ -56,7 +57,11 @@ export function Completeness() {
             <StatCard label="Covered" value={report.data.covered} />
             <StatCard label="Stale" value={report.data.stale} hint={`> ${report.data.staleAfterDays}d`} />
             <StatCard label="Missing" value={report.data.missing} />
-            <StatCard label="Completeness" value={`${report.data.completenessPct}%`} />
+            <StatCard
+              label="Completeness"
+              value={`${report.data.completenessPct}%`}
+              hint={`${report.data.covered} covered / ${report.data.expected} expected`}
+            />
           </div>
 
           <Section title={`Controls — ${report.data.controls.length}`}>
@@ -71,6 +76,18 @@ export function Completeness() {
                   { header: 'Framework', cell: (c) => c.framework },
                   { header: 'Control', cell: (c) => c.controlId },
                   { header: 'Title', cell: (c) => c.title },
+                  {
+                    // The evidence record this row's COVERED/STALE verdict was computed from.
+                    // MISSING rows genuinely have none, so they show an em dash.
+                    header: 'Evidence',
+                    cell: (c) =>
+                      c.evidenceId ? (
+                        <Link to={`/evidence/${c.evidenceId}`}>{c.evidenceId.slice(0, 8)}</Link>
+                      ) : (
+                        '—'
+                      ),
+                  },
+                  { header: 'Ver', cell: (c) => c.currentVersion ?? '—', align: 'right' },
                   { header: 'Age (d)', cell: (c) => c.ageDays ?? '—', align: 'right' },
                   {
                     header: 'Last collected',

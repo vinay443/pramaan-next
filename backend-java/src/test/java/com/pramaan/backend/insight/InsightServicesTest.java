@@ -157,6 +157,9 @@ class InsightServicesTest {
         assertThat(s1.simulated()).isTrue();
         assertThat(s1.summary()).isEqualTo(s2.summary()).contains("[mock-ai]");
         assertThat(s1.groundedOn()).anyMatch(g -> g.contains("control: OS-AUDIT-LOGGING"));
+        // UC-P2-3: the mock is a prompt digest, and the DTO must say so.
+        assertThat(s1.modelGenerated()).isFalse();
+        assertThat(s1.evidenceId()).isEqualTo(id.toString());
     }
 
     @Test
@@ -194,6 +197,28 @@ class InsightServicesTest {
         assertThat(nlQuery.answer("what evidence is stale?", null).matchedQuery()).isEqualTo("stale-evidence");
         assertThat(nlQuery.answer("where does our evidence come from?", null).matchedQuery())
                 .isEqualTo("source-breakdown");
+    }
+
+    /** UC-P2-4: source-breakdown is no longer the catch-all, so a genuinely unrecognised
+     *  question must report itself as unsupported rather than silently answering something else. */
+    @Test
+    void nlQueryReportsUnsupportedQuestionsInsteadOfFallingThrough() {
+        NlQueryResult r = nlQuery.answer("what is the capital of France?", null);
+        assertThat(r.supported()).isFalse();
+        assertThat(r.matchedQuery()).isEqualTo("unsupported");
+        assertThat(r.answer().get("supported")).isEqualTo(false);
+        assertThat(r.narrative()).contains("isn't supported");
+        assertThat(r.supportedQuestionTypes()).isNotEmpty();
+        // it must NOT have run a query or invented an answer
+        assertThat(r.answer()).doesNotContainKeys("counts", "rowCount", "evidenceCitations");
+    }
+
+    @Test
+    void nlQuerySupportedQuestionsAreFlaggedSupportedAndNotModelGenerated() {
+        NlQueryResult r = nlQuery.answer("which controls are missing for net-banking?", "net-banking");
+        assertThat(r.supported()).isTrue();
+        assertThat(r.modelGenerated()).isFalse();
+        assertThat(r.supportedQuestionTypes()).isNotEmpty();
     }
 
     /** Helper: re-ingest identical content returns the existing evidence id (dedup). */

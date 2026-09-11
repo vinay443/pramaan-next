@@ -58,7 +58,7 @@ public class EvidenceSummaryService {
 
         if (content == null && verdicts.isEmpty()) {
             return new EvidenceSummary(evidenceId.toString(), ev.applicationSlug(), ev.framework(),
-                    ev.controlId(), chat.name(), chat.deterministic(),
+                    ev.controlId(), chat.name(), chat.deterministic(), chat.modelGenerated(),
                     "No evidence content is available to summarize.", grounded, clock.instant());
         }
 
@@ -74,6 +74,7 @@ public class EvidenceSummaryService {
 
         String summary = chat.complete(system, user.toString());
         return new EvidenceSummary(evidenceId.toString(), ev.applicationSlug(), ev.framework(),
-                ev.controlId(), chat.name(), chat.deterministic(), summary, grounded, clock.instant());
+                ev.controlId(), chat.name(), chat.deterministic(), chat.modelGenerated(),
+                summary, grounded, clock.instant());
     }
 }

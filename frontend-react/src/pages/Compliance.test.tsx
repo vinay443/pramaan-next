@@ -19,4 +19,21 @@ describe('Compliance', () => {
     // payments TLS-CERT-EXPIRY / ITPP-CHG-02 have FAIL verdicts
     await waitFor(() => expect(screen.getAllByText('NON_COMPLIANT').length).toBeGreaterThan(0))
   })
+
+  it('honours ?applicationSlug from the Leadership drill-down (UC-P2-5)', async () => {
+    renderOffline(<Compliance />, '/compliance?applicationSlug=payments')
+
+    await screen.findByText(/^Controls — /)
+    expect((screen.getByLabelText('Application') as HTMLSelectElement).value).toBe('payments')
+    // payments TLS-CERT-EXPIRY / ITPP-CHG-02 have FAIL verdicts; net-banking does not
+    await waitFor(() => expect(screen.getAllByText('NON_COMPLIANT').length).toBeGreaterThan(0))
+  })
+
+  it('compliance % states its own numerator and denominator', async () => {
+    renderOffline(<Compliance />)
+    await screen.findByText('Controls — 7')
+
+    const pct = screen.getByText('Compliance', { selector: '.stat-label' }).closest('.stat') as HTMLElement
+    expect(pct.querySelector('.stat-hint')?.textContent).toMatch(/^\d+ compliant \/ \d+ expected$/)
+  })
 })

@@ -22,6 +22,9 @@ import type {
   CompletenessReport,
   ComplianceReport,
   ControlCoverage,
+  ControlFrameworks,
+  ControlReuseEvidence,
+  ControlReuseResult,
   ControlPosture,
   ControlStatus,
   Coverage,
@@ -43,8 +46,11 @@ import type {
   LifecycleAction,
   NationalDashboard,
   NlQueryResult,
+  OnboardingPhaseKey,
   OnboardingPlan,
   OnboardingResult,
+  OnboardingScanRequest,
+  OnboardingScanView,
   ReportInfo,
   TrendReport,
   Page,
@@ -145,6 +151,14 @@ function withNamingConvention(e: EvidenceView): EvidenceView {
 export const mockEvidence: EvidenceView[] = (evidenceRaw.evidence as unknown as EvidenceView[]).map(
   withNamingConvention,
 )
+
+// Demo seam for "Reuse by control": leave one record tagged to only its primary
+// framework so the "Reuse for [framework]" action has something to add. Live
+// evidence is normally stamped with the full UC03 framework set at ingestion.
+{
+  const partial = mockEvidence.find((e) => e.evidenceId === 'ev-002')
+  if (partial) partial.tags = { ...partial.tags, frameworks: partial.framework }
+}
 
 function ageDays(iso: string | undefined): number {
   if (!iso) return Number.POSITIVE_INFINITY
@@ -331,6 +345,122 @@ export function mockOnboardingResult(slugs?: string[]): OnboardingResult {
     }
   }
   return { applied: target.length, created, updated: target.length - created, slugs: target, collectionRunId: null }
+}
+
+// ---- Staged onboarding scan (rich intake form -> 5-phase async scan) ------
+
+const ONBOARDING_SCAN_PHASES: OnboardingPhaseKey[] = [
+  'REGISTER_APPLICATION',
+  'RESOLVE_FRAMEWORKS_CONTROLS',
+  'VALIDATE_EVIDENCE_SOURCES',
+  'TRIGGER_BASELINE_COLLECTION',
+  'COMPUTE_INITIAL_POSTURE',
+]
+
+function onboardingScanPhaseMessage(phase: OnboardingPhaseKey): string {
+  switch (phase) {
+    case 'REGISTER_APPLICATION':
+      return 'application registered and onboarded (mock)'
+    case 'RESOLVE_FRAMEWORKS_CONTROLS':
+      return 'controls resolved (mock)'
+    case 'VALIDATE_EVIDENCE_SOURCES':
+      return 'sources validated (mock)'
+    case 'TRIGGER_BASELINE_COLLECTION':
+      return 'baseline collection run triggered (mock)'
+    case 'COMPUTE_INITIAL_POSTURE':
+      return 'initial completeness/compliance computed (mock)'
+    default:
+      return 'done (mock)'
+  }
+}
+
+let scanSeq = 900
+const mockScans: OnboardingScanView[] = []
+// Wall-clock start per mock scan, so repeated polls can walk it through the 5
+// phases (mirrors what the real backend's async executor does).
+const scanStartedAt = new Map<string, number>()
+
+export function mockStartOnboardingScan(req: OnboardingScanRequest): OnboardingScanView {
+  scanSeq += 1
+  const scan: OnboardingScanView = {
+    scanId: `scan-${scanSeq}`,
+    applicationSlug: req.slug,
+    status: 'PENDING',
+    currentPhase: null,
+    phases: ONBOARDING_SCAN_PHASES.map((phase) => ({ phase, status: 'PENDING', message: null })),
+    schedulerRunId: null,
+    completenessPct: null,
+    compliancePct: null,
+    message: null,
+    createdAt: NOW,
+    startedAt: null,
+    finishedAt: null,
+  }
+  mockScans.unshift(scan)
+  scanStartedAt.set(scan.scanId, Date.now())
+
+  // Mirrors the backend's REGISTER_APPLICATION phase: upsert + onboard immediately
+  // so the rest of the app (Applications, catalogue) reflects it without waiting.
+  const existing = mockApplications.find((a) => a.slug === req.slug)
+  if (existing) {
+    existing.name = req.name
+    existing.businessUnit = req.businessUnit
+    existing.criticality = req.criticality ?? existing.criticality
+    existing.owner = req.owner
+    existing.technology = req.technology ?? existing.technology
+    existing.active = true
+    existing.updatedAt = NOW
+  } else {
+    mockApplications.unshift({
+      slug: req.slug,
+      name: req.name,
+      businessUnit: req.businessUnit,
+      criticality: req.criticality ?? 'MEDIUM',
+      owner: req.owner,
+      technology: req.technology ?? [],
+      autoCreated: false,
+      active: true,
+      createdAt: NOW,
+      updatedAt: NOW,
+    })
+  }
+  return scan
+}
+
+function advanceMockOnboardingScan(scan: OnboardingScanView): OnboardingScanView {
+  const started = scanStartedAt.get(scan.scanId)
+  if (started === undefined || scan.status === 'COMPLETED' || scan.status === 'FAILED') return scan
+  const stepMs = 1200
+  const elapsed = Date.now() - started
+  const doneCount = Math.min(ONBOARDING_SCAN_PHASES.length, Math.floor(elapsed / stepMs))
+
+  scan.phases = ONBOARDING_SCAN_PHASES.map((phase, i) => {
+    if (i < doneCount) return { phase, status: 'COMPLETED', message: onboardingScanPhaseMessage(phase) }
+    if (i === doneCount) return { phase, status: 'RUNNING', message: null }
+    return { phase, status: 'PENDING', message: null }
+  })
+  scan.currentPhase = ONBOARDING_SCAN_PHASES[Math.min(doneCount, ONBOARDING_SCAN_PHASES.length - 1)]
+
+  if (doneCount === 0) {
+    scan.status = 'PENDING'
+  } else if (doneCount < ONBOARDING_SCAN_PHASES.length) {
+    scan.status = 'RUNNING'
+    scan.startedAt = scan.startedAt ?? new Date(started).toISOString()
+  } else {
+    scan.status = 'COMPLETED'
+    scan.startedAt = scan.startedAt ?? new Date(started).toISOString()
+    scan.finishedAt = new Date().toISOString()
+    scan.schedulerRunId = scan.schedulerRunId ?? `run-${scan.scanId}`
+    scan.completenessPct = scan.completenessPct ?? 16.7
+    scan.compliancePct = scan.compliancePct ?? 11.1
+    scan.message = `application '${scan.applicationSlug}' onboarded (mock)`
+  }
+  return scan
+}
+
+export function mockOnboardingScanById(id: string): OnboardingScanView {
+  const scan = mockScans.find((s) => s.scanId === id) ?? mockScans[0]
+  return advanceMockOnboardingScan(scan)
 }
 
 // ---- UC14 comparison / UC16 enterprise / UC20 national --------------
@@ -1202,6 +1332,52 @@ export function mockReuseByText(text: string, limit = 5, minScore = 0.3): ReuseR
   }
 }
 
+// ---- Reuse by control (cross-framework) ------------------------------
+
+/** UC03 control -> frameworks catalogue — mirrors ControlFrameworkCatalog.all(). */
+export function mockReuseControls(): ControlFrameworks[] {
+  return Object.entries(CONTROL_FRAMEWORKS)
+    .map(([controlId, frameworks]) => ({ controlId, frameworks: [...frameworks] }))
+    .sort((a, b) => a.controlId.localeCompare(b.controlId))
+}
+
+export function mockReuseByControl(controlId: string): ControlReuseResult {
+  const cid = (controlId ?? '').trim().toUpperCase()
+  const frameworks = CONTROL_FRAMEWORKS[cid] ?? []
+  const evidence: ControlReuseEvidence[] = mockEvidence
+    .filter((e) => e.controlId.toUpperCase() === cid)
+    .map((e) => ({
+      evidenceId: e.evidenceId,
+      applicationSlug: e.applicationSlug,
+      controlId: e.controlId,
+      sourceSystem: e.sourceSystem,
+      collectionMethod: e.tags.collectionMethod ?? null,
+      collectedAt: e.latest?.collectedAt ?? e.createdAt ?? null,
+      sha256: e.latest?.sha256 ?? null,
+      mappedFrameworks: (e.tags.frameworks ?? e.framework)
+        .split(',')
+        .map((f) => f.trim().toUpperCase())
+        .filter(Boolean),
+    }))
+  return { controlId: cid, frameworks: [...frameworks], evidence }
+}
+
+/** Merge an extra framework into a record's `frameworks` tag (UC03 tagging path). */
+export function mockAddEvidenceFramework(evidenceId: string, framework: string): EvidenceView {
+  const ev = mockEvidence.find((e) => e.evidenceId === evidenceId)
+  if (!ev) throw new Error(`Unknown evidence: ${evidenceId}`)
+  const fw = framework.trim().toUpperCase()
+  const allowed = CONTROL_FRAMEWORKS[ev.controlId.toUpperCase()]
+  if (allowed && !allowed.map((f) => f.toUpperCase()).includes(fw)) {
+    throw new Error(`${fw} is not a framework that control ${ev.controlId} maps to`)
+  }
+  const current = (ev.tags.frameworks ?? ev.framework).split(',').map((f) => f.trim().toUpperCase()).filter(Boolean)
+  if (!current.includes(fw)) current.push(fw)
+  ev.tags = { ...ev.tags, frameworks: current.join(','), framework: current[0] }
+  ev.updatedAt = new Date().toISOString()
+  return ev
+}
+
 export function mockSummary(evidenceId: string): EvidenceSummary {
   const ev = mockEvidenceById(evidenceId)
   const verdicts = resultsRaw.results.filter((r) => r.evidenceId === ev.evidenceId)
@@ -1224,6 +1400,7 @@ export function mockSummary(evidenceId: string): EvidenceSummary {
     controlId: ev.controlId,
     model: 'mock-chat:v1',
     simulated: true,
+    modelGenerated: false,
     summary,
     groundedOn,
     generatedAt: NOW,
@@ -1272,12 +1449,53 @@ function routeNl(q: string): RouteHit {
       matchedQuery: 'evidence-lookup',
       interpretedAs: 'evidence records matching the question (semantic retrieval)',
     }
-  return { matchedQuery: 'source-breakdown', interpretedAs: 'which systems evidence comes from' }
+  // Explicit, not a catch-all — mirrors NlQueryService.route() so an unrecognised
+  // question reports itself as unsupported instead of silently becoming a source query.
+  if (has('come from', 'comes from', 'came from', 'where does', 'where do', 'source', 'sources',
+      'which system', 'what system', 'collected from', 'origin'))
+    return { matchedQuery: 'source-breakdown', interpretedAs: 'which systems evidence comes from' }
+  return { matchedQuery: 'unsupported', interpretedAs: 'no supported question type matched' }
 }
+
+/** Mirrors NlQueryService.SUPPORTED_QUESTION_TYPES. */
+export const MOCK_SUPPORTED_QUESTION_TYPES = [
+  'Missing / incomplete control coverage — e.g. "which controls are missing evidence?"',
+  'Overall compliance posture — e.g. "what is our compliance posture?"',
+  'Stale evidence — e.g. "what evidence is out of date?"',
+  'Evidence freshness — e.g. "how recent is our evidence?"',
+  'Duplicate evidence — e.g. "is any evidence duplicated?"',
+  'Latest evidence per control — e.g. "what is the current evidence?"',
+  'Evidence source breakdown — e.g. "where does our evidence come from?"',
+  'Evidence lookup by topic — e.g. "what evidence do we have for SSH root login?"',
+]
+
+const MOCK_UNSUPPORTED_TEXT =
+  "This question isn't supported. Question routing is a deterministic keyword " +
+  'router, not a general-purpose model — it answers only the question types ' +
+  'listed in supportedQuestionTypes.'
 
 export function mockNlQuery(question: string, applicationSlug?: string): NlQueryResult {
   const hit = routeNl(question)
   let answer: Record<string, unknown>
+  if (hit.matchedQuery === 'unsupported') {
+    return {
+      question,
+      interpretedAs: hit.interpretedAs,
+      matchedQuery: 'unsupported',
+      answer: {
+        supported: false,
+        supportedQuestionTypes: MOCK_SUPPORTED_QUESTION_TYPES,
+        answerText: MOCK_UNSUPPORTED_TEXT,
+      },
+      narrative: MOCK_UNSUPPORTED_TEXT,
+      model: 'mock-chat:v1',
+      simulated: true,
+      modelGenerated: false,
+      supported: false,
+      supportedQuestionTypes: MOCK_SUPPORTED_QUESTION_TYPES,
+      generatedAt: NOW,
+    }
+  }
   if (hit.matchedQuery === 'completeness') {
     const apps = appSlugs(applicationSlug)
     const rs = apps.map((a) => mockCompleteness(a))
@@ -1339,10 +1557,13 @@ export function mockNlQuery(question: string, applicationSlug?: string): NlQuery
     question,
     interpretedAs: hit.interpretedAs,
     matchedQuery: hit.matchedQuery,
-    answer,
+    answer: { ...answer, supported: true },
     narrative,
     model: 'mock-chat:v1',
     simulated: true,
+    modelGenerated: false,
+    supported: true,
+    supportedQuestionTypes: MOCK_SUPPORTED_QUESTION_TYPES,
     generatedAt: NOW,
   }
 }

@@ -1,7 +1,9 @@
 package com.pramaan.backend.insight;
 
+import com.pramaan.backend.evidence.ControlFrameworkCatalog;
 import com.pramaan.backend.insight.InsightDtos.AuditPrepReport;
 import com.pramaan.backend.insight.InsightDtos.ComparisonReport;
+import com.pramaan.backend.insight.InsightDtos.ControlReuseResult;
 import com.pramaan.backend.insight.InsightDtos.ComplianceReport;
 import com.pramaan.backend.insight.InsightDtos.CompletenessReport;
 import com.pramaan.backend.insight.InsightDtos.EnterpriseDashboard;
@@ -133,6 +135,18 @@ public class InsightController {
                                        @RequestParam(defaultValue = "5") int limit,
                                        @RequestParam(defaultValue = "0.3") double minScore) {
         return reuse.similarTo(id, limit, minScore);
+    }
+
+    /** UC — "Evidence similarity and reuse": the control→frameworks catalogue for the control picker. */
+    @GetMapping("/reuse/controls")
+    public List<ControlFrameworkCatalog.ControlFrameworks> reuseControls() {
+        return reuse.controlCatalogue();
+    }
+
+    /** UC — for one control: frameworks it satisfies + evidence already held (cross-framework reuse). */
+    @GetMapping("/reuse/by-control")
+    public ControlReuseResult reuseByControl(@RequestParam String controlId) {
+        return reuse.reuseByControl(controlId);
     }
 
     @PostMapping("/reuse/search")

@@ -58,4 +58,10 @@ public class MockChatModel implements ChatModel {
     public boolean deterministic() {
         return true;
     }
+
+    /** Never model-generated — this class only re-emits lines from the prompt it was given. */
+    @Override
+    public boolean modelGenerated() {
+        return false;
+    }
 }

@@ -5,7 +5,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "applications")
@@ -44,6 +48,16 @@ public class ApplicationEntity {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    /**
+     * Additive onboarding-form fields with no dedicated typed column (customer/internet
+     * facing, environment, hosting/cloud, data classification, auth type, DR/backup
+     * required, object storage location, CMDB identifier, split db/middleware/OS tech, …).
+     * Deliberately untyped here — add a real column only if a field needs to be queried.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "onboarding_profile")
+    private Map<String, Object> onboardingProfile = new LinkedHashMap<>();
+
     protected ApplicationEntity() {}
 
     public ApplicationEntity(UUID id, String slug, String name, Instant now) {
@@ -73,4 +87,8 @@ public class ApplicationEntity {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void touch(Instant now) { this.updatedAt = now; }
+    public Map<String, Object> getOnboardingProfile() { return onboardingProfile; }
+    public void setOnboardingProfile(Map<String, Object> v) {
+        this.onboardingProfile = v == null ? new LinkedHashMap<>() : new LinkedHashMap<>(v);
+    }
 }

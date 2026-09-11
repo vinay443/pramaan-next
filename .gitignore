@@ -13,6 +13,10 @@ Thumbs.db
 # Java / Maven
 backend-java/target/
 
+# Machine-local Spring Boot overrides (application-local.yml etc.) — never committed.
+# Loaded automatically from file:./config/ when the "local" profile is active.
+backend-java/config/
+
 # Go
 agents-go/bin/
 *.exe

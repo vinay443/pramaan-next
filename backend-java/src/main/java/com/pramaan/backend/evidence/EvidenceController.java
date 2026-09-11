@@ -158,6 +158,13 @@ public class EvidenceController {
         return queries.verify(id, version);
     }
 
+    // ---- UC03 — associate held evidence with an additional framework (reuse) ----
+
+    @PostMapping("/{id}/frameworks")
+    public EvidenceView addFramework(@PathVariable UUID id, @RequestBody Map<String, String> body) {
+        return ingestion.addFrameworkMapping(id, body.get("framework"));
+    }
+
     @GetMapping("/query/{name}")
     public DeterministicQueryResult query(
             @PathVariable String name,

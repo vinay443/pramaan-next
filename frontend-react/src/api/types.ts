@@ -181,6 +181,64 @@ export interface OnboardingResult {
   collectionRunId?: string | null
 }
 
+// ---- Staged onboarding scan (rich intake form -> 5-phase async scan) ------
+// Mirrors backend-java com.pramaan.backend.onboarding.OnboardingScanDtos.
+
+export type OnboardingPhaseKey =
+  | 'REGISTER_APPLICATION'
+  | 'RESOLVE_FRAMEWORKS_CONTROLS'
+  | 'VALIDATE_EVIDENCE_SOURCES'
+  | 'TRIGGER_BASELINE_COLLECTION'
+  | 'COMPUTE_INITIAL_POSTURE'
+
+export type OnboardingScanStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+
+export interface OnboardingScanRequest {
+  slug: string
+  name: string
+  businessUnit?: string
+  criticality?: Criticality
+  owner?: string
+  technology?: string[]
+  dbTechnology?: string[]
+  middlewareTechnology?: string[]
+  osTechnology?: string[]
+  frameworks?: string[]
+  sources?: string[]
+  customerFacing?: boolean
+  internetFacing?: boolean
+  environment?: string
+  hostingCloud?: string
+  dataClassification?: string
+  authType?: string
+  drRequired?: boolean
+  backupRequired?: boolean
+  objectStorageLocation?: string
+  cmdbIdentifier?: string
+  requestedBy?: string
+}
+
+export interface OnboardingScanPhase {
+  phase: OnboardingPhaseKey | string
+  status: OnboardingScanStatus | string
+  message?: string | null
+}
+
+export interface OnboardingScanView {
+  scanId: string
+  applicationSlug: string
+  status: OnboardingScanStatus | string
+  currentPhase?: string | null
+  phases: OnboardingScanPhase[]
+  schedulerRunId?: string | null
+  completenessPct?: number | null
+  compliancePct?: number | null
+  message?: string | null
+  createdAt: string
+  startedAt?: string | null
+  finishedAt?: string | null
+}
+
 // ---- UC14 cross-application comparison --------------------------------
 
 export interface ComparisonReport {
@@ -552,6 +610,30 @@ export interface ReuseResult {
   matches: SimilarEvidence[]
 }
 
+// ---- reuse by control (cross-framework) ---------------------------
+
+export interface ControlFrameworks {
+  controlId: string
+  frameworks: string[]
+}
+
+export interface ControlReuseEvidence {
+  evidenceId: string
+  applicationSlug: string
+  controlId: string
+  sourceSystem: string
+  collectionMethod?: string | null
+  collectedAt?: string | null
+  sha256?: string | null
+  mappedFrameworks: string[]
+}
+
+export interface ControlReuseResult {
+  controlId: string
+  frameworks: string[]
+  evidence: ControlReuseEvidence[]
+}
+
 export interface EvidenceSummary {
   evidenceId: string
   applicationSlug: string
@@ -559,6 +641,8 @@ export interface EvidenceSummary {
   controlId: string
   model: string
   simulated: boolean
+  /** False when the text is a deterministic prompt digest rather than model output. */
+  modelGenerated: boolean
   summary: string
   groundedOn: string[]
   generatedAt: string
@@ -572,6 +656,12 @@ export interface NlQueryResult {
   narrative: string
   model: string
   simulated: boolean
+  /** False when the narrative is a deterministic prompt digest, not model output. */
+  modelGenerated: boolean
+  /** False when the question matched no supported intent. */
+  supported: boolean
+  /** The question types the deterministic router can actually answer. */
+  supportedQuestionTypes: string[]
   generatedAt: string
 }
 

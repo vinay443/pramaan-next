@@ -11,7 +11,9 @@ public record PramaanProperties(
         Scheduler scheduler,
         Seed seed,
         Admin admin,
-        Evidence evidence) {
+        Evidence evidence,
+        /** Dev/demo only. Gates throwaway helpers like the demo-evidence seeder. Never true in prod. */
+        boolean demoMode) {
 
     /** Use Case 5 — canonical role catalogue for the ECS Admin console. */
     public record Admin(List<String> roles) {}

@@ -4,6 +4,7 @@ import com.pramaan.backend.application.ApplicationEntity;
 import com.pramaan.backend.application.ApplicationService;
 import com.pramaan.backend.common.ApiException;
 import com.pramaan.backend.evidence.EvidenceDtos.BulkIngestResponse;
+import com.pramaan.backend.evidence.EvidenceDtos.EvidenceView;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestOutcome;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestRequest;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestResult;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -167,6 +169,50 @@ public class EvidenceIngestionService {
         }
         return new BulkIngestResponse(items.size(), created, newVersions, duplicates,
                 errors.size(), ok, errors);
+    }
+
+    /**
+     * UC03 metadata tagging — associate an existing evidence record with an
+     * additional compliance framework its control satisfies ("reuse this evidence
+     * for framework X" instead of re-collecting). Merges into the canonical
+     * {@code frameworks} tag via the same tag path as ingestion — no parallel
+     * tagging mechanism. Idempotent. The framework must be one the control maps to
+     * in {@link ControlFrameworkCatalog} (when the control is catalogued).
+     */
+    @Transactional
+    public EvidenceView addFrameworkMapping(UUID evidenceId, String framework) {
+        if (framework == null || framework.isBlank()) {
+            throw ApiException.badRequest("framework is required");
+        }
+        String fw = framework.trim().toUpperCase(Locale.ROOT);
+        EvidenceRecord record = records.findById(evidenceId)
+                .orElseThrow(() -> ApiException.notFound("Unknown evidence: " + evidenceId));
+
+        List<String> allowed = controlFrameworks.frameworksFor(record.getControlId(), record.getFramework());
+        if (controlFrameworks.isMapped(record.getControlId()) && !allowed.contains(fw)) {
+            throw ApiException.badRequest(fw + " is not a framework that control "
+                    + record.getControlId() + " maps to " + allowed);
+        }
+
+        Map<String, String> current = new LinkedHashMap<>();
+        record.getTags().forEach(t -> current.put(t.getTagKey(), t.getTagValue()));
+        List<String> frameworks = new ArrayList<>();
+        String existing = current.getOrDefault(EvidenceNaming.TAG_FRAMEWORKS, "");
+        for (String f : existing.split(",")) {
+            String s = f.trim().toUpperCase(Locale.ROOT);
+            if (!s.isBlank() && !frameworks.contains(s)) {
+                frameworks.add(s);
+            }
+        }
+        if (record.getFramework() != null && !frameworks.contains(record.getFramework().toUpperCase(Locale.ROOT))) {
+            frameworks.add(0, record.getFramework().toUpperCase(Locale.ROOT));
+        }
+        if (!frameworks.contains(fw)) {
+            frameworks.add(fw);
+        }
+        applyTags(record, Map.of(EvidenceNaming.TAG_FRAMEWORKS, String.join(",", frameworks)));
+        records.save(record);
+        return EvidenceView.from(record);
     }
 
     /** Caller tags plus the canonical Use Case 3 tag set (canonical keys win). */

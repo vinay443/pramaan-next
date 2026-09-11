@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -39,6 +40,17 @@ public class GlobalExceptionHandler {
     ResponseEntity<ErrorBody> handleNoResource(NoResourceFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ErrorBody.of(HttpStatus.NOT_FOUND, "No endpoint " + ex.getResourcePath()));
+    }
+
+    /** Wrong HTTP verb on a known path is a 405 (with an Allow header), not a 500. */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<ErrorBody> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        var body = ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED);
+        var supported = ex.getSupportedHttpMethods();
+        if (supported != null && !supported.isEmpty()) {
+            body.allow(supported.toArray(new org.springframework.http.HttpMethod[0]));
+        }
+        return body.body(ErrorBody.of(HttpStatus.METHOD_NOT_ALLOWED, ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
