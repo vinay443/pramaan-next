@@ -2,9 +2,12 @@ package com.pramaan.backend.scheduler;
 
 import com.pramaan.backend.application.ApplicationEntity;
 import com.pramaan.backend.application.ApplicationRepository;
+import com.pramaan.backend.evidence.EvidenceDtos.IngestOutcome;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestRequest;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestResult;
 import com.pramaan.backend.evidence.EvidenceIngestionService;
+import com.pramaan.backend.evidence.repo.EvidenceRecordRepository;
+import com.pramaan.backend.insight.EvidenceEmbeddingIndexer;
 import com.pramaan.backend.integrations.EnterpriseIntegration;
 import com.pramaan.backend.integrations.EnterpriseIntegration.CollectedEvidence;
 import com.pramaan.backend.integrations.EnterpriseIntegration.CollectionRequest;
@@ -20,9 +23,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
-/** Runs a scheduler collection: pull from each integration, ingest, tally. */
+/**
+ * Runs a scheduler collection: pull from each integration, ingest, tally.
+ *
+ * <p>Deliberately NOT {@code @Transactional} at this level. {@link
+ * EvidenceIngestionService#ingest} is transactional per call, so leaving this method
+ * bare lets each of the (potentially hundreds of) items across all sources commit or
+ * fail independently. Wrapping the whole loop in one transaction meant a single
+ * genuine failure (or, before the {@code replaceTags} fix, any re-tagging of an
+ * already-tagged record) marked the shared transaction rollback-only, silently
+ * failing every item after it in the same run.
+ */
 @Component
 public class SchedulerRunExecutor {
 
@@ -32,15 +44,20 @@ public class SchedulerRunExecutor {
     private final ApplicationRepository applications;
     private final IntegrationRegistry integrations;
     private final EvidenceIngestionService ingestion;
+    private final EvidenceRecordRepository records;
+    private final EvidenceEmbeddingIndexer embeddingIndexer;
     private final Clock clock;
 
     public SchedulerRunExecutor(SchedulerRunRepository runs, ApplicationRepository applications,
                                 IntegrationRegistry integrations, EvidenceIngestionService ingestion,
+                                EvidenceRecordRepository records, EvidenceEmbeddingIndexer embeddingIndexer,
                                 Clock clock) {
         this.runs = runs;
         this.applications = applications;
         this.integrations = integrations;
         this.ingestion = ingestion;
+        this.records = records;
+        this.embeddingIndexer = embeddingIndexer;
         this.clock = clock;
     }
 
@@ -53,7 +70,6 @@ public class SchedulerRunExecutor {
         }
     }
 
-    @Transactional
     public void execute(UUID runId) {
         SchedulerRun run = runs.findById(runId).orElseThrow();
         run.markRunning(clock.instant());
@@ -110,7 +126,10 @@ public class SchedulerRunExecutor {
                     try {
                         IngestResult r = ingestion.ingest(toRequest(slug, source, ce), runId);
                         switch (r.outcome()) {
-                            case CREATED, NEW_VERSION -> sIng++;
+                            case CREATED, NEW_VERSION -> {
+                                sIng++;
+                                indexEmbedding(r);
+                            }
                             case DUPLICATE -> sDup++;
                         }
                     } catch (RuntimeException ex) {
@@ -126,6 +145,25 @@ public class SchedulerRunExecutor {
         run.complete(clock.instant(), received, ingested, duplicates, failed, perSource);
         runs.save(run);
         log.info("scheduler run {} complete: {}", runId, run.getMessage());
+    }
+
+    /**
+     * Embed newly ingested/changed evidence into the vector store so it's searchable
+     * (reuse/similarity, NL query) without waiting for the on-demand
+     * {@link EvidenceEmbeddingIndexer#ensureIndexed()} reindex-on-query path. Best
+     * effort: an embedding failure (e.g. the embedding model being unreachable) must
+     * not fail evidence that was already durably ingested — {@code ensureIndexed()}
+     * will catch it up on the next reuse/NL-query call regardless.
+     */
+    private void indexEmbedding(IngestResult r) {
+        if (r.outcome() != IngestOutcome.CREATED && r.outcome() != IngestOutcome.NEW_VERSION) {
+            return;
+        }
+        try {
+            records.findById(UUID.fromString(r.evidenceId())).ifPresent(embeddingIndexer::indexOne);
+        } catch (RuntimeException ex) {
+            log.warn("embedding index failed for evidence {}: {}", r.evidenceId(), ex.getMessage());
+        }
     }
 
     private static IngestRequest toRequest(String slug, String source, CollectedEvidence ce) {

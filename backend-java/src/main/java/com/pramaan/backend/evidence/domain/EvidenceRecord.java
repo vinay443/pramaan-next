@@ -12,7 +12,9 @@ import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /** Logical evidence identity. Content lives in {@link EvidenceVersion} rows + the object store. */
@@ -114,11 +116,30 @@ public class EvidenceRecord {
         return versions.isEmpty() ? null : versions.get(versions.size() - 1);
     }
 
+    /**
+     * Merge in place rather than clear-then-add: clearing the managed collection and
+     * re-adding fresh {@link EvidenceTag} entities with the same {@code tagKey} makes
+     * Hibernate schedule the inserts before the orphan-removal deletes in the same
+     * flush, which trips the {@code (evidence_record_id, tag_key)} unique constraint
+     * the moment a record is re-tagged with a key it already had (e.g. every scheduler
+     * re-run over unchanged evidence). Updating existing entries and only
+     * inserting/removing genuinely new/gone keys avoids that insert-before-delete
+     * collision entirely.
+     */
     public void replaceTags(List<EvidenceTag> newTags) {
-        tags.clear();
-        newTags.forEach(t -> {
-            t.attachTo(this);
-            tags.add(t);
+        Map<String, String> incoming = new LinkedHashMap<>();
+        newTags.forEach(t -> incoming.put(t.getTagKey(), t.getTagValue()));
+
+        tags.removeIf(existing -> !incoming.containsKey(existing.getTagKey()));
+        tags.forEach(existing -> existing.setTagValue(incoming.get(existing.getTagKey())));
+
+        List<String> existingKeys = tags.stream().map(EvidenceTag::getTagKey).toList();
+        incoming.forEach((key, value) -> {
+            if (!existingKeys.contains(key)) {
+                EvidenceTag t = new EvidenceTag(UUID.randomUUID(), key, value);
+                t.attachTo(this);
+                tags.add(t);
+            }
         });
     }
 

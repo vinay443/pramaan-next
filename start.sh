@@ -386,7 +386,13 @@ run_demo() {
   # startup packet's "TimeZone" parameter (pgjdbc sends this directly,
   # independent of any JDBC URL "options" override). Force a valid zone for
   # this Docker-Postgres path only — see CLAUDE.md decision log.
-  BACKEND_EXTRA_JVM_ARGS="-Duser.timezone=Asia/Kolkata"
+  #
+  # Option D is the only mode where minio/pgvector actually have somewhere to
+  # point at (localhost:9000 / localhost:5434, both started above), so this is
+  # also the only place object-store/vector-store default away from
+  # filesystem/memory. L and R keep the filesystem/memory defaults from
+  # application.yml unless a developer overrides them explicitly.
+  BACKEND_EXTRA_JVM_ARGS="-Duser.timezone=Asia/Kolkata -Dpramaan.object-store.driver=minio -Dpramaan.ai.vector-store=pgvector"
   if [[ -n "$DRYRUN" ]]; then
     echo "[dry-run] docker compose up -d"
     echo "[dry-run] wait for pramaan-postgres container health status (PostgreSQL)"

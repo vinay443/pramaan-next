@@ -29,11 +29,20 @@ management:
         include: health,info
 
 pramaan:
-  # Object storage abstraction. driver: filesystem (default) | memory
+  # Object storage abstraction. driver: filesystem (default) | memory | minio
   object-store:
     driver: ${PRAMAAN_OBJECT_STORE_DRIVER:filesystem}
     filesystem:
       root: ${PRAMAAN_OBJECT_STORE_ROOT:./data/object-store}
+    # Connection for the docker-compose `minio` service (host-mapped ports — this
+    # app runs on the host, not inside compose's network). Only used when
+    # driver=minio; start.sh's option D sets that driver via a JVM system property,
+    # it isn't the global default.
+    minio:
+      endpoint: ${PRAMAAN_MINIO_ENDPOINT:http://localhost:9000}
+      access-key: ${PRAMAAN_MINIO_ACCESS_KEY:pramaan}
+      secret-key: ${PRAMAAN_MINIO_SECRET_KEY:pramaan-secret}
+      bucket: ${PRAMAAN_MINIO_BUCKET:pramaan-evidence}
   integrations:
     # Phase 1 ships mock enterprise integrations only.
     mock-enabled: true
@@ -89,6 +98,12 @@ pramaan:
     mode: ${PRAMAAN_AI_MODE:mock}
     # vector-store: memory (default) | pgvector (needs the pgvector/pgvector image)
     vector-store: ${PRAMAAN_AI_VECTOR_STORE:memory}
+    # Dedicated pgvector container/DB (docker-compose `pgvector` service, host-mapped
+    # port — see PgVectorEmbeddingStore). Only connected to when vector-store=pgvector.
+    pgvector:
+      url: ${PRAMAAN_AI_PGVECTOR_URL:jdbc:postgresql://localhost:5434/pramaan_vectors}
+      username: ${PRAMAAN_AI_PGVECTOR_USER:pramaan}
+      password: ${PRAMAAN_AI_PGVECTOR_PASSWORD:pramaan}
     chat:
       provider: ${PRAMAAN_AI_CHAT_PROVIDER:openai}   # openai | anthropic
       base-url: ${PRAMAAN_AI_CHAT_BASE_URL:}

@@ -7,11 +7,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.util.UUID;
 
 /** Mutable key/value tag on an evidence record (metadata tagging). */
 @Entity
-@Table(name = "evidence_tag")
+@Table(name = "evidence_tag",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"evidence_record_id", "tag_key"}))
 public class EvidenceTag {
 
     @Id
@@ -40,4 +42,5 @@ public class EvidenceTag {
     public UUID getId() { return id; }
     public String getTagKey() { return tagKey; }
     public String getTagValue() { return tagValue; }
+    void setTagValue(String v) { this.tagValue = v; }
 }
