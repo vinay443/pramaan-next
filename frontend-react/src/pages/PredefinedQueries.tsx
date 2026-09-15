@@ -127,22 +127,10 @@ export function PredefinedQueries() {
         {lastRun ? (
           <div className="answer">
             <p>
-              <StatusPill status={lastRun.outcome} /> {lastRun.controlId} → evidence{' '}
-              {lastRun.evidenceId ? <Link to={`/evidence/${lastRun.evidenceId}`}>{lastRun.evidenceId}</Link> : '—'} for{' '}
-              {lastRun.applicationSlug} ({lastRun.mode})
+              <StatusPill status={lastRun.outcome} /> {lastRun.controlId} →{' '}
+              <Link to={`/predefined-queries/${lastRun.controlId}`}>view details</Link>
             </p>
-            {commandFor(lastRun.controlId) ? (
-              <p className="muted small">
-                <code>{commandFor(lastRun.controlId)}</code>
-              </p>
-            ) : null}
             {lastRun.error ? <ErrorNote message={lastRun.error} /> : null}
-            {lastRun.outputPreview ? (
-              <details>
-                <summary>Output</summary>
-                <pre className="json">{lastRun.outputPreview}</pre>
-              </details>
-            ) : null}
           </div>
         ) : null}
         {summary ? (
@@ -180,7 +168,7 @@ export function PredefinedQueries() {
             columns={[
               { header: 'Control', cell: (q) => q.controlId },
               { header: 'Technology', cell: (q) => q.technology },
-              { header: 'Name', cell: (q) => q.controlName },
+              { header: 'Name', cell: (q) => <Link to={`/predefined-queries/${q.controlId}`}>{q.controlName}</Link> },
               { header: 'Command', cell: (q) => <code>{q.command}</code> },
               { header: 'Family', cell: (q) => q.controlFamily },
               { header: 'Frameworks', cell: (q) => q.frameworks.join(', ') },

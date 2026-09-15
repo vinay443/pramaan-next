@@ -12,6 +12,7 @@ import { useAsync } from '../hooks/useAsync'
 import { DataTable, ErrorNote, JsonBlock, Loading, Section, StatusPill } from '../components/ui'
 import { EvidenceSummaryPanel } from '../components/EvidenceSummaryPanel'
 import { MetadataTaggingPanel } from '../components/MetadataTaggingPanel'
+import { LifecycleHistoryTable } from '../components/LifecycleHistoryTable'
 
 export function EvidenceDetail() {
   const { id = '' } = useParams()
@@ -155,17 +156,7 @@ export function EvidenceDetail() {
                 {lifecycle.data.ageDays != null ? ` · age ${lifecycle.data.ageDays}d` : ''}
               </span>
             </p>
-            <DataTable
-              rows={lifecycle.data.history}
-              rowKey={(h) => `${h.occurredAt}-${h.action}`}
-              columns={[
-                { header: 'When', cell: (h) => new Date(h.occurredAt).toLocaleString() },
-                { header: 'Action', cell: (h) => h.action },
-                { header: 'From→To', cell: (h) => `${h.fromState ?? '—'} → ${h.toState}` },
-                { header: 'Actor', cell: (h) => h.actor ?? '—' },
-                { header: 'Note', cell: (h) => h.note ?? '' },
-              ]}
-            />
+            <LifecycleHistoryTable history={lifecycle.data.history} />
           </>
         ) : null}
       </Section>

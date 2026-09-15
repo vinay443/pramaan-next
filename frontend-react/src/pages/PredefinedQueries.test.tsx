@@ -18,9 +18,11 @@ describe('PredefinedQueries', () => {
     expect(screen.getByText('LNX-007')).toBeInTheDocument()
 
     await userEvent.click(screen.getAllByRole('button', { name: 'Run' })[0])
-    await waitFor(() => expect(screen.getByRole('link', { name: /ev-pq-/ })).toBeInTheDocument())
-    expect(screen.getByRole('link', { name: /ev-pq-/ })).toHaveAttribute('href', expect.stringMatching(/^\/evidence\/ev-pq-/))
-    expect(screen.getByText('Output')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('link', { name: 'view details' })).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: 'view details' })).toHaveAttribute(
+      'href',
+      expect.stringMatching(/^\/predefined-queries\/LNX-007$/),
+    )
   })
 
   it('runs the whole (filtered) catalogue and shows a scheduler-shaped summary with per-control results', async () => {

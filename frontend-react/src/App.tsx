@@ -8,6 +8,7 @@ import { EvidenceQuery } from './pages/EvidenceQuery'
 import { EvidenceLifecycle } from './pages/EvidenceLifecycle'
 import { GrcIntegration } from './pages/GrcIntegration'
 import { PredefinedQueries } from './pages/PredefinedQueries'
+import { PredefinedQueryDetail } from './pages/PredefinedQueryDetail'
 import { BulkUpload } from './pages/BulkUpload'
 import { Scheduler } from './pages/Scheduler'
 import { Applications } from './pages/Applications'
@@ -39,6 +40,7 @@ export function App() {
         <Route path="evidence-lifecycle" element={<EvidenceLifecycle />} />
         <Route path="grc-integration" element={<GrcIntegration />} />
         <Route path="predefined-queries" element={<PredefinedQueries />} />
+        <Route path="predefined-queries/:controlId" element={<PredefinedQueryDetail />} />
         <Route path="evidence/:id" element={<EvidenceDetail />} />
         <Route path="bulk-upload" element={<BulkUpload />} />
         <Route path="scheduler" element={<Scheduler />} />
