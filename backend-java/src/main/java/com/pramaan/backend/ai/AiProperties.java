@@ -14,7 +14,8 @@ public record AiProperties(
         String mode,
         String vectorStore,
         Chat chat,
-        Embedding embedding) {
+        Embedding embedding,
+        PgVector pgvector) {
 
     public AiProperties {
         if (mode == null || mode.isBlank()) {
@@ -22,6 +23,30 @@ public record AiProperties(
         }
         if (vectorStore == null || vectorStore.isBlank()) {
             vectorStore = "memory";
+        }
+    }
+
+    public PgVector pgvectorOrDefault() {
+        return pgvector != null ? pgvector : new PgVector(null, null, null);
+    }
+
+    /**
+     * Connection for the dedicated pgvector database (a separate container/DB from
+     * the main {@code spring.datasource} — see {@code docker-compose.yml}'s
+     * {@code pgvector} service). Deliberately its own {@link javax.sql.DataSource},
+     * not the app's primary one: the primary DB is plain PostgreSQL with no
+     * {@code vector} extension available.
+     */
+    public record PgVector(String url, String username, String password) {
+        public String urlOrDefault() {
+            return url == null || url.isBlank()
+                    ? "jdbc:postgresql://localhost:5434/pramaan_vectors" : url;
+        }
+        public String usernameOrDefault() {
+            return username == null || username.isBlank() ? "pramaan" : username;
+        }
+        public String passwordOrDefault() {
+            return password == null || password.isBlank() ? "pramaan" : password;
         }
     }
 

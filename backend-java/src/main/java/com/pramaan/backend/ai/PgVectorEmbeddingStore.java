@@ -6,10 +6,14 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * PostgreSQL + pgvector embedding store. The {@code evidence_embedding} table and
- * the {@code vector} extension are created by Flyway migration {@code V4__phase2.sql}
- * (PostgreSQL only). Nearest-neighbour search uses the cosine distance operator
- * {@code <=>}; similarity score is {@code 1 - distance}.
+ * PostgreSQL + pgvector embedding store. Connects to the dedicated {@code pgvector}
+ * container/DB (not the app's primary Flyway-managed database, which has no
+ * {@code vector} extension) — see {@link com.pramaan.backend.ai.AiConfig}. The
+ * {@code vector} extension and the {@code evidence_embedding} table are created
+ * on demand by {@link #ensureSchema()}, not by Flyway, so pgvector's DDL only runs
+ * when {@code pramaan.ai.vector-store=pgvector} is actually selected. Nearest-
+ * neighbour search uses the cosine distance operator {@code <=>}; similarity score
+ * is {@code 1 - distance}.
  */
 public class PgVectorEmbeddingStore implements EmbeddingStore {
 

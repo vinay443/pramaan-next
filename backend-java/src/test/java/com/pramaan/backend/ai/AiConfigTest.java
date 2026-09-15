@@ -19,7 +19,7 @@ class AiConfigTest {
     @Test
     void liveModeWithoutChatBaseUrlRefusesToBuildTheBean() {
         AiProperties props = new AiProperties("live", "memory",
-                new Chat("openai", null, "k", "gpt-4o-mini", 30), null);
+                new Chat("openai", null, "k", "gpt-4o-mini", 30), null, null);
 
         assertThatThrownBy(() -> config.chatModel(props))
                 .isInstanceOf(IllegalStateException.class)
@@ -30,7 +30,7 @@ class AiConfigTest {
     @Test
     void liveModeWithBlankChatBaseUrlAlsoRefuses() {
         AiProperties props = new AiProperties("live", "memory",
-                new Chat("openai", "   ", "k", "gpt-4o-mini", 30), null);
+                new Chat("openai", "   ", "k", "gpt-4o-mini", 30), null, null);
 
         assertThatThrownBy(() -> config.chatModel(props)).isInstanceOf(IllegalStateException.class);
     }
@@ -39,7 +39,7 @@ class AiConfigTest {
     void liveModeWithoutEmbeddingBaseUrlRefusesToBuildTheBean() {
         AiProperties props = new AiProperties("live", "memory",
                 new Chat("openai", "http://localhost:1234/v1", "k", "gpt-4o-mini", 30),
-                new Embedding("openai", null, "k", "text-embedding-3-small", 256));
+                new Embedding("openai", null, "k", "text-embedding-3-small", 256), null);
 
         assertThatThrownBy(() -> config.embeddingModel(props))
                 .isInstanceOf(IllegalStateException.class)
@@ -49,7 +49,7 @@ class AiConfigTest {
     @Test
     void liveModeWithBaseUrlBuildsTheHttpModelAndMarksItModelGenerated() {
         AiProperties props = new AiProperties("live", "memory",
-                new Chat("openai", "http://localhost:1234/v1", "k", "gpt-4o-mini", 30), null);
+                new Chat("openai", "http://localhost:1234/v1", "k", "gpt-4o-mini", 30), null, null);
 
         ChatModel model = config.chatModel(props);
 
@@ -60,7 +60,7 @@ class AiConfigTest {
 
     @Test
     void mockModeBuildsTheDigestAndMarksItNotModelGenerated() {
-        AiProperties props = new AiProperties("mock", "memory", null, null);
+        AiProperties props = new AiProperties("mock", "memory", null, null, null);
 
         ChatModel model = config.chatModel(props);
 

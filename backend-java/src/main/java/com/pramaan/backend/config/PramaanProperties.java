@@ -29,8 +29,24 @@ public record PramaanProperties(
         return evidence != null ? evidence : new Evidence(365);
     }
 
-    public record ObjectStore(String driver, Filesystem filesystem) {
+    public record ObjectStore(String driver, Filesystem filesystem, Minio minio) {
         public record Filesystem(String root) {}
+
+        /** MinIO (S3-compatible) connection — used when {@code driver=minio}. */
+        public record Minio(String endpoint, String accessKey, String secretKey, String bucket) {
+            public String endpointOrDefault() {
+                return endpoint == null || endpoint.isBlank() ? "http://localhost:9000" : endpoint;
+            }
+            public String accessKeyOrDefault() {
+                return accessKey == null || accessKey.isBlank() ? "pramaan" : accessKey;
+            }
+            public String secretKeyOrDefault() {
+                return secretKey == null || secretKey.isBlank() ? "pramaan-secret" : secretKey;
+            }
+            public String bucketOrDefault() {
+                return bucket == null || bucket.isBlank() ? "pramaan-evidence" : bucket;
+            }
+        }
     }
 
     public record Integrations(boolean mockEnabled, Endpoint sharepoint, Endpoint servicenow, Endpoint grc) {

@@ -58,7 +58,7 @@ public class EvidenceEmbeddingIndexer {
         }
     }
 
-    boolean indexOne(EvidenceRecord r) {
+    public boolean indexOne(EvidenceRecord r) {
         String content = evidence.latestContentText(r.getId()).orElse(null);
         if (content == null) {
             return false;
