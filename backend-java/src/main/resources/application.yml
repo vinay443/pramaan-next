@@ -2,7 +2,7 @@ spring:
   application:
     name: pramaan-next-backend
   datasource:
-    url: ${PRAMAAN_DB_URL:jdbc:postgresql://localhost:5433/pramaan}
+    url: ${PRAMAAN_DB_URL:jdbc:postgresql://localhost:5433/pramaan?options=-c%20TimeZone%3DAsia/Kolkata}
     username: ${PRAMAAN_DB_USER:pramaan}
     password: ${PRAMAAN_DB_PASSWORD:pramaan}
   jpa:

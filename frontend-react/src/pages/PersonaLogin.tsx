@@ -25,9 +25,7 @@ export function PersonaLogin() {
   function handleContinue() {
     if (!selected) return
     localStorage.setItem(PERSONA_STORAGE_KEY, selected)
-    // App Owner has its own scoped dashboard/pages (see AppOwnerLayout); every
-    // other persona still shares the one existing Dashboard, unchanged.
-    navigate(selected === 'APP' ? '/app-owner' : '/dashboard')
+    navigate('/dashboard')
   }
 
   return (

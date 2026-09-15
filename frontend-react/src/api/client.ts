@@ -50,8 +50,6 @@ export interface RequestOptions {
   body?: unknown
   signal?: AbortSignal
   timeoutMs?: number
-  /** Extra request headers (e.g. the App-Owner identity headers) merged over the defaults. */
-  headers?: Record<string, string>
 }
 
 export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
@@ -63,12 +61,7 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
   try {
     res = await fetch(url, {
       method: opts.method ?? 'GET',
-      headers: {
-        ...(opts.body !== undefined
-          ? { 'Content-Type': 'application/json', Accept: 'application/json' }
-          : { Accept: 'application/json' }),
-        ...opts.headers,
-      },
+      headers: opts.body !== undefined ? { 'Content-Type': 'application/json', Accept: 'application/json' } : { Accept: 'application/json' },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       signal: opts.signal ?? controller.signal,
     })

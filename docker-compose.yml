@@ -19,6 +19,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # Container starts under start.sh option D but is not currently wired into
+  # backend-java (pramaan.ai.vector-store defaults to memory / object store
+  # defaults to filesystem). Intentional — see CLAUDE.md decision log.
   pgvector:
     image: pgvector/pgvector:pg16
     container_name: pramaan-pgvector
@@ -37,8 +40,11 @@ services:
       timeout: 5s
       retries: 5
 
+  # Container starts under start.sh option D but is not currently wired into
+  # backend-java (pramaan.ai.vector-store defaults to memory / object store
+  # defaults to filesystem). Intentional — see CLAUDE.md decision log.
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     container_name: pramaan-minio
     command: server /data --console-address ":9001"
     environment:

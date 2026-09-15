@@ -11,7 +11,6 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -74,13 +73,6 @@ public class EvidenceRecord {
 
     @Column(name = "lifecycle_note", length = 2000)
     private String lifecycleNote;
-
-    /** App Owner scope only (see com.pramaan.backend.appowner) — not read/written by any other role's code path. */
-    @Column(name = "target_date")
-    private LocalDate targetDate;
-
-    @Column(name = "target_date_comment", length = 1000)
-    private String targetDateComment;
 
     @OneToMany(mappedBy = "record", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("versionNumber ASC")
@@ -153,16 +145,6 @@ public class EvidenceRecord {
     public String getReviewedBy() { return reviewedBy; }
     public Instant getReviewedAt() { return reviewedAt; }
     public String getLifecycleNote() { return lifecycleNote; }
-
-    public LocalDate getTargetDate() { return targetDate; }
-    public String getTargetDateComment() { return targetDateComment; }
-
-    /** App Owner scope only — sets the Target Date; caller (AppOwnerService) owns all validation/history. */
-    public void applyTargetDate(LocalDate date, String comment, Instant now) {
-        this.targetDate = date;
-        this.targetDateComment = comment;
-        this.updatedAt = now;
-    }
 
     /** Apply a lifecycle transition (validation happens in the service). */
     public void applyLifecycle(EvidenceLifecycleState to, String actor, String note, Instant now) {

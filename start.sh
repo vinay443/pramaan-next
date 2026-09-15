@@ -138,6 +138,22 @@ wait_for_port() {
   return 1
 }
 
+wait_for_container_healthy() {
+  local container="$1" name="$2" timeout="${3:-120}" waited=0
+  echo "Waiting for $name container '$container' to become healthy (up to ${timeout}s)..."
+  while (( waited < timeout )); do
+    local status
+    status=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null)
+    if [[ "$status" == "healthy" ]]; then
+      echo "  $name is healthy."
+      return 0
+    fi
+    sleep 2; waited=$((waited + 2))
+  done
+  echo "  ERROR: $name did not become healthy within ${timeout}s (last status: ${status:-unknown})." >&2
+  return 1
+}
+
 wait_for_http() {
   local url="$1" name="$2" timeout="${3:-120}" waited=0
   echo "Waiting for $name ($url, up to ${timeout}s)..."
@@ -195,8 +211,8 @@ trap cleanup EXIT INT TERM
 
 # --- demo mode: resolve + seed ----------------------------------------
 resolve_demo_mode() {
-  # Precedence: an explicit DEMO_MODE in the environment wins and skips the
-  # prompt; otherwise ask, defaulting to N (current behaviour on bare Enter).
+  # Precedence: an explicit DEMO_MODE in the environment wins; otherwise demo
+  # mode is always on (no interactive prompt) for D, L, and R.
   if [[ -n "${DEMO_MODE:-}" ]]; then
     case "${DEMO_MODE,,}" in
       1|true|yes|on) DEMO_MODE=true;  DEMO_MODE_ON="yes" ;;
@@ -205,12 +221,8 @@ resolve_demo_mode() {
     echo ""
     echo "Demo mode: ${DEMO_MODE_ON^^}  (from environment: DEMO_MODE=$DEMO_MODE)"
   else
-    local ans=""
-    read -rp $'\nEnable demo mode (seeds demo evidence, adds POST /api/v1/dev/seed-demo-evidence)? [y/N] ' ans || true
-    case "${ans,,}" in
-      y|yes) DEMO_MODE=true;  DEMO_MODE_ON="yes" ;;
-      *)     DEMO_MODE=false; DEMO_MODE_ON="no"  ;;
-    esac
+    # Demo mode is always on for D, L, and R — no interactive prompt.
+    DEMO_MODE=true; DEMO_MODE_ON="yes"
     echo "Demo mode: ${DEMO_MODE_ON^^}"
   fi
   export DEMO_MODE
@@ -243,9 +255,15 @@ start_backend() {
   # backend-java/config/application-local.yml (if present) is picked up. It is a
   # no-op when that file doesn't exist, so this changes nothing for a fresh clone.
   local profiles="local"; [[ -n "$profile" ]] && profiles="$profile,local"
+  # BACKEND_EXTRA_JVM_ARGS lets a caller (e.g. run_demo) inject extra JVM args
+  # for its invocation only; unset/empty for every other caller, so this is a
+  # no-op everywhere except where it's explicitly set beforehand.
+  local jvm_args=""
+  [[ "$demo" == "true" ]] && jvm_args="-DDEMO_MODE=true"
+  [[ -n "${BACKEND_EXTRA_JVM_ARGS:-}" ]] && jvm_args="${jvm_args:+$jvm_args }${BACKEND_EXTRA_JVM_ARGS}"
   if [[ -n "$DRYRUN" ]]; then
     local prof_dry=" -Dspring-boot.run.profiles=$profiles"
-    local demo_arg_dry=""; [[ "$demo" == "true" ]] && demo_arg_dry=" -Dspring-boot.run.jvmArguments=-DDEMO_MODE=true"
+    local demo_arg_dry=""; [[ -n "$jvm_args" ]] && demo_arg_dry=" -Dspring-boot.run.jvmArguments=$jvm_args"
     echo "[dry-run] (cd backend-java && $mvn -q spring-boot:run${prof_dry}${demo_arg_dry}) >> $BACKEND_LOG 2>&1 &"
     BACKEND_PID="dryrun"; return 0
   fi
@@ -256,7 +274,7 @@ start_backend() {
   # ${DEMO_MODE:false} from system properties too.
   echo "  demo-mode: $demo  -> pramaan.demo-mode"
   local run_args=(-q spring-boot:run -Dspring-boot.run.profiles="$profiles")
-  [[ "$demo" == "true" ]] && run_args+=(-Dspring-boot.run.jvmArguments="-DDEMO_MODE=true")
+  [[ -n "$jvm_args" ]] && run_args+=(-Dspring-boot.run.jvmArguments="$jvm_args")
   : > "$BACKEND_LOG"
   (
     cd "$BACKEND_DIR"
@@ -363,15 +381,21 @@ EOF
 run_demo() {
   require_docker
   echo "Demo mode: starting full docker-compose stack..."
+  # Windows JVMs map the OS zone "India Standard Time" to the legacy
+  # tz-database alias "Asia/Calcutta", which Postgres 16 rejects in the
+  # startup packet's "TimeZone" parameter (pgjdbc sends this directly,
+  # independent of any JDBC URL "options" override). Force a valid zone for
+  # this Docker-Postgres path only — see CLAUDE.md decision log.
+  BACKEND_EXTRA_JVM_ARGS="-Duser.timezone=Asia/Kolkata"
   if [[ -n "$DRYRUN" ]]; then
     echo "[dry-run] docker compose up -d"
-    echo "[dry-run] wait for tcp localhost:$COMPOSE_PG_HOST_PORT (PostgreSQL)"
+    echo "[dry-run] wait for pramaan-postgres container health status (PostgreSQL)"
     start_app_layer ""; return 0
   fi
   COMPOSE_SERVICES=( $(compose config --services) )
   compose up -d || { echo "docker compose up failed." >&2; exit 1; }
   STARTED_COMPOSE=1
-  wait_for_port localhost "$COMPOSE_PG_HOST_PORT" "PostgreSQL" 120 || exit 1
+  wait_for_container_healthy "pramaan-postgres" "PostgreSQL" 120 || exit 1
   start_app_layer ""      # default profile -> Docker Postgres/pgvector/MinIO
 }
 
