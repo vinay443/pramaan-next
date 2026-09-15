@@ -807,6 +807,7 @@ export function mockRunPredefinedQuery(controlId: string, applicationSlug?: stri
   return {
     controlId, technology: q.technology, applicationSlug: app, mode: 'SIMULATED',
     outcome: 'CREATED', evidenceId: `ev-pq-${controlId}`, sha256: 'a'.repeat(64), error: null,
+    outputPreview: `simulated result for ${q.technology} / ${controlId}: compliant`,
   }
 }
 
@@ -818,6 +819,7 @@ export function mockRunAllPredefinedQueries(
   const results = items.map((q) => ({
     controlId: q.controlId, technology: q.technology, applicationSlug: app, mode: 'SIMULATED',
     outcome: 'CREATED', evidenceId: `ev-pq-${q.controlId}`, sha256: 'a'.repeat(64), error: null,
+    outputPreview: `simulated result for ${q.technology} / ${q.controlId}: compliant`,
   }))
   return {
     received: items.length, ingested: items.length, duplicates: 0, failed: 0,
@@ -979,6 +981,24 @@ export function mockLifecycleTransition(
   }
   LIFECYCLE.set(evidenceId, next)
   return next
+}
+
+/** Mock for the multipart bulk-upload endpoint: builds one `IngestRequest` per selected
+ *  file (a real .zip is not expanded client-side — that's server-only behavior — so in
+ *  mock mode a .zip is just ingested as a single opaque item, same as any other file). */
+export function mockBulkIngestFiles(
+  files: File[],
+  meta: { applicationSlug: string; framework: string; controlId: string; sourceSystem?: string },
+): BulkIngestResponse {
+  const items: IngestRequest[] = files.map((f) => ({
+    applicationSlug: meta.applicationSlug,
+    controlId: meta.controlId,
+    framework: meta.framework,
+    sourceSystem: meta.sourceSystem || 'BULK_UPLOAD',
+    title: f.name,
+    contentText: f.name,
+  }))
+  return mockBulkIngest(items)
 }
 
 export function mockBulkIngest(items: IngestRequest[]): BulkIngestResponse {

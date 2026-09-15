@@ -88,6 +88,48 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
   return parsed as T
 }
 
+/** Like `apiFetch`, but sends a `FormData` body as multipart instead of JSON
+ *  (the browser sets the boundary header itself — never set Content-Type manually here). */
+export async function apiFetchMultipart<T>(
+  path: string,
+  form: FormData,
+  opts: { timeoutMs?: number; signal?: AbortSignal } = {},
+): Promise<T> {
+  const url = `${apiBaseUrl()}${path}`
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 30000)
+
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      body: form,
+      signal: opts.signal ?? controller.signal,
+    })
+  } catch (e) {
+    throw new ApiError(`Cannot reach backend at ${url}`, { offline: true, body: e })
+  } finally {
+    clearTimeout(timeout)
+  }
+
+  const text = await res.text()
+  const parsed = text ? safeJson(text) : undefined
+
+  if (!res.ok) {
+    const msg =
+      parsed && typeof parsed === 'object' && parsed !== null && 'message' in parsed
+        ? String((parsed as { message: unknown }).message)
+        : `${res.status} ${res.statusText}`
+    const aiUnavailable =
+      parsed !== null &&
+      typeof parsed === 'object' &&
+      (parsed as { aiUnavailable?: unknown }).aiUnavailable === true
+    throw new ApiError(msg, { status: res.status, aiUnavailable, body: parsed })
+  }
+  return parsed as T
+}
+
 function safeJson(text: string): unknown {
   try {
     return JSON.parse(text)

@@ -430,6 +430,7 @@ export interface PredefinedQueryRunResult {
   evidenceId?: string | null
   sha256?: string | null
   error?: string | null
+  outputPreview?: string | null
 }
 
 export interface PredefinedQueryRunSummary {

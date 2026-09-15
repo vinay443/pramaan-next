@@ -1,54 +1,41 @@
-import { useState } from 'react'
-import { ingestBulk } from '../api/endpoints'
-import type { BulkIngestResponse, IngestRequest } from '../api/types'
+import { useRef, useState } from 'react'
+import { ingestBulkUpload } from '../api/endpoints'
+import type { BulkIngestResponse } from '../api/types'
 import { DataTable, ErrorNote, Section, StatCard, StatusPill } from '../components/ui'
 
-interface Row {
-  controlId: string
-  title: string
-  contentText: string
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-const EMPTY: Row = { controlId: '', title: '', contentText: '' }
+function isZip(file: File): boolean {
+  return file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip'
+}
 
 export function BulkUpload() {
   const [applicationSlug, setApp] = useState('net-banking')
   const [framework, setFramework] = useState('PCI_DSS')
-  const [sourceSystem, setSource] = useState('BULK_UPLOAD')
+  const [controlId, setControlId] = useState('')
   const [technology, setTechnology] = useState('')
-  const [collectedBy, setCollectedBy] = useState('ui-user')
-  const [rows, setRows] = useState<Row[]>([{ ...EMPTY }])
-  const [jsonMode, setJsonMode] = useState(false)
-  const [jsonText, setJsonText] = useState('')
+  const [files, setFiles] = useState<File[]>([])
+  const [dragOver, setDragOver] = useState(false)
   const [result, setResult] = useState<BulkIngestResponse>()
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  function setRow(i: number, patch: Partial<Row>) {
-    setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
+  function addFiles(list: FileList | null) {
+    if (!list || list.length === 0) return
+    setFiles((fs) => {
+      const existing = new Set(fs.map((f) => `${f.name}|${f.size}`))
+      const next = Array.from(list).filter((f) => !existing.has(`${f.name}|${f.size}`))
+      return [...fs, ...next]
+    })
   }
 
-  function buildItems(): IngestRequest[] {
-    if (jsonMode) {
-      const parsed = JSON.parse(jsonText)
-      if (!Array.isArray(parsed)) throw new Error('JSON must be an array of IngestRequest objects')
-      return parsed as IngestRequest[]
-    }
-    const tags: Record<string, string> = { 'ingest.channel': 'bulk-upload' }
-    if (technology.trim()) tags.technology = technology.trim()
-    return rows
-      .filter((r) => r.controlId.trim() && r.contentText.trim())
-      .map((r) => ({
-        applicationSlug,
-        controlId: r.controlId.trim(),
-        framework,
-        sourceSystem,
-        title: r.title.trim() || undefined,
-        contentText: r.contentText,
-        collectedBy,
-        collectedAt: new Date().toISOString(),
-        tags,
-      }))
+  function removeFile(i: number) {
+    setFiles((fs) => fs.filter((_, idx) => idx !== i))
   }
 
   async function submit() {
@@ -56,9 +43,21 @@ export function BulkUpload() {
     setError(undefined)
     setResult(undefined)
     try {
-      const items = buildItems()
-      if (items.length === 0) throw new Error('Add at least one item with a control and content.')
-      setResult(await ingestBulk(items))
+      if (!applicationSlug.trim() || !framework.trim() || !controlId.trim()) {
+        throw new Error('Application, framework and control are required.')
+      }
+      if (files.length === 0) {
+        throw new Error('Select at least one file, or a single .zip archive.')
+      }
+      setResult(
+        await ingestBulkUpload(files, {
+          applicationSlug: applicationSlug.trim(),
+          framework: framework.trim(),
+          controlId: controlId.trim(),
+          technology: technology.trim() || undefined,
+        }),
+      )
+      setFiles([])
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -66,12 +65,15 @@ export function BulkUpload() {
     }
   }
 
+  const hasZip = files.some(isZip)
+
   return (
     <div className="page">
       <h1>Bulk Upload</h1>
       <p className="muted">
-        Submits <code>POST /api/v1/evidence/bulk</code> (a JSON array of <code>IngestRequest</code>). Partial success is
-        allowed — each item reports its own outcome.
+        Submits <code>POST /api/v1/evidence/bulk/upload</code> (multipart). Upload multiple files, or a single{' '}
+        <code>.zip</code> archive whose contents are unzipped and ingested as separate evidence items. Partial
+        success is allowed — each file reports its own outcome.
       </p>
 
       <Section title="Common fields">
@@ -85,8 +87,13 @@ export function BulkUpload() {
             <input aria-label="Framework" value={framework} onChange={(e) => setFramework(e.target.value)} />
           </label>
           <label>
-            Source system
-            <input aria-label="Source system" value={sourceSystem} onChange={(e) => setSource(e.target.value)} />
+            Control ID
+            <input
+              aria-label="Control ID"
+              value={controlId}
+              onChange={(e) => setControlId(e.target.value)}
+              placeholder="e.g. PCI-DSS-6.2"
+            />
           </label>
           <label>
             Technology
@@ -97,68 +104,65 @@ export function BulkUpload() {
               placeholder="postgresql / nginx / … (optional)"
             />
           </label>
-          <label>
-            Collected by
-            <input aria-label="Collected by" value={collectedBy} onChange={(e) => setCollectedBy(e.target.value)} />
-          </label>
         </div>
-        <label className="checkbox">
-          <input type="checkbox" checked={jsonMode} onChange={(e) => setJsonMode(e.target.checked)} /> Paste raw JSON array
-          instead
-        </label>
       </Section>
 
-      {jsonMode ? (
-        <Section title="JSON array">
-          <textarea
-            aria-label="JSON array"
-            rows={10}
-            value={jsonText}
-            onChange={(e) => setJsonText(e.target.value)}
-            placeholder='[{"applicationSlug":"payments","controlId":"C-1","framework":"ITPP","sourceSystem":"BULK_UPLOAD","contentText":"..."}]'
-          />
-        </Section>
-      ) : (
-        <Section
-          title="Items"
-          actions={
-            <button type="button" onClick={() => setRows((rs) => [...rs, { ...EMPTY }])}>
-              + Add item
-            </button>
-          }
+      <Section title="Files">
+        <div
+          className={`dropzone${dragOver ? ' dropzone-active' : ''}`}
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragOver(true)
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragOver(false)
+            addFiles(e.dataTransfer.files)
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="File drop zone"
         >
-          {rows.map((r, i) => (
-            <div className="item-row" key={i}>
-              <input
-                aria-label={`Control ${i + 1}`}
-                placeholder="controlId"
-                value={r.controlId}
-                onChange={(e) => setRow(i, { controlId: e.target.value })}
-              />
-              <input
-                aria-label={`Title ${i + 1}`}
-                placeholder="title (optional)"
-                value={r.title}
-                onChange={(e) => setRow(i, { title: e.target.value })}
-              />
-              <input
-                aria-label={`Content ${i + 1}`}
-                placeholder="evidence content (text)"
-                value={r.contentText}
-                onChange={(e) => setRow(i, { contentText: e.target.value })}
-              />
-              {rows.length > 1 ? (
-                <button type="button" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
+          <p>Drag and drop files here, or click to browse.</p>
+          <p className="muted">Multiple individual files, or a single .zip archive.</p>
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            aria-label="Choose files"
+            className="visually-hidden"
+            onChange={(e) => {
+              addFiles(e.target.files)
+              e.target.value = ''
+            }}
+          />
+        </div>
+
+        {hasZip && files.length > 1 ? (
+          <p className="muted">Note: a .zip archive is expanded server-side; other selected files are uploaded as-is.</p>
+        ) : null}
+
+        {files.length > 0 ? (
+          <ul className="file-list">
+            {files.map((f, i) => (
+              <li key={`${f.name}|${f.size}|${i}`}>
+                <span className="file-list-name">{f.name}</span>
+                <span className="file-list-size">{formatSize(f.size)}</span>
+                <button type="button" onClick={() => removeFile(i)} aria-label={`Remove ${f.name}`}>
                   ✕
                 </button>
-              ) : null}
-            </div>
-          ))}
-        </Section>
-      )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">No files selected.</p>
+        )}
+      </Section>
 
       <button className="primary" onClick={submit} disabled={busy}>
-        {busy ? 'Submitting…' : 'Submit bulk'}
+        {busy ? 'Uploading…' : 'Submit bulk'}
       </button>
 
       {error ? <ErrorNote message={error} /> : null}

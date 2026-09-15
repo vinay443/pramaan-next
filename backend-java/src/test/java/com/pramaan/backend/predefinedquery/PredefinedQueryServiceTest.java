@@ -50,6 +50,7 @@ class PredefinedQueryServiceTest {
         assertThat(r.outcome()).isIn("CREATED", "NEW_VERSION");
         assertThat(r.mode()).isEqualTo("SIMULATED");
         assertThat(r.evidenceId()).isNotBlank();
+        assertThat(r.outputPreview()).contains(controlId);
 
         var page = evidence.search(new EvidenceFilter("payments", null, null, "PREDEFINED_QUERY",
                 null, null, null, 0, 50), new TagFacets(null, "predefined-query"));

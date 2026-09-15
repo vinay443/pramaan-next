@@ -42,23 +42,26 @@ export function PersonaLogin() {
         <h1 className="persona-login-heading">Welcome to Pramaan</h1>
         <p className="muted persona-login-lead">Select your persona to continue</p>
 
-        <label htmlFor="persona-select">
-          Persona
+        <div className="persona-login-field">
+          <label className="persona-login-label" htmlFor="persona-select">
+            Login
+          </label>
           <select
             id="persona-select"
+            aria-label="Login"
             value={selected}
             onChange={(e) => setSelected(e.target.value as PersonaCode | '')}
           >
             <option value="" disabled>
-              Select Persona
+              Select Login
             </option>
             {PERSONAS.map((p) => (
               <option key={p.code} value={p.code}>
-                {p.name} ({p.code})
+                {p.name}
               </option>
             ))}
           </select>
-        </label>
+        </div>
 
         <div className="persona-login-actions">
           <button type="button" className="primary" disabled={!selected} onClick={handleContinue}>

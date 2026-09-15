@@ -18,15 +18,18 @@ describe('PredefinedQueries', () => {
     expect(screen.getByText('LNX-007')).toBeInTheDocument()
 
     await userEvent.click(screen.getAllByRole('button', { name: 'Run' })[0])
-    await waitFor(() => expect(screen.getByText(/→ evidence ev-pq-/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('link', { name: /ev-pq-/ })).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: /ev-pq-/ })).toHaveAttribute('href', expect.stringMatching(/^\/evidence\/ev-pq-/))
+    expect(screen.getByText('Output')).toBeInTheDocument()
   })
 
-  it('runs the whole (filtered) catalogue and shows a scheduler-shaped summary', async () => {
+  it('runs the whole (filtered) catalogue and shows a scheduler-shaped summary with per-control results', async () => {
     renderOffline(<PredefinedQueries />)
     expect(await screen.findByText(/Catalogue —/)).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: /^Run all/ }))
     await waitFor(() => expect(screen.getByText('Received')).toBeInTheDocument())
     expect(screen.getByText('Ingested')).toBeInTheDocument()
+    expect(screen.getAllByText('DB-001').length).toBeGreaterThan(1)
   })
 })

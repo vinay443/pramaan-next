@@ -2,7 +2,7 @@
 // failure (or when VITE_USE_MOCKS=true) it falls back to deterministic mock data
 // and flips the global data source to 'mock'.
 
-import { ApiError, apiBaseUrl, apiFetch, buildQuery } from './client'
+import { ApiError, apiBaseUrl, apiFetch, apiFetchMultipart, buildQuery } from './client'
 import { mocksForced, setDataSource } from './dataSource'
 import type * as MockModule from './mocks'
 import type {
@@ -36,7 +36,6 @@ import type {
   EvidenceLifecycleView,
   EvidenceView,
   GrcSyncStatus,
-  IngestRequest,
   IntegrityReport,
   LeadershipDashboard,
   LifecycleAction,
@@ -369,10 +368,32 @@ export function runEvidenceQuery(
   )
 }
 
-export function ingestBulk(items: IngestRequest[]): Promise<BulkIngestResponse> {
+export interface BulkUploadMeta {
+  applicationSlug: string
+  framework: string
+  controlId: string
+  sourceSystem?: string
+  technology?: string
+  collectedBy?: string
+}
+
+/** Uploads files (or a single .zip, expanded server-side into one item per entry) via
+ *  `POST /api/v1/evidence/bulk/upload` (multipart/form-data). Partial success is allowed —
+ *  each file/entry reports its own outcome in the response. */
+export function ingestBulkUpload(files: File[], meta: BulkUploadMeta): Promise<BulkIngestResponse> {
   return withFallback(
-    () => apiFetch<BulkIngestResponse>('/api/v1/evidence/bulk', { method: 'POST', body: items }),
-    () => mock.mockBulkIngest(items),
+    () => {
+      const form = new FormData()
+      form.set('applicationSlug', meta.applicationSlug)
+      form.set('framework', meta.framework)
+      form.set('controlId', meta.controlId)
+      if (meta.sourceSystem) form.set('sourceSystem', meta.sourceSystem)
+      if (meta.technology) form.set('technology', meta.technology)
+      if (meta.collectedBy) form.set('collectedBy', meta.collectedBy)
+      files.forEach((f) => form.append('files', f))
+      return apiFetchMultipart<BulkIngestResponse>('/api/v1/evidence/bulk/upload', form)
+    },
+    () => mock.mockBulkIngestFiles(files, meta),
   )
 }
 

@@ -212,4 +212,26 @@ class EvidenceControllerWebTest {
                 .andExpect(jsonPath("$.totalItems").value(1))
                 .andExpect(jsonPath("$.items[0].tags.technology").value("unknown"));
     }
+
+    @Test
+    void bulkFileUploadExpandsZipEntriesIntoSeparateEvidenceItems() throws Exception {
+        java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(buf)) {
+            zos.putNextEntry(new java.util.zip.ZipEntry("configs/nginx.conf"));
+            zos.write("server_tokens off;".getBytes());
+            zos.closeEntry();
+            zos.putNextEntry(new java.util.zip.ZipEntry("tls.txt"));
+            zos.write("ssl_protocols TLSv1.2 TLSv1.3;".getBytes());
+            zos.closeEntry();
+        }
+        MockMultipartFile zip = new MockMultipartFile("files", "evidence.zip", "application/zip", buf.toByteArray());
+
+        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(zip)
+                        .param("applicationSlug", "net-banking")
+                        .param("framework", "PCI_DSS")
+                        .param("controlId", "MW-TLS-VERSION"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.received").value(2))
+                .andExpect(jsonPath("$.created").value(2));
+    }
 }

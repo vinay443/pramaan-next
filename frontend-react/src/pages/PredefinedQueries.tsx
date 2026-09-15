@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { listApplications, listPredefinedQueries, runAllPredefinedQueries, runPredefinedQuery } from '../api/endpoints'
 import type { PredefinedQueryRunResult, PredefinedQueryRunSummary } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
@@ -55,6 +56,7 @@ export function PredefinedQueries() {
   }
 
   const count = catalog.data?.items.length ?? 0
+  const commandFor = (controlId: string) => catalog.data?.items.find((i) => i.controlId === controlId)?.command
 
   return (
     <div className="page">
@@ -123,10 +125,25 @@ export function PredefinedQueries() {
         </div>
         {error ? <ErrorNote message={error} /> : null}
         {lastRun ? (
-          <p className="answer">
-            <StatusPill status={lastRun.outcome} /> {lastRun.controlId} → evidence {lastRun.evidenceId} for{' '}
-            {lastRun.applicationSlug} ({lastRun.mode})
-          </p>
+          <div className="answer">
+            <p>
+              <StatusPill status={lastRun.outcome} /> {lastRun.controlId} → evidence{' '}
+              {lastRun.evidenceId ? <Link to={`/evidence/${lastRun.evidenceId}`}>{lastRun.evidenceId}</Link> : '—'} for{' '}
+              {lastRun.applicationSlug} ({lastRun.mode})
+            </p>
+            {commandFor(lastRun.controlId) ? (
+              <p className="muted small">
+                <code>{commandFor(lastRun.controlId)}</code>
+              </p>
+            ) : null}
+            {lastRun.error ? <ErrorNote message={lastRun.error} /> : null}
+            {lastRun.outputPreview ? (
+              <details>
+                <summary>Output</summary>
+                <pre className="json">{lastRun.outputPreview}</pre>
+              </details>
+            ) : null}
+          </div>
         ) : null}
         {summary ? (
           <>
@@ -139,6 +156,16 @@ export function PredefinedQueries() {
             <p className="muted small">
               {summary.message} — application {summary.applicationSlug}, mode {summary.mode}
             </p>
+            <DataTable
+              rows={summary.results}
+              rowKey={(r) => r.controlId}
+              columns={[
+                { header: 'Control', cell: (r) => r.controlId },
+                { header: 'Command', cell: (r) => <code>{commandFor(r.controlId)}</code> },
+                { header: 'Outcome', cell: (r) => <StatusPill status={r.outcome} /> },
+                { header: 'Error', cell: (r) => (r.error ? r.error : '') },
+              ]}
+            />
           </>
         ) : null}
       </Section>
@@ -154,6 +181,7 @@ export function PredefinedQueries() {
               { header: 'Control', cell: (q) => q.controlId },
               { header: 'Technology', cell: (q) => q.technology },
               { header: 'Name', cell: (q) => q.controlName },
+              { header: 'Command', cell: (q) => <code>{q.command}</code> },
               { header: 'Family', cell: (q) => q.controlFamily },
               { header: 'Frameworks', cell: (q) => q.frameworks.join(', ') },
               { header: 'Type', cell: (q) => q.evidenceType },

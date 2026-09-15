@@ -20,10 +20,11 @@ public final class PredefinedQueryDtos {
     public record CatalogResponse(int total, List<String> technologies, List<String> frameworks,
                                   List<String> controlFamilies, List<CatalogItemView> items) {}
 
-    /** Result of running one predefined query. */
+    /** Result of running one predefined query. {@code outputPreview} is the simulated/collected
+     *  content that was ingested as evidence, truncated so a bulk-run summary stays a reasonable size. */
     public record QueryRunResult(String controlId, String technology, String applicationSlug,
                                  String mode, String outcome, String evidenceId, String sha256,
-                                 String error) {}
+                                 String error, String outputPreview) {}
 
     /**
      * Bulk-run summary — same received / ingested / duplicates / failed shape as a

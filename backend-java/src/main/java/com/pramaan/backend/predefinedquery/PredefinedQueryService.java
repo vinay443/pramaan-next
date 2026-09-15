@@ -30,6 +30,7 @@ public class PredefinedQueryService {
 
     private static final Logger log = LoggerFactory.getLogger(PredefinedQueryService.class);
     private static final String SOURCE_SYSTEM = "PREDEFINED_QUERY";
+    private static final int OUTPUT_PREVIEW_MAX_CHARS = 4000;
 
     private final PredefinedQueryCatalog catalog;
     private final PredefinedQueryExecutor executor;
@@ -108,12 +109,19 @@ public class PredefinedQueryService {
             // evidence with the catalogue entry's own full framework list.
             IngestResult ir = ingestion.ingest(req, null, q.frameworksOrEmpty());
             return new QueryRunResult(q.controlId(), q.technology(), applicationSlug, executor.mode(),
-                    ir.outcome().name(), ir.evidenceId(), ir.sha256(), null);
+                    ir.outcome().name(), ir.evidenceId(), ir.sha256(), null, truncate(out.content()));
         } catch (RuntimeException ex) {
             log.warn("predefined query {} failed for {}: {}", q.controlId(), applicationSlug, ex.toString());
             return new QueryRunResult(q.controlId(), q.technology(), applicationSlug, executor.mode(),
-                    "FAILED", null, null, ex.getMessage());
+                    "FAILED", null, null, ex.getMessage(), null);
         }
+    }
+
+    private static String truncate(String content) {
+        if (content == null || content.length() <= OUTPUT_PREVIEW_MAX_CHARS) {
+            return content;
+        }
+        return content.substring(0, OUTPUT_PREVIEW_MAX_CHARS) + "…";
     }
 
     /** Onboarded target(s): the named app (must be active) or every active app. */
