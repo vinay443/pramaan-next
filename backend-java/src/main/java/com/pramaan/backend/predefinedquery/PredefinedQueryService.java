@@ -3,9 +3,12 @@ package com.pramaan.backend.predefinedquery;
 import com.pramaan.backend.application.ApplicationEntity;
 import com.pramaan.backend.application.ApplicationRepository;
 import com.pramaan.backend.common.ApiException;
+import com.pramaan.backend.evidence.EvidenceDtos.IngestOutcome;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestRequest;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestResult;
 import com.pramaan.backend.evidence.EvidenceIngestionService;
+import com.pramaan.backend.evidence.repo.EvidenceRecordRepository;
+import com.pramaan.backend.insight.EvidenceEmbeddingIndexer;
 import com.pramaan.backend.predefinedquery.PredefinedQueryDtos.CatalogItemView;
 import com.pramaan.backend.predefinedquery.PredefinedQueryDtos.CatalogResponse;
 import com.pramaan.backend.predefinedquery.PredefinedQueryDtos.QueryRunResult;
@@ -14,6 +17,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -36,15 +40,20 @@ public class PredefinedQueryService {
     private final PredefinedQueryExecutor executor;
     private final EvidenceIngestionService ingestion;
     private final ApplicationRepository applications;
+    private final EvidenceRecordRepository records;
+    private final EvidenceEmbeddingIndexer embeddingIndexer;
     private final Clock clock;
 
     public PredefinedQueryService(PredefinedQueryCatalog catalog, PredefinedQueryExecutor executor,
                                   EvidenceIngestionService ingestion, ApplicationRepository applications,
+                                  EvidenceRecordRepository records, EvidenceEmbeddingIndexer embeddingIndexer,
                                   Clock clock) {
         this.catalog = catalog;
         this.executor = executor;
         this.ingestion = ingestion;
         this.applications = applications;
+        this.records = records;
+        this.embeddingIndexer = embeddingIndexer;
         this.clock = clock;
     }
 
@@ -108,12 +117,31 @@ public class PredefinedQueryService {
             // Predefined-query controls aren't in ControlFrameworkCatalog — tag the
             // evidence with the catalogue entry's own full framework list.
             IngestResult ir = ingestion.ingest(req, null, q.frameworksOrEmpty());
+            indexEmbedding(ir);
             return new QueryRunResult(q.controlId(), q.technology(), applicationSlug, executor.mode(),
                     ir.outcome().name(), ir.evidenceId(), ir.sha256(), null, truncate(out.content()));
         } catch (RuntimeException ex) {
             log.warn("predefined query {} failed for {}: {}", q.controlId(), applicationSlug, ex.toString());
             return new QueryRunResult(q.controlId(), q.technology(), applicationSlug, executor.mode(),
                     "FAILED", null, null, ex.getMessage(), null);
+        }
+    }
+
+    /**
+     * Embed newly ingested/changed evidence into the vector store eagerly, same as
+     * {@code SchedulerRunExecutor.indexEmbedding}. Best effort: an embedding failure
+     * must not fail evidence that was already durably ingested — {@code
+     * EvidenceEmbeddingIndexer#ensureIndexed()} will catch it up on the next
+     * reuse/NL-query call regardless.
+     */
+    private void indexEmbedding(IngestResult r) {
+        if (r.outcome() != IngestOutcome.CREATED && r.outcome() != IngestOutcome.NEW_VERSION) {
+            return;
+        }
+        try {
+            records.findById(UUID.fromString(r.evidenceId())).ifPresent(embeddingIndexer::indexOne);
+        } catch (RuntimeException ex) {
+            log.warn("embedding index failed for evidence {}: {}", r.evidenceId(), ex.getMessage());
         }
     }
 

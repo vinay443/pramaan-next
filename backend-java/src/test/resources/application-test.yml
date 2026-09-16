@@ -18,6 +18,8 @@ spring:
 pramaan:
   object-store:
     driver: memory
+  ai:
+    vector-store: memory
   integrations:
     mock-enabled: true
   onboarding-scan:

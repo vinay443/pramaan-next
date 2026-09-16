@@ -23,6 +23,10 @@ pramaan:
     driver: filesystem
     filesystem:
       root: ./target/dev-object-store
+  ai:
+    # No containers exist here — override the (now Docker-backed) base default
+    # of pgvector back to memory.
+    vector-store: memory
   integrations:
     mock-enabled: true
   scheduler:

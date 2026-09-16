@@ -1064,19 +1064,45 @@ button.ghost:hover:not(:disabled) {
 
 /* ---- predefined queries table ------------------------------ */
 
-.pq-table .table-wrap {
+/* .pq-table IS the .table-wrap (DataTable puts both classes on one div) —
+   not a descendant selector, or this never matches. */
+.pq-table {
   max-height: 65vh;
   overflow-y: auto;
 }
 
-.pq-table th.col-id, .pq-table td.col-id { width: 108px; }
-.pq-table th.col-tech, .pq-table td.col-tech { width: 140px; }
-.pq-table th.col-name, .pq-table td.col-name { width: 220px; }
-.pq-table th.col-cmd, .pq-table td.col-cmd { width: 320px; }
-.pq-table th.col-fw, .pq-table td.col-fw { width: 200px; }
-.pq-table th.col-type, .pq-table td.col-type { width: 140px; }
-.pq-table th.col-status, .pq-table td.col-status { width: 170px; }
-.pq-table th.col-actions, .pq-table td.col-actions { width: 168px; }
+/* Fixed layout so columns hold their assigned widths instead of auto-sizing
+   per row's content — that auto-sizing was squeezing the Framework column
+   down to near-zero, which is why chips were stacking one per line. */
+.pq-table table {
+  table-layout: fixed;
+}
+
+.pq-table th, .pq-table td {
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+/* Percentage widths below are ratios of the leftover space after the fixed
+   columns (table-layout:fixed splits leftover space by relative percentage,
+   not literal % of table width) — weighted so Framework gets enough room
+   for 2-3 short chips on one line rather than Command dominating. */
+.pq-table th.col-id, .pq-table td.col-id { width: 90px; }
+.pq-table th.col-tech, .pq-table td.col-tech { width: 110px; }
+.pq-table th.col-name, .pq-table td.col-name { width: 16%; }
+.pq-table th.col-cmd, .pq-table td.col-cmd { width: 22%; }
+.pq-table th.col-fw, .pq-table td.col-fw { width: 24%; }
+.pq-table th.col-type, .pq-table td.col-type { width: 120px; }
+.pq-table th.col-status, .pq-table td.col-status { width: 90px; }
+.pq-table th.col-actions, .pq-table td.col-actions { width: 146px; }
+
+.ellipsis-cell {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: help;
+}
 
 .pq-table td.col-actions .row-actions {
   margin-top: 0;
@@ -1141,6 +1167,16 @@ button.ghost:hover:not(:disabled) {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  align-items: center;
+}
+
+/* Smaller than the table body text (13px) so 2-3 short framework chips fit
+   on one line instead of forcing the row taller. Scoped to this table's
+   Framework chips only — .tag is shared by other pages/columns. */
+.pq-table .chip-row .tag {
+  padding: 2px 8px;
+  font-size: 12px;
+  margin: 0;
 }
 
 /* ---- indeterminate progress (Run All in flight) ------------- */

@@ -425,7 +425,15 @@ export function PredefinedQueries() {
               columns={[
                 { header: 'Control ID', className: 'col-id', cell: (item) => <code>{item.controlId}</code> },
                 { header: 'Technology', className: 'col-tech', cell: (item) => item.technology },
-                { header: 'Control Name', className: 'col-name', cell: (item) => item.controlName },
+                {
+                  header: 'Control Name',
+                  className: 'col-name',
+                  cell: (item) => (
+                    <span className="ellipsis-cell" title={item.controlName}>
+                      {item.controlName}
+                    </span>
+                  ),
+                },
                 {
                   header: 'Query / Command',
                   className: 'col-cmd',

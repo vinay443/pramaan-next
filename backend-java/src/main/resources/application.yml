@@ -29,9 +29,12 @@ management:
         include: health,info
 
 pramaan:
-  # Object storage abstraction. driver: filesystem (default) | memory | minio
+  # Object storage abstraction. driver: filesystem | memory | minio (default here —
+  # this is the Docker-backed default profile that start.sh's Demo/Low-mem options
+  # start the minio container for; the no-Docker 'dev' profile overrides back to
+  # filesystem in application-dev.yml).
   object-store:
-    driver: ${PRAMAAN_OBJECT_STORE_DRIVER:filesystem}
+    driver: ${PRAMAAN_OBJECT_STORE_DRIVER:minio}
     filesystem:
       root: ${PRAMAAN_OBJECT_STORE_ROOT:./data/object-store}
     # Connection for the docker-compose `minio` service (host-mapped ports — this
@@ -108,8 +111,11 @@ pramaan:
   ai:
     # mode: mock (deterministic, no external calls) | live (call the HTTP model APIs)
     mode: ${PRAMAAN_AI_MODE:mock}
-    # vector-store: memory (default) | pgvector (needs the pgvector/pgvector image)
-    vector-store: ${PRAMAAN_AI_VECTOR_STORE:memory}
+    # vector-store: memory | pgvector (default here — this is the Docker-backed
+    # default profile that start.sh's Demo/Low-mem options start the pgvector
+    # container for; the no-Docker 'dev' profile overrides back to memory in
+    # application-dev.yml).
+    vector-store: ${PRAMAAN_AI_VECTOR_STORE:pgvector}
     # Dedicated pgvector container/DB (docker-compose `pgvector` service, host-mapped
     # port — see PgVectorEmbeddingStore). Only connected to when vector-store=pgvector.
     pgvector:
