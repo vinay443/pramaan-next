@@ -143,19 +143,24 @@ export function DataTable<T>({
   columns,
   rowKey,
   onRowClick,
+  className,
 }: {
   rows: T[]
-  columns: Array<{ header: string; cell: (row: T) => ReactNode; align?: 'right' }>
+  columns: Array<{ header: string; cell: (row: T) => ReactNode; align?: 'right'; className?: string }>
   rowKey: (row: T) => string
   onRowClick?: (row: T) => void
+  className?: string
 }) {
   return (
-    <div className="table-wrap">
+    <div className={className ? `table-wrap ${className}` : 'table-wrap'}>
       <table>
         <thead>
           <tr>
             {columns.map((c) => (
-              <th key={c.header} className={c.align === 'right' ? 'num' : undefined}>
+              <th
+                key={c.header}
+                className={[c.align === 'right' ? 'num' : '', c.className ?? ''].filter(Boolean).join(' ') || undefined}
+              >
                 {c.header}
               </th>
             ))}
@@ -169,7 +174,10 @@ export function DataTable<T>({
               className={onRowClick ? 'clickable' : undefined}
             >
               {columns.map((c) => (
-                <td key={c.header} className={c.align === 'right' ? 'num' : undefined}>
+                <td
+                  key={c.header}
+                  className={[c.align === 'right' ? 'num' : '', c.className ?? ''].filter(Boolean).join(' ') || undefined}
+                >
                   {c.cell(row)}
                 </td>
               ))}
@@ -188,24 +196,29 @@ export function Meter({
   max = 100,
   label,
   tone = 'accent',
+  indeterminate = false,
 }: {
   value: number
   max?: number
   label?: string
   tone?: 'accent' | 'ok' | 'bad'
+  /** True while progress can't be quantified yet (e.g. a bulk run in flight with no
+   *  per-item completion signal from the backend) — renders a sweeping bar instead
+   *  of a fabricated percentage. */
+  indeterminate?: boolean
 }) {
   const pct = max <= 0 ? 0 : Math.max(0, Math.min(100, (value / max) * 100))
   return (
     <div className="meter">
       <div
-        className="meter-track"
+        className={indeterminate ? 'meter-track meter-indeterminate' : 'meter-track'}
         role="progressbar"
-        aria-valuenow={Math.round(pct)}
+        aria-valuenow={indeterminate ? undefined : Math.round(pct)}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={label}
       >
-        <div className={`meter-fill meter-${tone}`} style={{ width: `${pct}%` }} />
+        <div className={`meter-fill meter-${tone}`} style={indeterminate ? undefined : { width: `${pct}%` }} />
       </div>
       {label ? <div className="meter-label">{label}</div> : null}
     </div>

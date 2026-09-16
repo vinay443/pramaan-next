@@ -1,25 +1,134 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useMemo, useState, type FormEvent } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { listApplications, listPredefinedQueries, runAllPredefinedQueries, runPredefinedQuery } from '../api/endpoints'
-import type { PredefinedQueryRunResult, PredefinedQueryRunSummary } from '../api/types'
+import type { PredefinedQueryItem, PredefinedQueryRunResult, PredefinedQueryRunSummary } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
-import { DataTable, ErrorNote, Loading, Section, StatCard, StatusPill } from '../components/ui'
+import { DataTable, Empty, ErrorNote, Loading, Meter, Section, StatCard, StatusPill } from '../components/ui'
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50] as const
+
+/** Technology values the catalogue cannot resolve yet — kept out of the executable UI
+ *  (data-quality flag, not a UI bug) until a real technology mapping lands. */
+const UNRESOLVED_TECHNOLOGIES = new Set(['Unknown'])
+
+/**
+ * Recommended `Type` values, derived from the catalogue's evidenceType/command shape.
+ * The catalogue itself has no `type` field yet (that's a data-model change out of
+ * this pass's scope), so this is a display-only classification — nothing is persisted.
+ */
+const RECOMMENDED_TYPES = [
+  'SQL Query',
+  'Shell Command',
+  'Configuration Check',
+  'API Check',
+  'File/Artifact Check',
+  'Agent Script',
+] as const
+
+const SQL_LEAD = /^\s*(SELECT|SHOW|INSERT|UPDATE|DELETE)\b/i
+const API_LEAD = /^\s*(curl|GET |POST |PUT )/i
+const SCAN_TOOL = /\b(trivy|gitleaks|dependency-check)\b/i
+
+function deriveType(q: PredefinedQueryItem): (typeof RECOMMENDED_TYPES)[number] {
+  const cmd = q.command ?? ''
+  const et = q.evidenceType ?? ''
+  if (SQL_LEAD.test(cmd)) return 'SQL Query'
+  if (et === 'Scan Report' || SCAN_TOOL.test(cmd)) return 'Agent Script'
+  if (API_LEAD.test(cmd) || et === 'API Output' || et === 'Search Output') return 'API Check'
+  if (et === 'Configuration File' || et === 'Configuration Export' || et === 'Certificate Output') {
+    return 'File/Artifact Check'
+  }
+  if (['Kubernetes', 'OpenShift', 'MongoDB', 'Aerospike', 'Redis'].includes(q.technology)) {
+    return 'Configuration Check'
+  }
+  return 'Shell Command'
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      className={copied ? 'copy-btn copied' : 'copy-btn'}
+      title="Copy command"
+      onClick={async (e) => {
+        e.stopPropagation()
+        try {
+          await navigator.clipboard.writeText(text)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        } catch {
+          // clipboard unavailable (e.g. insecure context) — no-op, user can still select the text
+        }
+      }}
+    >
+      {copied ? 'Copied' : 'Copy'}
+    </button>
+  )
+}
+
+type SortField = 'controlId' | 'technology' | 'controlName' | 'ecsStatus'
+type SortOrder = 'asc' | 'desc'
+
+const SORT_LABELS: Record<SortField, string> = {
+  controlId: 'Control ID',
+  technology: 'Technology',
+  controlName: 'Control Name',
+  ecsStatus: 'ECS Status',
+}
+
+function sortValue(item: PredefinedQueryItem, field: SortField): string {
+  switch (field) {
+    case 'controlId':
+      return item.controlId
+    case 'technology':
+      return item.technology
+    case 'controlName':
+      return item.controlName
+    case 'ecsStatus':
+      return item.runtimeStatus
+  }
+}
+
+interface FilterState {
+  technology: string
+  framework: string
+  search: string
+  sortBy: SortField
+  order: SortOrder
+}
+
+const DEFAULT_FILTERS: FilterState = {
+  technology: '',
+  framework: '',
+  search: '',
+  sortBy: 'controlId',
+  order: 'asc',
+}
+
+const TABS = ['Query Catalog', 'Execution History', 'Manual Controls'] as const
+type Tab = (typeof TABS)[number]
 
 export function PredefinedQueries() {
-  const [technology, setTechnology] = useState('')
-  const [framework, setFramework] = useState('')
-  const [controlFamily, setControlFamily] = useState('')
-  const [applicationSlug, setApplicationSlug] = useState('')
+  const navigate = useNavigate()
+  const [tab, setTab] = useState<Tab>('Query Catalog')
 
-  const filters = useMemo(
+  // Draft mirrors what's in the filter controls; applied is what's actually in
+  // effect. Nothing here re-filters until Apply is clicked (or the form submitted).
+  const [draft, setDraft] = useState<FilterState>(DEFAULT_FILTERS)
+  const [applied, setApplied] = useState<FilterState>(DEFAULT_FILTERS)
+  const [applicationSlug, setApplicationSlug] = useState('')
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(25)
+
+  const serverFilters = useMemo(
     () => ({
-      technology: technology || undefined,
-      framework: framework || undefined,
-      controlFamily: controlFamily || undefined,
+      technology: applied.technology || undefined,
+      framework: applied.framework || undefined,
     }),
-    [technology, framework, controlFamily],
+    [applied.technology, applied.framework],
   )
-  const catalog = useAsync(() => listPredefinedQueries(filters), [JSON.stringify(filters)])
+  const catalog = useAsync(() => listPredefinedQueries(serverFilters), [JSON.stringify(serverFilters)])
   const apps = useAsync(() => listApplications(), [])
   const onboarded = (apps.data ?? []).filter((a) => a.active)
 
@@ -27,6 +136,55 @@ export function PredefinedQueries() {
   const [error, setError] = useState<string>()
   const [summary, setSummary] = useState<PredefinedQueryRunSummary>()
   const [lastRun, setLastRun] = useState<PredefinedQueryRunResult>()
+
+  const resolvedItems = useMemo(
+    () => (catalog.data?.items ?? []).filter((q) => !UNRESOLVED_TECHNOLOGIES.has(q.technology)),
+    [catalog.data],
+  )
+  const technologies = useMemo(
+    () => (catalog.data?.technologies ?? []).filter((t) => !UNRESOLVED_TECHNOLOGIES.has(t)),
+    [catalog.data],
+  )
+  const unsupportedTechCount = useMemo(
+    () => (catalog.data?.items ?? []).filter((q) => UNRESOLVED_TECHNOLOGIES.has(q.technology)).length,
+    [catalog.data],
+  )
+  const controlsWithQueries = useMemo(() => resolvedItems.filter((i) => !!i.command).length, [resolvedItems])
+  const manualControls = resolvedItems.length - controlsWithQueries
+
+  const searchTerm = applied.search.trim().toLowerCase()
+  const filteredItems = useMemo(() => {
+    let items = resolvedItems
+    if (searchTerm) {
+      items = items.filter(
+        (item) =>
+          item.controlId.toLowerCase().includes(searchTerm) ||
+          item.controlName.toLowerCase().includes(searchTerm) ||
+          item.technology.toLowerCase().includes(searchTerm) ||
+          item.command.toLowerCase().includes(searchTerm) ||
+          item.frameworks.some((f) => f.toLowerCase().includes(searchTerm)),
+      )
+    }
+    const sorted = [...items].sort((a, b) => {
+      const cmp = sortValue(a, applied.sortBy).localeCompare(sortValue(b, applied.sortBy))
+      return applied.order === 'asc' ? cmp : -cmp
+    })
+    return sorted
+  }, [resolvedItems, searchTerm, applied.sortBy, applied.order])
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize))
+  const clampedPage = Math.min(page, totalPages - 1)
+  const rangeStart = filteredItems.length === 0 ? 0 : clampedPage * pageSize + 1
+  const rangeEnd = Math.min(filteredItems.length, clampedPage * pageSize + pageSize)
+  const pageItems = filteredItems.slice(clampedPage * pageSize, clampedPage * pageSize + pageSize)
+
+  const count = resolvedItems.length
+
+  function applyFilters(e?: FormEvent) {
+    e?.preventDefault()
+    setApplied(draft)
+    setPage(0)
+  }
 
   async function runOne(controlId: string) {
     setBusy(true)
@@ -45,8 +203,9 @@ export function PredefinedQueries() {
     setBusy(true)
     setError(undefined)
     setLastRun(undefined)
+    setSummary(undefined)
     try {
-      setSummary(await runAllPredefinedQueries({ ...filters, applicationSlug: applicationSlug || undefined }))
+      setSummary(await runAllPredefinedQueries({ ...serverFilters, applicationSlug: applicationSlug || undefined }))
       catalog.reload()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -55,7 +214,6 @@ export function PredefinedQueries() {
     }
   }
 
-  const count = catalog.data?.items.length ?? 0
   const commandFor = (controlId: string) => catalog.data?.items.find((i) => i.controlId === controlId)?.command
 
   return (
@@ -67,6 +225,16 @@ export function PredefinedQueries() {
         path — tagged <code>collectionMethod=predefined-query</code>.
       </p>
 
+      {catalog.data ? (
+        <div className="stat-grid">
+          <StatCard label="Total Controls" value={resolvedItems.length} />
+          <StatCard label="Predefined Queries" value={controlsWithQueries} />
+          <StatCard label="Manual Controls" value={manualControls} />
+          <StatCard label="Frameworks Covered" value={catalog.data.frameworks.length} />
+          <StatCard label="Unsupported Tech" value={unsupportedTechCount} hint="excluded from the catalogue below" />
+        </div>
+      ) : null}
+
       <Section
         title="Filters"
         actions={
@@ -75,34 +243,29 @@ export function PredefinedQueries() {
           </button>
         }
       >
-        <div className="filter-row">
+        <form className="filter-row" onSubmit={applyFilters}>
           <label>
             Technology
-            <select aria-label="Technology" value={technology} onChange={(e) => setTechnology(e.target.value)}>
+            <select
+              aria-label="Technology"
+              value={draft.technology}
+              onChange={(e) => setDraft((d) => ({ ...d, technology: e.target.value }))}
+            >
               <option value="">(any)</option>
-              {(catalog.data?.technologies ?? []).map((t) => (
+              {technologies.map((t) => (
                 <option key={t}>{t}</option>
               ))}
             </select>
           </label>
           <label>
             Framework
-            <select aria-label="Framework" value={framework} onChange={(e) => setFramework(e.target.value)}>
-              <option value="">(any)</option>
-              {(catalog.data?.frameworks ?? []).map((f) => (
-                <option key={f}>{f}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Control family
             <select
-              aria-label="Control family"
-              value={controlFamily}
-              onChange={(e) => setControlFamily(e.target.value)}
+              aria-label="Framework"
+              value={draft.framework}
+              onChange={(e) => setDraft((d) => ({ ...d, framework: e.target.value }))}
             >
               <option value="">(any)</option>
-              {(catalog.data?.controlFamilies ?? []).map((f) => (
+              {(catalog.data?.frameworks ?? []).map((f) => (
                 <option key={f}>{f}</option>
               ))}
             </select>
@@ -122,7 +285,50 @@ export function PredefinedQueries() {
               ))}
             </select>
           </label>
-        </div>
+          <label>
+            Search
+            <input
+              aria-label="Search catalogue"
+              value={draft.search}
+              onChange={(e) => setDraft((d) => ({ ...d, search: e.target.value }))}
+              placeholder="Control ID, name, technology, command…"
+            />
+          </label>
+          <label>
+            Sort
+            <select
+              aria-label="Sort"
+              value={draft.sortBy}
+              onChange={(e) => setDraft((d) => ({ ...d, sortBy: e.target.value as SortField }))}
+            >
+              {(Object.keys(SORT_LABELS) as SortField[]).map((f) => (
+                <option key={f} value={f}>
+                  {SORT_LABELS[f]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Order
+            <select
+              aria-label="Order"
+              value={draft.order}
+              onChange={(e) => setDraft((d) => ({ ...d, order: e.target.value as SortOrder }))}
+            >
+              <option value="asc">Ascending</option>
+              <option value="desc">Descending</option>
+            </select>
+          </label>
+          <div className="filter-apply">
+            <button type="submit" className="primary">
+              Apply
+            </button>
+          </div>
+        </form>
+
+        {busy ? (
+          <Meter value={0} indeterminate tone="accent" label={`Running${count ? ` ${count} controls` : ''}…`} />
+        ) : null}
         {error ? <ErrorNote message={error} /> : null}
         {lastRun ? (
           <div className="answer">
@@ -158,42 +364,132 @@ export function PredefinedQueries() {
         ) : null}
       </Section>
 
-      <Section title={`Catalogue${catalog.data ? ` — ${catalog.data.total}` : ''}`}>
-        {catalog.loading ? <Loading what="predefined queries" /> : null}
-        {catalog.error ? <ErrorNote message={catalog.error} /> : null}
-        {catalog.data ? (
-          <DataTable
-            rows={catalog.data.items}
-            rowKey={(q) => q.controlId}
-            columns={[
-              { header: 'Control', cell: (q) => q.controlId },
-              { header: 'Technology', cell: (q) => q.technology },
-              { header: 'Name', cell: (q) => <Link to={`/predefined-queries/${q.controlId}`}>{q.controlName}</Link> },
-              { header: 'Command', cell: (q) => <code>{q.command}</code> },
-              { header: 'Family', cell: (q) => q.controlFamily },
-              { header: 'Frameworks', cell: (q) => q.frameworks.join(', ') },
-              { header: 'Type', cell: (q) => q.evidenceType },
-              {
-                header: 'ECS status',
-                cell: (q) => (
-                  <span className="muted small">
-                    {q.runtimeStatus}
-                    {q.executableNow ? ' · executableNow' : ''}
-                  </span>
-                ),
-              },
-              {
-                header: '',
-                cell: (q) => (
-                  <button disabled={busy} onClick={() => runOne(q.controlId)}>
-                    Run
-                  </button>
-                ),
-              },
-            ]}
-          />
-        ) : null}
-      </Section>
+      <div className="row-actions">
+        {TABS.map((t) => (
+          <button key={t} className={t === tab ? 'primary' : undefined} onClick={() => setTab(t)}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'Query Catalog' ? (
+        <Section
+          title={
+            catalog.data
+              ? `Catalogue — ${filteredItems.length}${filteredItems.length !== count ? ` of ${count}` : ''}`
+              : 'Catalogue'
+          }
+          actions={
+            catalog.data && filteredItems.length > 0 ? (
+              <div className="pager">
+                <span>
+                  Showing {rangeStart}–{rangeEnd} of {filteredItems.length} controls
+                </span>
+                <label className="pager-page-size">
+                  Per page
+                  <select
+                    aria-label="Rows per page"
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])
+                      setPage(0)
+                    }}
+                  >
+                    {PAGE_SIZE_OPTIONS.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button disabled={clampedPage === 0} onClick={() => setPage((p) => p - 1)}>
+                  Prev
+                </button>
+                <span>
+                  Page {clampedPage + 1} / {totalPages}
+                </span>
+                <button disabled={clampedPage + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>
+                  Next
+                </button>
+              </div>
+            ) : undefined
+          }
+        >
+          {catalog.loading ? <Loading what="predefined queries" /> : null}
+          {catalog.error ? <ErrorNote message={catalog.error} /> : null}
+          {catalog.data ? (
+            <DataTable
+              className="pq-table"
+              rows={pageItems}
+              rowKey={(item) => item.controlId}
+              columns={[
+                { header: 'Control ID', className: 'col-id', cell: (item) => <code>{item.controlId}</code> },
+                { header: 'Technology', className: 'col-tech', cell: (item) => item.technology },
+                { header: 'Control Name', className: 'col-name', cell: (item) => item.controlName },
+                {
+                  header: 'Query / Command',
+                  className: 'col-cmd',
+                  cell: (item) => (
+                    <div className="cmd-cell">
+                      <code title={item.command}>{item.command}</code>
+                      <CopyButton text={item.command} />
+                    </div>
+                  ),
+                },
+                {
+                  header: 'Framework',
+                  className: 'col-fw',
+                  cell: (item) => (
+                    <div className="chip-row">
+                      {item.frameworks.map((f) => (
+                        <span key={f} className="tag">
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  ),
+                },
+                {
+                  header: 'Type',
+                  className: 'col-type',
+                  cell: (item) => <span className="tag">{deriveType(item)}</span>,
+                },
+                {
+                  header: 'ECS Status',
+                  className: 'col-status',
+                  cell: (item) => <StatusPill status={item.runtimeStatus} />,
+                },
+                {
+                  header: '',
+                  className: 'col-actions',
+                  cell: (item) => (
+                    <div className="row-actions">
+                      <button type="button" onClick={() => navigate(`/predefined-queries/${item.controlId}`)}>
+                        View
+                      </button>
+                      <button type="button" disabled={busy} onClick={() => runOne(item.controlId)}>
+                        Run Query
+                      </button>
+                    </div>
+                  ),
+                },
+              ]}
+            />
+          ) : null}
+        </Section>
+      ) : null}
+
+      {tab === 'Execution History' ? (
+        <Section title="Execution History">
+          <Empty message="Execution history isn't wired up on this screen yet — each run's result is still available from a control's own detail page (Result / Audit Trail tabs)." />
+        </Section>
+      ) : null}
+
+      {tab === 'Manual Controls' ? (
+        <Section title="Manual Controls">
+          <Empty message="No manual-control data source exists in the catalogue yet — every catalogued control currently ships with a predefined query." />
+        </Section>
+      ) : null}
     </div>
   )
 }
