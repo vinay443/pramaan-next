@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,35 +35,60 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class EvidenceIngestionService {
 
+    private static final Logger log = LoggerFactory.getLogger(EvidenceIngestionService.class);
+
     private final EvidenceRecordRepository records;
     private final ApplicationService applications;
     private final ObjectStore objectStore;
     private final EvidenceLifecycleService lifecycle;
     private final RuleEvaluationService ruleEvaluation;
     private final ControlFrameworkCatalog controlFrameworks;
+    private final EvidenceControlCatalog controlCatalog;
     private final Clock clock;
 
     public EvidenceIngestionService(EvidenceRecordRepository records, ApplicationService applications,
                                     ObjectStore objectStore, EvidenceLifecycleService lifecycle,
                                     RuleEvaluationService ruleEvaluation,
-                                    ControlFrameworkCatalog controlFrameworks, Clock clock) {
+                                    ControlFrameworkCatalog controlFrameworks,
+                                    EvidenceControlCatalog controlCatalog, Clock clock) {
         this.records = records;
         this.applications = applications;
         this.objectStore = objectStore;
         this.lifecycle = lifecycle;
         this.ruleEvaluation = ruleEvaluation;
         this.controlFrameworks = controlFrameworks;
+        this.controlCatalog = controlCatalog;
         this.clock = clock;
     }
 
-    @Transactional
-    public IngestResult ingest(IngestRequest req) {
-        return ingest(req, null, null);
+    /** How strictly {@link #ingest} checks (framework, controlId) against the xlsx
+     *  bank catalog ({@link EvidenceControlCatalog}, docs/ECS_Control_Library.xlsx). */
+    public enum CatalogGuard {
+        /** No check — control/framework may be anything (predefined-query catalog,
+         *  RBAC approval-scope testing, the dev demo-seed's own free-form callers). */
+        NONE,
+        /** Ingest proceeds; a non-conformant (framework, controlId) is logged as a
+         *  warning so drift is discoverable without breaking existing callers that
+         *  legitimately use frameworks/controls outside this catalog. */
+        LOG,
+        /** Reject with 400 if (framework, controlId) isn't one of the 133 xlsx
+         *  bank-catalog controls. Reserved for the Scheduler — the one path where
+         *  silent catalog drift is the actual risk this guard exists to prevent. */
+        REJECT
     }
 
+    /** Unguarded (NONE): used by predefined-query runs, the dev demo-seed, and the
+     *  generic single-item /ingest API (also exercised by approval-RBAC tests with
+     *  frameworks outside this catalog, e.g. ISG) — see {@link CatalogGuard}. */
+    @Transactional
+    public IngestResult ingest(IngestRequest req) {
+        return ingest(req, null, null, CatalogGuard.NONE);
+    }
+
+    /** Scheduler path — always catalog-guarded, see {@link CatalogGuard#REJECT}. */
     @Transactional
     public IngestResult ingest(IngestRequest req, UUID ingestionRunId) {
-        return ingest(req, ingestionRunId, null);
+        return ingest(req, ingestionRunId, null, CatalogGuard.REJECT);
     }
 
     /**
@@ -72,10 +99,26 @@ public class EvidenceIngestionService {
      */
     @Transactional
     public IngestResult ingest(IngestRequest req, UUID ingestionRunId, List<String> frameworkOverride) {
+        return ingest(req, ingestionRunId, frameworkOverride, CatalogGuard.NONE);
+    }
+
+    @Transactional
+    public IngestResult ingest(IngestRequest req, UUID ingestionRunId, List<String> frameworkOverride,
+                               CatalogGuard guard) {
         requireField("applicationSlug", req.applicationSlug());
         requireField("controlId", req.controlId());
         requireField("framework", req.framework());
         requireField("sourceSystem", req.sourceSystem());
+        if (guard != CatalogGuard.NONE && !controlCatalog.isConformant(req.framework(), req.controlId())) {
+            if (guard == CatalogGuard.REJECT) {
+                throw ApiException.badRequest("control " + req.controlId() + " / framework " + req.framework()
+                        + " is not part of the ECS control catalog (docs/ECS_Control_Library.xlsx) — "
+                        + "evidence must be tagged with one of the 133 bank-catalog controls");
+            }
+            log.warn("non-catalog evidence ingested: control={} framework={} application={} source={} "
+                            + "(not in the 133-control ECS bank catalog, docs/ECS_Control_Library.xlsx)",
+                    req.controlId(), req.framework(), req.applicationSlug(), req.sourceSystem());
+        }
         byte[] content = decodeContent(req);
         String sha = Hashing.sha256Hex(content);
         Instant now = clock.instant();
@@ -149,6 +192,14 @@ public class EvidenceIngestionService {
                 record.getControlId(), null));
     }
 
+    /**
+     * Manual/bulk-upload path ({@code /evidence/bulk}, {@code /evidence/bulk/upload}) —
+     * catalog-checked with {@link CatalogGuard#LOG}, not {@code REJECT}: this endpoint
+     * doubles as a generic bulk-mechanics test harness (dedup, partial-failure
+     * reporting, zip expansion) using arbitrary non-catalog control IDs, so a hard
+     * reject here would break that unrelated coverage. Non-conformant items still
+     * ingest; they're just logged, matching the Scheduler item's log line.
+     */
     @Transactional
     public BulkIngestResponse ingestBulk(List<IngestRequest> items) {
         List<IngestResult> ok = new ArrayList<>();
@@ -156,7 +207,7 @@ public class EvidenceIngestionService {
         int created = 0, newVersions = 0, duplicates = 0;
         for (int i = 0; i < items.size(); i++) {
             try {
-                IngestResult r = ingest(items.get(i));
+                IngestResult r = ingest(items.get(i), null, null, CatalogGuard.LOG);
                 ok.add(r);
                 switch (r.outcome()) {
                     case CREATED -> created++;
@@ -251,7 +302,7 @@ public class EvidenceIngestionService {
     private IngestResult result(EvidenceRecord r, IngestOutcome outcome, EvidenceVersion v) {
         return new IngestResult(r.getId().toString(), r.getEvidenceKey(), r.getApplicationSlug(),
                 r.getControlId(), r.getFramework(), r.getSourceSystem(), outcome,
-                v.getVersionNumber(), v.getSha256(), v.getSizeBytes());
+                v.getVersionNumber(), v.getSha256(), v.getSizeBytes(), r.getSourceObjectId());
     }
 
     private byte[] decodeContent(IngestRequest req) {

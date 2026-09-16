@@ -74,6 +74,9 @@ export interface IngestResult {
   version: number
   sha256: string
   sizeBytes: number
+  /** Echoes the request's source object id — for a bulk file upload, the uploaded filename —
+   *  so a DUPLICATE (or any other) outcome can be mapped back to the specific file. */
+  sourceObjectId?: string | null
 }
 
 export interface BulkError {
@@ -665,6 +668,67 @@ export interface CompletenessReport {
   missing: number
   completenessPct: number
   controls: ControlCoverage[]
+}
+
+// ---- per-evidence-item completeness (audit-readiness at the item level) ----
+
+export interface EvidenceCompletenessFactor {
+  factor: string
+  status: 'ok' | 'fail' | string
+  detail: string
+}
+
+export type CompletenessBand = 'COMPLETE' | 'PARTIAL' | 'INCOMPLETE'
+
+export interface EvidenceCompletenessItem {
+  evidenceId: string
+  applicationSlug: string
+  framework: string
+  controlId: string
+  sourceSystem: string
+  collectedBy?: string | null
+  technology?: string | null
+  currentVersion: number
+  lastCollectedAt?: string | null
+  ageDays?: number | null
+  sha256?: string | null
+  integrityStatus?: IntegrityStatus
+  completenessPct: number
+  band: CompletenessBand | string
+  factors: EvidenceCompletenessFactor[]
+}
+
+export interface EvidenceCompletenessReport {
+  applicationSlug?: string | null
+  framework?: string | null
+  generatedAt: string
+  staleAfterDays: number
+  totalItems: number
+  avgCompletenessPct: number
+  completeCount: number
+  partialCount: number
+  incompleteCount: number
+  items: EvidenceCompletenessItem[]
+}
+
+// ---- framework/control rollup (Evidence Completeness page, aggregated view) ----
+
+export interface FrameworkCompletenessRow {
+  framework: string
+  totalControls: number
+  controlsEvaluated: number
+  controlsNotEvaluated: number
+  /** Null when no control in this framework has any evidence yet. */
+  avgCompletenessPct: number | null
+}
+
+export interface ControlCompletenessRow {
+  controlId: string
+  title: string
+  evaluated: boolean
+  /** Null (not 0%) when the control has no mapped evidence. */
+  completenessPct: number | null
+  evidenceCount: number
 }
 
 export interface SimilarEvidence {

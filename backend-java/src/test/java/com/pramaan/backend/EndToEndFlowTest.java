@@ -55,8 +55,8 @@ class EndToEndFlowTest {
         MockMultipartFile f = new MockMultipartFile("files", "hsts.conf", "text/plain",
                 "add_header Strict-Transport-Security max-age=63072000; HSTS enabled on nginx".getBytes());
         String upJson = mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(f)
-                        .param("applicationSlug", "net-banking").param("framework", "DPSC")
-                        .param("controlId", "MW-HSTS").param("technology", "nginx")
+                        .param("applicationSlug", "net-banking").param("framework", "NGINX_BASELINING")
+                        .param("controlId", "NGBL-C8").param("technology", "nginx")
                         .param("collectedBy", "app-owner"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.created").value(1))
@@ -66,8 +66,8 @@ class EndToEndFlowTest {
         // 4. TAG — canonical Use Case 3 tag set applied on the one ingestion path
         mvc.perform(get("/api/v1/evidence/{id}", evidenceId))
                 .andExpect(jsonPath("$.tags.application").value("net-banking"))
-                .andExpect(jsonPath("$.tags.control").value("MW-HSTS"))
-                .andExpect(jsonPath("$.tags.framework").value("DPSC"))
+                .andExpect(jsonPath("$.tags.control").value("NGBL-C8"))
+                .andExpect(jsonPath("$.tags.framework").value("NGINX_BASELINING"))
                 .andExpect(jsonPath("$.tags.technology").value("nginx"))
                 .andExpect(jsonPath("$.tags.collectionMethod").value("bulk"))
                 .andExpect(jsonPath("$.lifecycleState").value("DRAFT"));

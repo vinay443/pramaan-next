@@ -436,6 +436,46 @@ tr.clickable {
   cursor: pointer;
 }
 
+.nested-cell {
+  background: var(--surface-2);
+  padding: 12px 14px 16px !important;
+}
+
+.nested-cell .table-wrap {
+  border-color: var(--line);
+}
+
+.row-expand-btn {
+  padding: 0;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.row-expand-btn:hover {
+  color: var(--ink);
+}
+
+.cell-truncate {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Caps a multi-framework badge stack so it can't blow out row height —
+   scrolls internally instead of wrapping to N lines. */
+.tag-stack {
+  display: flex;
+  flex-wrap: wrap;
+  max-height: 44px;
+  overflow-y: auto;
+}
+
 /* ---- pills / badges -------------------------------------------- */
 
 .pill {
@@ -728,6 +768,16 @@ p.muted.small,
   margin-top: 16px;
 }
 
+.modal-close {
+  padding: 4px 8px;
+  line-height: 1;
+  font-size: var(--fs-sm);
+}
+
+.modal-lg {
+  max-width: min(760px, calc(100vw - 40px));
+}
+
 /* ---- forms ------------------------------------------------- */
 
 .filter-row {
@@ -778,6 +828,14 @@ textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+.input-invalid {
+  border-color: var(--bad);
+}
+
+.input-invalid:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
 }
 
 textarea {
@@ -903,6 +961,28 @@ fieldset.sources legend {
 .file-list-size {
   color: var(--muted);
   font-size: var(--fs-xs);
+}
+
+.duplicate-note {
+  margin: 14px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--warn-line);
+  border-radius: var(--r-md);
+  background: var(--warn-tint);
+  color: var(--warn);
+  font-size: var(--fs-sm);
+}
+
+.duplicate-note p {
+  margin: 0 0 6px;
+}
+
+.duplicate-note ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 /* ---- buttons -------------------------------------------------- */
@@ -1218,4 +1298,96 @@ pre.json {
   .persona-login-actions .primary {
     width: 100%;
   }
+}
+
+/* ---- evidence completeness (per-item score + breakdown) ------ */
+
+.completeness-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px 20px;
+  margin-bottom: 18px;
+}
+
+.detail-grid strong {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.detail-grid code {
+  overflow-wrap: anywhere;
+}
+
+.breakdown-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.breakdown-head h3 {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+/* Compact, scannable checklist — one line per factor (icon + name + reason),
+   two columns once there's room so a typical 8-9 factor breakdown doesn't
+   read as a long vertical list. */
+.factor-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px 24px;
+  font-size: var(--fs-sm);
+}
+
+@media (min-width: 560px) {
+  .factor-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.factor-row {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 3px 0;
+}
+
+.factor-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.factor-ok .factor-icon {
+  color: var(--ok);
+}
+
+.factor-fail .factor-icon {
+  color: var(--bad);
+}
+
+.factor-text {
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+
+.factor-text strong {
+  color: var(--ink);
+  font-weight: 600;
 }

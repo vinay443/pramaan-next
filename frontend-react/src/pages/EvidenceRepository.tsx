@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listEvidence } from '../api/endpoints'
 import { onDataEvent } from '../api/events'
-import type { EvidenceQueryParams } from '../api/types'
+import type { EvidenceQueryParams, EvidenceView } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
-import { DataTable, Empty, ErrorNote, Loading, Section, StatusPill } from '../components/ui'
+import { Empty, ErrorNote, Loading, Section, StatusPill } from '../components/ui'
 
 const PAGE_SIZE = 20
 
@@ -12,6 +12,7 @@ export function EvidenceRepository() {
   const navigate = useNavigate()
   const [filters, setFilters] = useState<EvidenceQueryParams>({})
   const [page, setPage] = useState(0)
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   const query = useMemo<EvidenceQueryParams>(
     () => ({ ...clean(filters), page, size: PAGE_SIZE }),
@@ -123,33 +124,93 @@ export function EvidenceRepository() {
         {error ? <ErrorNote message={error} /> : null}
         {data && data.items.length === 0 ? <Empty message="No evidence matches these filters." /> : null}
         {data && data.items.length > 0 ? (
-          <DataTable
-            rows={data.items}
-            rowKey={(r) => r.evidenceId}
-            onRowClick={(r) => navigate(`/evidence/${r.evidenceId}`)}
-            columns={[
-              { header: 'Name', cell: (r) => <code className="small">{r.tags.name ?? r.title ?? '—'}</code> },
-              { header: 'Application', cell: (r) => r.applicationSlug },
-              { header: 'Control', cell: (r) => r.controlId },
-              {
-                header: 'Frameworks',
-                cell: (r) =>
-                  (r.tags.frameworks ?? r.framework)
-                    .split(',')
-                    .map((f) => <span key={f} className="tag">{f}</span>),
-              },
-              { header: 'Type', cell: (r) => r.tags.evidenceType ?? '—' },
-              { header: 'Source', cell: (r) => r.sourceSystem },
-              { header: 'Technology', cell: (r) => r.tags.technology ?? '—' },
-              { header: 'Method', cell: (r) => r.tags.collectionMethod ?? '—' },
-              { header: 'Ver', cell: (r) => r.currentVersion, align: 'right' },
-              { header: 'Collected', cell: (r) => (r.latest ? new Date(r.latest.collectedAt).toLocaleDateString() : '—') },
-              { header: 'Integrity', cell: (r) => <StatusPill status={r.integrityStatus ?? 'UNKNOWN'} /> },
-            ]}
-          />
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th aria-hidden="true" />
+                  <th>Name</th>
+                  <th>Control</th>
+                  <th>Frameworks</th>
+                  <th>Collected</th>
+                  <th>Integrity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((r) => {
+                  const name = r.tags.name ?? r.title ?? '—'
+                  const isExpanded = expanded === r.evidenceId
+                  return (
+                    <Fragment key={r.evidenceId}>
+                      <tr className="clickable" onClick={() => navigate(`/evidence/${r.evidenceId}`)}>
+                        <td>
+                          <button
+                            type="button"
+                            className="row-expand-btn"
+                            aria-expanded={isExpanded}
+                            aria-label={isExpanded ? 'Hide details' : 'Show details'}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setExpanded((cur) => (cur === r.evidenceId ? null : r.evidenceId))
+                            }}
+                          >
+                            {isExpanded ? '▾' : '▸'}
+                          </button>
+                        </td>
+                        <td className="cell-truncate" title={name}>
+                          <code className="small">{name}</code>
+                        </td>
+                        <td>{r.controlId}</td>
+                        <td>
+                          <div className="tag-stack">
+                            {(r.tags.frameworks ?? r.framework).split(',').map((f) => (
+                              <span key={f} className="tag">
+                                {f}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td>{r.latest ? new Date(r.latest.collectedAt).toLocaleDateString() : '—'}</td>
+                        <td>
+                          <StatusPill status={r.integrityStatus ?? 'UNKNOWN'} />
+                        </td>
+                      </tr>
+                      {isExpanded ? (
+                        <tr>
+                          <td colSpan={6} className="nested-cell">
+                            <RowDetails row={r} />
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         ) : null}
       </Section>
     </div>
+  )
+}
+
+/** The columns moved out of the default set (step 2): shown on expand only. */
+function RowDetails({ row }: { row: EvidenceView }) {
+  return (
+    <dl className="kv">
+      <dt>Application</dt>
+      <dd>{row.applicationSlug}</dd>
+      <dt>Type</dt>
+      <dd>{row.tags.evidenceType ?? '—'}</dd>
+      <dt>Source</dt>
+      <dd>{row.sourceSystem}</dd>
+      <dt>Technology</dt>
+      <dd>{row.tags.technology ?? '—'}</dd>
+      <dt>Method</dt>
+      <dd>{row.tags.collectionMethod ?? '—'}</dd>
+      <dt>Ver</dt>
+      <dd>{row.currentVersion}</dd>
+    </dl>
   )
 }
 

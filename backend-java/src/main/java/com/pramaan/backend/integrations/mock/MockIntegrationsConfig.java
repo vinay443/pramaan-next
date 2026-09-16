@@ -18,8 +18,8 @@ class MockIntegrationsConfig {
             @Override public String sourceSystem() { return "MOCK_JIRA"; }
             @Override protected List<String[]> catalog() {
                 return List.of(
-                        new String[]{"PCI_DSS", "PCI-DSS-6.3", "change_ticket"},
-                        new String[]{"ITPP", "ITPP-CHG-02", "change_ticket"});
+                        new String[]{"PCI_DSS", "PCI-C6", "change_ticket"},
+                        new String[]{"ITPP", "ITPP-C12", "change_ticket"});
             }
         };
     }
@@ -30,8 +30,8 @@ class MockIntegrationsConfig {
             @Override public String sourceSystem() { return "MOCK_SERVICENOW"; }
             @Override protected List<String[]> catalog() {
                 return List.of(
-                        new String[]{"ITPP", "ITPP-INC-01", "incident_record"},
-                        new String[]{"PCI_DSS", "PCI-DSS-12.10", "incident_record"});
+                        new String[]{"ITPP", "ITPP-C14", "incident_record"},
+                        new String[]{"PCI_DSS", "PCI-C12", "incident_record"});
             }
         };
     }
@@ -42,8 +42,8 @@ class MockIntegrationsConfig {
             @Override public String sourceSystem() { return "MOCK_GITHUB"; }
             @Override protected List<String[]> catalog() {
                 return List.of(
-                        new String[]{"PCI_DSS", "PCI-DSS-6.2", "branch_protection"},
-                        new String[]{"DPSC", "DPSC-SDLC-04", "pull_request_review"});
+                        new String[]{"PCI_DSS", "PCI-C6", "branch_protection"},
+                        new String[]{"DPSC", "DPSC-C14", "pull_request_review"});
             }
         };
     }
@@ -54,8 +54,8 @@ class MockIntegrationsConfig {
             @Override public String sourceSystem() { return "MOCK_CONFLUENCE"; }
             @Override protected List<String[]> catalog() {
                 return List.of(
-                        new String[]{"ITPP", "ITPP-DOC-03", "policy_page"},
-                        new String[]{"DPSC", "DPSC-GOV-01", "policy_page"});
+                        new String[]{"C-SITE", "CSITE-C1", "policy_page"},
+                        new String[]{"DPSC", "DPSC-C1", "policy_page"});
             }
         };
     }

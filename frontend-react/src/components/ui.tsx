@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 
 export function StatCard({
@@ -35,21 +36,74 @@ export function Section({ title, actions, children }: { title: string; actions?:
 
 const PILL_OK = new Set([
   'COMPLETED', 'PASS', 'CREATED', 'COVERED', 'COMPLIANT', 'ONBOARDED', 'APPROVED',
-  'GREEN', 'ACTIVE', 'READY', 'INTACT', 'SUCCESS', 'DONE', 'VERIFIED',
+  'GREEN', 'ACTIVE', 'READY', 'INTACT', 'SUCCESS', 'DONE', 'VERIFIED', 'COMPLETE', 'OK',
+  'EVALUATED',
 ])
 const PILL_BAD = new Set([
   'FAILED', 'FAIL', 'ERROR', 'MISSING', 'MISSING_EVIDENCE', 'NON_COMPLIANT',
-  'REJECTED', 'RED', 'EXPIRED', 'CRITICAL', 'MISMATCH', 'TAMPERED',
+  'REJECTED', 'RED', 'EXPIRED', 'CRITICAL', 'MISMATCH', 'TAMPERED', 'INCOMPLETE',
 ])
 const PILL_MUTED = new Set([
   'DUPLICATE', 'NOT_APPLICABLE', 'NOT_ASSESSED', 'NOT ONBOARDED', 'NOT_ONBOARDED',
   'DRAFT', 'SUPERSEDED', 'SKIPPED', 'N/A', 'MEDIUM', 'LOW', 'UNKNOWN', 'NEW',
+  'NOT_EVALUATED',
 ])
 
 export function StatusPill({ status }: { status: string }) {
   const s = status.toUpperCase()
   const tone = PILL_OK.has(s) ? 'ok' : PILL_BAD.has(s) ? 'bad' : PILL_MUTED.has(s) ? 'muted' : 'warn'
   return <span className={`pill pill-${tone}`}>{status}</span>
+}
+
+/**
+ * Centered, dismissible modal overlay. Dismisses on Escape or a click on the
+ * backdrop (outside the panel); the caller supplies content and a close button
+ * (or other actions) via {@code children} — same `.modal` / `.modal-head` /
+ * `.modal-foot` classes as the Onboarding scan-progress modal, for a consistent look.
+ */
+export function Modal({
+  title,
+  onClose,
+  children,
+  size = 'md',
+}: {
+  title?: ReactNode
+  onClose: () => void
+  children: ReactNode
+  /** 'lg' for content that needs more horizontal room (wide grids, multi-column lists). */
+  size?: 'md' | 'lg'
+}) {
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
+  return (
+    <div
+      className="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label={typeof title === 'string' ? title : undefined}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className={size === 'lg' ? 'modal modal-lg' : 'modal'}>
+        {title ? (
+          <div className="modal-head">
+            <h2>{title}</h2>
+            <button type="button" className="ghost modal-close" aria-label="Close dialog" onClick={onClose}>
+              ✕
+            </button>
+          </div>
+        ) : null}
+        {children}
+      </div>
+    </div>
+  )
 }
 
 export function Loading({ what = 'data' }: { what?: string }) {

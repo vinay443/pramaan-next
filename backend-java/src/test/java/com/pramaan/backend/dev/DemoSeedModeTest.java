@@ -25,12 +25,12 @@ class DemoSeedModeTest {
     @Autowired MockMvc mvc;
 
     @Test
-    void seedIsIdempotentAndLeavesOneRecordShortOfItsFullFrameworkMapping() throws Exception {
+    void seedIsIdempotentAndCoversEveryXlsxFramework() throws Exception {
         // POST works and returns the seed summary JSON
         mvc.perform(post("/api/v1/dev/seed-demo-evidence").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.seeded").value(7))
-                .andExpect(jsonPath("$.created").value(7))
+                .andExpect(jsonPath("$.seeded").value(12))
+                .andExpect(jsonPath("$.created").value(12))
                 .andExpect(jsonPath("$.duplicates").value(0));
 
         // GET on the same (POST-only) path is a clean 405, not a 500
@@ -42,24 +42,27 @@ class DemoSeedModeTest {
         mvc.perform(post("/api/v1/dev/seed-demo-evidence"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.created").value(0))
-                .andExpect(jsonPath("$.duplicates").value(7));
+                .andExpect(jsonPath("$.duplicates").value(12));
 
         // spread across the seeded applications
         mvc.perform(get("/api/v1/evidence").param("applicationSlug", "mobile-banking"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalItems").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)));
 
-        // the payments / DB-TLS-IN-TRANSIT record is tagged to PCI_DSS only (reuse has work to do)
+        // every record is an xlsx bank-catalog control, e.g. payments/DBBL-C8 (DB Baselining)
         mvc.perform(get("/api/v1/evidence")
-                        .param("applicationSlug", "payments").param("controlId", "DB-TLS-IN-TRANSIT"))
+                        .param("applicationSlug", "payments").param("controlId", "DBBL-C8"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalItems").value(1))
-                .andExpect(jsonPath("$.items[0].tags.frameworks").value("PCI_DSS"))
+                .andExpect(jsonPath("$.items[0].tags.frameworks").value("DB_BASELINING"))
                 .andExpect(jsonPath("$.items[0].tags.collectionMethod").value("demo-seed"));
 
-        // by-control reuse view now surfaces the frameworks still to add
-        mvc.perform(get("/api/v1/insight/reuse/by-control").param("controlId", "DB-TLS-IN-TRANSIT"))
+        // a framework the old legacy-ID seed never touched (zero coverage before this change)
+        // now has evidence too
+        mvc.perform(get("/api/v1/evidence")
+                        .param("applicationSlug", "net-banking").param("controlId", "VAPT-C1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.frameworks").value(org.hamcrest.Matchers.hasItems("DPSC", "ISO27001")));
+                .andExpect(jsonPath("$.totalItems").value(1))
+                .andExpect(jsonPath("$.items[0].tags.frameworks").value("VAPT"));
     }
 }

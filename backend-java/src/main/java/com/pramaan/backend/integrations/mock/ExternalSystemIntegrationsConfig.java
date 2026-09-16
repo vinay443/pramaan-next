@@ -41,9 +41,9 @@ class ExternalSystemIntegrationsConfig {
             }
             @Override protected List<String[]> catalog() {
                 return List.of(
-                        new String[]{"ITPP", "ITPP-DOC-03", "policy_document"},
-                        new String[]{"DPSC", "DPSC-GOV-01", "governance_pack"},
-                        new String[]{"PCI_DSS", "PCI-DSS-12.1", "security_policy"});
+                        new String[]{"ITDRM", "ITDRM-C7", "policy_document"},
+                        new String[]{"DPSC", "DPSC-C17", "governance_pack"},
+                        new String[]{"PCI_DSS", "PCI-C12", "security_policy"});
             }
         };
     }
@@ -62,9 +62,9 @@ class ExternalSystemIntegrationsConfig {
             }
             @Override protected List<String[]> catalog() {
                 return List.of(
-                        new String[]{"ITPP", "ITPP-CHG-02", "change_request"},
-                        new String[]{"ITPP", "ITPP-INC-01", "incident_record"},
-                        new String[]{"PCI_DSS", "PCI-DSS-12.10", "incident_response_plan"});
+                        new String[]{"ITPP", "ITPP-C12", "change_request"},
+                        new String[]{"ITPP", "ITPP-C14", "incident_record"},
+                        new String[]{"C-SITE", "CSITE-C11", "incident_response_plan"});
             }
         };
     }

@@ -26,6 +26,10 @@ import type {
   CompletenessReport,
   ComplianceReport,
   ControlFrameworks,
+  EvidenceCompletenessItem,
+  EvidenceCompletenessReport,
+  ControlCompletenessRow,
+  FrameworkCompletenessRow,
   ControlReuseResult,
   DeterministicQueryResult,
   EvidenceDashboard,
@@ -501,6 +505,60 @@ export function getCompleteness(applicationSlug: string, framework?: string): Pr
         `/api/v1/insight/completeness${buildQuery({ applicationSlug, framework })}`,
       ),
     () => mock.mockCompleteness(applicationSlug, framework),
+    true,
+  )
+}
+
+export function getEvidenceCompleteness(applicationSlug?: string, framework?: string): Promise<EvidenceCompletenessReport> {
+  return withFallback(
+    () =>
+      apiFetch<EvidenceCompletenessReport>(
+        `/api/v1/insight/evidence-completeness${buildQuery({ applicationSlug, framework })}`,
+      ),
+    () => mock.mockEvidenceCompleteness(applicationSlug, framework),
+    true,
+  )
+}
+
+/** Evidence Completeness — Framework -> Control rollup: one row per framework. */
+export function getEvidenceCompletenessFrameworks(applicationSlug?: string): Promise<FrameworkCompletenessRow[]> {
+  return withFallback(
+    () =>
+      apiFetch<FrameworkCompletenessRow[]>(
+        `/api/v1/insight/evidence-completeness/frameworks${buildQuery({ applicationSlug })}`,
+      ),
+    () => mock.mockEvidenceCompletenessFrameworks(applicationSlug),
+    true,
+  )
+}
+
+/** One row per control in the given framework. */
+export function getEvidenceCompletenessControls(
+  framework: string,
+  applicationSlug?: string,
+): Promise<ControlCompletenessRow[]> {
+  return withFallback(
+    () =>
+      apiFetch<ControlCompletenessRow[]>(
+        `/api/v1/insight/evidence-completeness/frameworks/${encodeURIComponent(framework)}/controls${buildQuery({ applicationSlug })}`,
+      ),
+    () => mock.mockEvidenceCompletenessControls(framework, applicationSlug),
+    true,
+  )
+}
+
+/** Per-evidence-item completeness records backing one control's score (drill-down). */
+export function getEvidenceCompletenessControlEvidence(
+  framework: string,
+  controlId: string,
+  applicationSlug?: string,
+): Promise<EvidenceCompletenessItem[]> {
+  return withFallback(
+    () =>
+      apiFetch<EvidenceCompletenessItem[]>(
+        `/api/v1/insight/evidence-completeness/frameworks/${encodeURIComponent(framework)}/controls/${encodeURIComponent(controlId)}/evidence${buildQuery({ applicationSlug })}`,
+      ),
+    () => mock.mockEvidenceCompletenessControlEvidence(framework, controlId, applicationSlug),
     true,
   )
 }

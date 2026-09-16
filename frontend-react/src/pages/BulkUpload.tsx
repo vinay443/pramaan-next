@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ingestBulkUpload } from '../api/endpoints'
 import type { BulkIngestResponse } from '../api/types'
 import { DataTable, ErrorNote, Section, StatCard, StatusPill } from '../components/ui'
@@ -22,8 +23,14 @@ export function BulkUpload() {
   const [dragOver, setDragOver] = useState(false)
   const [result, setResult] = useState<BulkIngestResponse>()
   const [error, setError] = useState<string>()
+  const [attempted, setAttempted] = useState(false)
   const [busy, setBusy] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+  }, [error])
 
   function addFiles(list: FileList | null) {
     if (!list || list.length === 0) return
@@ -42,6 +49,7 @@ export function BulkUpload() {
     setBusy(true)
     setError(undefined)
     setResult(undefined)
+    setAttempted(true)
     try {
       if (!applicationSlug.trim() || !framework.trim() || !controlId.trim()) {
         throw new Error('Application, framework and control are required.')
@@ -79,17 +87,34 @@ export function BulkUpload() {
       <Section title="Common fields">
         <div className="filter-row">
           <label>
-            Application
-            <input aria-label="Application" value={applicationSlug} onChange={(e) => setApp(e.target.value)} />
+            Application *
+            <input
+              aria-label="Application"
+              aria-required="true"
+              aria-invalid={attempted && !applicationSlug.trim()}
+              className={attempted && !applicationSlug.trim() ? 'input-invalid' : undefined}
+              value={applicationSlug}
+              onChange={(e) => setApp(e.target.value)}
+            />
           </label>
           <label>
-            Framework
-            <input aria-label="Framework" value={framework} onChange={(e) => setFramework(e.target.value)} />
+            Framework *
+            <input
+              aria-label="Framework"
+              aria-required="true"
+              aria-invalid={attempted && !framework.trim()}
+              className={attempted && !framework.trim() ? 'input-invalid' : undefined}
+              value={framework}
+              onChange={(e) => setFramework(e.target.value)}
+            />
           </label>
           <label>
-            Control ID
+            Control ID *
             <input
               aria-label="Control ID"
+              aria-required="true"
+              aria-invalid={attempted && !controlId.trim()}
+              className={attempted && !controlId.trim() ? 'input-invalid' : undefined}
               value={controlId}
               onChange={(e) => setControlId(e.target.value)}
               placeholder="e.g. PCI-DSS-6.2"
@@ -165,39 +190,80 @@ export function BulkUpload() {
         {busy ? 'Uploading…' : 'Submit bulk'}
       </button>
 
-      {error ? <ErrorNote message={error} /> : null}
-
-      {result ? (
-        <Section title="Result">
-          <div className="stat-grid">
-            <StatCard label="Received" value={result.received} />
-            <StatCard label="Created" value={result.created} />
-            <StatCard label="New versions" value={result.newVersions} />
-            <StatCard label="Duplicates" value={result.duplicates} />
-            <StatCard label="Failed" value={result.failed} />
-          </div>
-          <DataTable
-            rows={result.results}
-            rowKey={(r) => r.evidenceId}
-            columns={[
-              { header: 'Control', cell: (r) => r.controlId },
-              { header: 'Outcome', cell: (r) => <StatusPill status={r.outcome} /> },
-              { header: 'Version', cell: (r) => r.version, align: 'right' },
-              { header: 'SHA-256', cell: (r) => <code>{r.sha256.slice(0, 16)}…</code> },
-            ]}
-          />
-          {result.errors.length > 0 ? (
-            <DataTable
-              rows={result.errors}
-              rowKey={(e) => String(e.index)}
-              columns={[
-                { header: 'Index', cell: (e) => e.index, align: 'right' },
-                { header: 'Error', cell: (e) => e.message },
-              ]}
-            />
-          ) : null}
-        </Section>
+      {error ? (
+        <div ref={errorRef}>
+          <ErrorNote message={error} />
+        </div>
       ) : null}
+
+      {result
+        ? (() => {
+            const succeeded = result.results.filter((r) => r.outcome !== 'DUPLICATE')
+            const duplicates = result.results.filter((r) => r.outcome === 'DUPLICATE')
+            return (
+              <Section title="Result">
+                <p className="muted small">
+                  {succeeded.length} added successfully
+                  {duplicates.length > 0 ? `, ${duplicates.length} skipped as duplicate` : ''}
+                  {result.failed > 0 ? `, ${result.failed} failed` : ''}.
+                </p>
+                <div className="stat-grid">
+                  <StatCard label="Received" value={result.received} />
+                  <StatCard label="Created" value={result.created} />
+                  <StatCard label="New versions" value={result.newVersions} />
+                  <StatCard label="Duplicates" value={result.duplicates} />
+                  <StatCard label="Failed" value={result.failed} />
+                </div>
+
+                {duplicates.length > 0 ? (
+                  <div className="duplicate-note" role="status">
+                    <p>
+                      <strong>Skipped as duplicate ({duplicates.length}):</strong>
+                    </p>
+                    <ul>
+                      {duplicates.map((r, i) => (
+                        <li key={`${r.evidenceId}-${i}`}>
+                          <strong>{r.sourceObjectId ?? r.controlId}</strong> was not added — duplicate of existing
+                          evidence (
+                          <Link to={`/evidence/${r.evidenceId}`}>{r.evidenceId.slice(0, 8)}</Link>, version {r.version}
+                          ).
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                <DataTable
+                  rows={result.results}
+                  rowKey={(r) => r.evidenceId}
+                  columns={[
+                    { header: 'File', cell: (r) => r.sourceObjectId ?? '—' },
+                    { header: 'Control', cell: (r) => r.controlId },
+                    { header: 'Outcome', cell: (r) => <StatusPill status={r.outcome} /> },
+                    { header: 'Version', cell: (r) => r.version, align: 'right' },
+                    { header: 'SHA-256', cell: (r) => <code>{r.sha256.slice(0, 16)}…</code> },
+                  ]}
+                />
+
+                {result.errors.length > 0 ? (
+                  <>
+                    <p className="muted small">
+                      <strong>Failed ({result.errors.length}):</strong>
+                    </p>
+                    <DataTable
+                      rows={result.errors}
+                      rowKey={(e) => String(e.index)}
+                      columns={[
+                        { header: 'Index', cell: (e) => e.index, align: 'right' },
+                        { header: 'Error', cell: (e) => e.message },
+                      ]}
+                    />
+                  </>
+                ) : null}
+              </Section>
+            )
+          })()
+        : null}
     </div>
   )
 }

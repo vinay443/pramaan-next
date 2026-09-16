@@ -66,9 +66,9 @@ class InsightServicesTest {
     @Test
     void completenessCountsCoveredStaleAndMissing() {
         CompletenessReport r = completeness.forApplication("net-banking", null);
-        assertThat(r.expected()).isEqualTo(18);
+        assertThat(r.expected()).isEqualTo(151);
         assertThat(r.covered()).isEqualTo(3);
-        assertThat(r.missing()).isEqualTo(15);
+        assertThat(r.missing()).isEqualTo(148);
         assertThat(r.completenessPct()).isGreaterThan(0.0).isLessThan(100.0);
         assertThat(r.controls()).anyMatch(c -> c.controlId().equals("OS-SSH-ROOT-LOGIN")
                 && c.coverage() == Coverage.COVERED);
@@ -80,7 +80,7 @@ class InsightServicesTest {
     void complianceRollsUpDeterministicVerdicts() {
         rules.evaluate(new EvaluateRequest(null, null, null, null));
         ComplianceReport r = compliance.forApplication("net-banking", null);
-        assertThat(r.expected()).isEqualTo(18);
+        assertThat(r.expected()).isEqualTo(151);
         // OS-SSH + OS-AUDIT -> COMPLIANT ; MW-HSTS -> NON_COMPLIANT ; rest -> MISSING_EVIDENCE
         assertThat(r.compliant()).isEqualTo(2);
         assertThat(r.controls()).anyMatch(c -> c.controlId().equals("MW-HSTS")

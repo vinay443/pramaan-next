@@ -1,5 +1,6 @@
 package com.pramaan.backend.insight;
 
+import com.pramaan.backend.evidence.EvidenceDtos.IntegrityStatus;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,61 @@ public final class InsightDtos {
             int missing,
             double completenessPct,
             List<ControlCoverage> controls) {}
+
+    // ---- per-evidence-item completeness (audit-readiness at the item level) ----
+
+    /** One scored factor contributing to an item's completeness percentage. */
+    public record EvidenceCompletenessFactor(String factor, String status, String detail) {}
+
+    public record EvidenceCompletenessItem(
+            String evidenceId,
+            String applicationSlug,
+            String framework,
+            String controlId,
+            String sourceSystem,
+            String collectedBy,
+            String technology,
+            int currentVersion,
+            Instant lastCollectedAt,
+            Integer ageDays,
+            String sha256,
+            IntegrityStatus integrityStatus,
+            int completenessPct,
+            String band,
+            List<EvidenceCompletenessFactor> factors) {}
+
+    public record EvidenceCompletenessReport(
+            String applicationSlug,
+            String framework,
+            Instant generatedAt,
+            int staleAfterDays,
+            int totalItems,
+            double avgCompletenessPct,
+            int completeCount,
+            int partialCount,
+            int incompleteCount,
+            List<EvidenceCompletenessItem> items) {}
+
+    // ---- framework/control rollup (Evidence Completeness page, aggregated view) ----
+
+    /** One framework's rollup: how many of its {@link ControlCatalog} controls have >=1 mapped
+     *  evidence item, and the mean completeness across those evaluated controls only. */
+    public record FrameworkCompletenessRow(
+            String framework,
+            int totalControls,
+            int controlsEvaluated,
+            int controlsNotEvaluated,
+            /** Null when no control in this framework has any evidence yet. */
+            Double avgCompletenessPct) {}
+
+    /** One control's rollup within a framework — {@code completenessPct} is the mean of its
+     *  mapped evidence items' scores, null (not 0%) when the control has no evidence. */
+    public record ControlCompletenessRow(
+            String controlId,
+            String title,
+            boolean evaluated,
+            Double completenessPct,
+            int evidenceCount) {}
 
     // ---- reuse / similarity --------------------------------------------
 

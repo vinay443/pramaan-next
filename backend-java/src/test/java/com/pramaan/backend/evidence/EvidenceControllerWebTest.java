@@ -234,4 +234,47 @@ class EvidenceControllerWebTest {
                 .andExpect(jsonPath("$.received").value(2))
                 .andExpect(jsonPath("$.created").value(2));
     }
+
+    @Test
+    void bulkFileUploadReportsAPartialDuplicateDistinctlyFromFailuresAndSuccesses() throws Exception {
+        MockMultipartFile original = new MockMultipartFile("files", "existing.txt", "text/plain",
+                "unchanged policy text".getBytes());
+        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(original)
+                        .param("applicationSlug", "payments")
+                        .param("framework", "ITPP")
+                        .param("controlId", "ITPP-DOC-09"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.created").value(1));
+
+        // Re-upload the same filename + byte-identical content alongside a genuinely new
+        // file: the duplicate must be reported as DUPLICATE (not an error), the new file
+        // must still be ingested, and neither should land in the `errors` list.
+        MockMultipartFile duplicate = new MockMultipartFile("files", "existing.txt", "text/plain",
+                "unchanged policy text".getBytes());
+        MockMultipartFile fresh = new MockMultipartFile("files", "new-evidence.txt", "text/plain",
+                "brand new content".getBytes());
+
+        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(duplicate).file(fresh)
+                        .param("applicationSlug", "payments")
+                        .param("framework", "ITPP")
+                        .param("controlId", "ITPP-DOC-09"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.received").value(2))
+                .andExpect(jsonPath("$.created").value(1))
+                .andExpect(jsonPath("$.duplicates").value(1))
+                .andExpect(jsonPath("$.failed").value(0))
+                .andExpect(jsonPath("$.errors").isEmpty())
+                .andExpect(jsonPath("$.results[0].outcome").value("DUPLICATE"))
+                .andExpect(jsonPath("$.results[0].sourceObjectId").value("existing.txt"))
+                .andExpect(jsonPath("$.results[1].outcome").value("CREATED"))
+                .andExpect(jsonPath("$.results[1].sourceObjectId").value("new-evidence.txt"));
+
+        // the duplicate is reported, not silently dropped — it's still queryable and its
+        // evidence record didn't gain a spurious new version from the duplicate re-upload
+        mvc.perform(get("/api/v1/evidence")
+                        .param("applicationSlug", "payments")
+                        .param("controlId", "ITPP-DOC-09"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalItems").value(2));
+    }
 }

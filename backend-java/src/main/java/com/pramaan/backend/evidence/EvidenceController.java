@@ -54,6 +54,11 @@ public class EvidenceController {
 
     // ---- ingestion ----------------------------------------------------------
 
+    // Deliberately NOT catalog-guarded: this generic single-item JSON endpoint is used
+    // for evidence outside the ECS bank catalog too (e.g. the ISG/PCIDSS/DPSC approval
+    // RBAC scopes in EvidenceApprovalRbacTest, which exercise arbitrary framework/control
+    // combinations that have nothing to do with docs/ECS_Control_Library.xlsx). The
+    // App-Owner-facing manual upload UI uses /bulk/upload, which IS guarded below.
     @PostMapping("/ingest")
     @ResponseStatus(HttpStatus.CREATED)
     public IngestResult ingest(@Valid @RequestBody IngestRequest req) {

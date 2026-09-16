@@ -43,25 +43,38 @@ public class DemoSeedController {
     private record Seed(String app, String controlId, String framework, String source,
                         String collectedAt, List<String> onlyFrameworks) {}
 
-    // 7 records: 3 apps, 5 controls (all with 3+ frameworks in ControlFrameworkCatalog),
-    // including OS-SSH-ROOT-LOGIN and DB-TLS-IN-TRANSIT. The payments/DB-TLS-IN-TRANSIT
-    // record is deliberately tagged to PCI_DSS only, leaving DPSC + ISO27001 for
-    // "Reuse for [framework]" on the Evidence Reuse page.
+    // One record per xlsx bank-catalog framework (docs/ECS_Control_Library.xlsx via
+    // phase2/control-catalog.json, source=xlsx) across the 3 demo apps, so the Evidence
+    // Repository / Completeness / Reuse pages have coverage for all 10 frameworks —
+    // not just the 4 the old legacy-ID seed touched. controlId/framework here MUST be
+    // an xlsx-sourced (framework, controlId) pair: EvidenceControlCatalog enforces this
+    // on the Scheduler and manual/bulk paths, and this seed is kept in sync with it
+    // deliberately (even though the demo-seed call itself is unguarded).
     private static final List<Seed> SEEDS = List.of(
-            new Seed("net-banking", "OS-SSH-ROOT-LOGIN", "C-SITE", "AGENT_OS_LINUX",
+            new Seed("net-banking", "PCI-C4", "PCI_DSS", "AGENT_TLS",
                     "2026-08-14T09:00:00Z", null),
-            new Seed("mobile-banking", "OS-SSH-ROOT-LOGIN", "C-SITE", "AGENT_OS_LINUX",
+            new Seed("mobile-banking", "DPSC-C6", "DPSC", "AGENT_MIDDLEWARE_NGINX",
                     "2026-08-15T09:00:00Z", null),
-            new Seed("payments", "DB-TLS-IN-TRANSIT", "PCI_DSS", "AGENT_DATABASE_POSTGRESQL",
-                    "2026-08-16T09:00:00Z", List.of("PCI_DSS")),
-            new Seed("net-banking", "DB-TLS-IN-TRANSIT", "PCI_DSS", "AGENT_DATABASE_POSTGRESQL",
+            new Seed("payments", "ITPP-C12", "ITPP", "AGENT_ITPP_POLICY",
+                    "2026-08-16T09:00:00Z", null),
+            new Seed("net-banking", "OSBL-C1", "OS_BASELINING", "AGENT_OS_LINUX",
                     "2026-08-17T09:00:00Z", null),
-            new Seed("payments", "MW-TLS-VERSION", "PCI_DSS", "AGENT_MIDDLEWARE_NGINX",
+            new Seed("mobile-banking", "OSBL-C1", "OS_BASELINING", "AGENT_OS_LINUX",
+                    "2026-08-17T09:05:00Z", null),
+            new Seed("payments", "DBBL-C8", "DB_BASELINING", "AGENT_DATABASE_POSTGRESQL",
                     "2026-08-18T09:00:00Z", null),
-            new Seed("mobile-banking", "MW-HSTS", "DPSC", "AGENT_MIDDLEWARE_NGINX",
+            new Seed("net-banking", "DBBL-C8", "DB_BASELINING", "AGENT_DATABASE_POSTGRESQL",
+                    "2026-08-18T09:05:00Z", List.of("DB_BASELINING")),
+            new Seed("payments", "NGBL-C5", "NGINX_BASELINING", "AGENT_MIDDLEWARE_NGINX",
                     "2026-08-19T09:00:00Z", null),
-            new Seed("net-banking", "TLS-PROTOCOL-VERSION", "PCI_DSS", "AGENT_TLS",
-                    "2026-08-20T09:00:00Z", null));
+            new Seed("net-banking", "VAPT-C1", "VAPT", "AGENT_VAPT_SCANNER",
+                    "2026-08-20T09:00:00Z", null),
+            new Seed("mobile-banking", "CSITE-C9", "C-SITE", "AGENT_OS_LINUX",
+                    "2026-08-21T09:00:00Z", null),
+            new Seed("payments", "ITDRM-C8", "ITDRM", "AGENT_DR_TEST",
+                    "2026-08-22T09:00:00Z", null),
+            new Seed("net-banking", "IA-C2", "INTERNAL_AUDIT", "AGENT_AUDIT_TRACKER",
+                    "2026-08-23T09:00:00Z", null));
 
     private final EvidenceIngestionService ingestion;
 

@@ -105,6 +105,43 @@ kill_pid() {
   kill -9 "$pid" 2>/dev/null || true
 }
 
+require_port_free() {
+  # $1 label, $2 port — hard-fail if something is already listening there.
+  #
+  # Root-cause guard: on MINGW64, `$!` after `mvnw.cmd`/`npm` is the shim PID,
+  # not the real java.exe/node PID (see MONITOR_* note above). If a previous
+  # run's terminal was closed (or killed) without going through this script's
+  # own EXIT trap, that real process can survive as an orphan still bound to
+  # this port. The next "restart" then either fails to bind the port (and
+  # exits) or never gets the chance to serve anything — but wait_for_http only
+  # polls the URL, so it happily reports success once it sees the ORPHAN
+  # answering health checks. The user believes the restart worked; requests
+  # keep hitting old code (existing routes work, newly added ones 404) with no
+  # visible error. Failing fast here, before launching anything, turns that
+  # silent-stale-process failure mode into a loud one.
+  local label="$1" port="$2" existing pid kill_lines=""
+  existing="$(pids_on_port "$port")"
+  [[ -z "${existing// /}" ]] && return 0
+  for pid in $existing; do
+    kill_lines="${kill_lines}    taskkill //PID $pid //T //F"$'\n'
+  done
+  cat >&2 <<EOF
+
+ERROR: something is already listening on :$port (pid(s): $(echo "$existing" | tr '\n' ' ')) —
+refusing to start $label on top of it.
+
+This is almost always a leftover process from a previous run that didn't shut
+down cleanly (a closed terminal, a killed shim, etc. — the real process
+survives even though it looks stopped). Starting a new $label now would either
+fail to bind the port, or leave you unknowingly talking to the OLD process:
+old routes keep responding while anything added since it started 404s.
+
+Kill it, then re-run this script:
+${kill_lines}(or, to double check first: netstat -ano | grep ":$port.*LISTENING")
+EOF
+  exit 1
+}
+
 stop_service() {
   # $1 label, $2 captured-pid (may be a stale shim), $3 port
   local label="$1" pid="$2" port="$3" killed=""
@@ -267,6 +304,7 @@ start_backend() {
     echo "[dry-run] (cd backend-java && $mvn -q spring-boot:run${prof_dry}${demo_arg_dry}) >> $BACKEND_LOG 2>&1 &"
     BACKEND_PID="dryrun"; return 0
   fi
+  require_port_free "backend" "$BACKEND_PORT"
   echo "Starting backend (${profile:-default profile}) -> $BACKEND_LOG"
   # DEMO_MODE was resolved by resolve_demo_mode and exported, so the plugin fork
   # inherits it. We ALSO pass it as a JVM system property so it survives the
@@ -289,6 +327,7 @@ start_frontend() {
     echo "[dry-run] (cd frontend-react && npm run dev) >> $FRONTEND_LOG 2>&1 &"
     FRONTEND_PID="dryrun"; return 0
   fi
+  require_port_free "frontend" "$FRONTEND_PORT"
   echo "Starting frontend -> $FRONTEND_LOG"
   : > "$FRONTEND_LOG"
   ( cd "$FRONTEND_DIR"

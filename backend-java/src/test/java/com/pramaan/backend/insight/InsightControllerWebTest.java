@@ -35,12 +35,12 @@ class InsightControllerWebTest {
 
         mvc.perform(get("/api/v1/insight/completeness").param("applicationSlug", "net-banking"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.expected").value(18))
+                .andExpect(jsonPath("$.expected").value(151))
                 .andExpect(jsonPath("$.covered").value(1));
 
         mvc.perform(get("/api/v1/insight/compliance").param("applicationSlug", "net-banking"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.expected").value(18));
+                .andExpect(jsonPath("$.expected").value(151));
 
         mvc.perform(post("/api/v1/insight/nl-query").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"question\":\"which controls are missing for net-banking?\",\"applicationSlug\":\"net-banking\"}"))
@@ -78,7 +78,7 @@ class InsightControllerWebTest {
         mvc.perform(get("/api/v1/insight/leadership"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.applications").value(1))
-                .andExpect(jsonPath("$.expected").value(18))
+                .andExpect(jsonPath("$.expected").value(151))
                 .andExpect(jsonPath("$.byApplication[0].applicationSlug").value("net-banking"))
                 .andExpect(jsonPath("$.checkVerdicts.PASS").exists());
     }

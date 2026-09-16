@@ -1,23 +1,492 @@
 {
-  "note": "UC03 Controls_Framework_Mapping. Maps an internal control code to every compliance framework that control helps satisfy. This is the source of truth for the evidence 'frameworks' metadata tag. Reference data only — deliberately NOT a DB entity (see EvidenceNaming / task decision note). Add a row here when a new control code is introduced.",
+  "note": "UC03 Controls_Framework_Mapping. Maps an internal control code to every compliance framework that control helps satisfy. This is the source of truth for the evidence 'frameworks' metadata tag. Reference data only — deliberately NOT a DB entity (see EvidenceNaming / task decision note). Add a row here when a new control code is introduced. Entries for the 133 xlsx bank-catalog controls (docs/ECS_Control_Library.xlsx, phase2/control-catalog.json source=xlsx) were added as self-mappings (control -> its own framework only) so isMapped()/frameworksFor() recognize them; no cross-framework equivalence data exists yet (see that workbook's Notes sheet CCL example) beyond the original 18 hand-curated controls above.",
   "mappings": {
-    "OS-BASELINE-VERSION": ["ITPP", "ISO27001", "IS"],
-    "OS-SSH-ROOT-LOGIN": ["C-SITE", "PCI_DSS", "ISO27001", "IS"],
-    "OS-SSH-PASSWORD-AUTH": ["C-SITE", "PCI_DSS", "ISO27001"],
-    "OS-AUDIT-LOGGING": ["PCI_DSS", "ISO27001", "IS", "DPSC"],
-    "DB-TLS-IN-TRANSIT": ["PCI_DSS", "DPSC", "ISO27001"],
-    "DB-AUDIT-LOGGING": ["PCI_DSS", "ISO27001", "IS"],
-    "DB-PASSWORD-STORAGE": ["C-SITE", "PCI_DSS", "ISO27001"],
-    "DB-AUTH-NO-TRUST": ["C-SITE", "PCI_DSS"],
-    "MW-TLS-VERSION": ["PCI_DSS", "DPSC", "ISG"],
-    "MW-BANNER-SUPPRESSION": ["C-SITE", "ISG"],
-    "MW-HSTS": ["DPSC", "ISG", "ISO27001"],
-    "TLS-PROTOCOL-VERSION": ["PCI_DSS", "DPSC", "ISG"],
-    "TLS-CERT-EXPIRY": ["C-SITE", "ISG", "ISO27001"],
-    "TLS-KEY-STRENGTH": ["C-SITE", "PCI_DSS", "ISG"],
-    "TLS-CERT-TRUST": ["DPSC", "ISG"],
-    "ITPP-CHG-02": ["ITPP", "ISO27001", "IS"],
-    "DPSC-SDLC-04": ["DPSC", "ISO27001", "PCI_DSS"],
-    "PCI-DSS-6.2": ["PCI_DSS", "DPSC"]
+    "OS-BASELINE-VERSION": [
+      "ITPP",
+      "ISO27001",
+      "IS"
+    ],
+    "OS-SSH-ROOT-LOGIN": [
+      "C-SITE",
+      "PCI_DSS",
+      "ISO27001",
+      "IS"
+    ],
+    "OS-SSH-PASSWORD-AUTH": [
+      "C-SITE",
+      "PCI_DSS",
+      "ISO27001"
+    ],
+    "OS-AUDIT-LOGGING": [
+      "PCI_DSS",
+      "ISO27001",
+      "IS",
+      "DPSC"
+    ],
+    "DB-TLS-IN-TRANSIT": [
+      "PCI_DSS",
+      "DPSC",
+      "ISO27001"
+    ],
+    "DB-AUDIT-LOGGING": [
+      "PCI_DSS",
+      "ISO27001",
+      "IS"
+    ],
+    "DB-PASSWORD-STORAGE": [
+      "C-SITE",
+      "PCI_DSS",
+      "ISO27001"
+    ],
+    "DB-AUTH-NO-TRUST": [
+      "C-SITE",
+      "PCI_DSS"
+    ],
+    "MW-TLS-VERSION": [
+      "PCI_DSS",
+      "DPSC",
+      "ISG"
+    ],
+    "MW-BANNER-SUPPRESSION": [
+      "C-SITE",
+      "ISG"
+    ],
+    "MW-HSTS": [
+      "DPSC",
+      "ISG",
+      "ISO27001"
+    ],
+    "TLS-PROTOCOL-VERSION": [
+      "PCI_DSS",
+      "DPSC",
+      "ISG"
+    ],
+    "TLS-CERT-EXPIRY": [
+      "C-SITE",
+      "ISG",
+      "ISO27001"
+    ],
+    "TLS-KEY-STRENGTH": [
+      "C-SITE",
+      "PCI_DSS",
+      "ISG"
+    ],
+    "TLS-CERT-TRUST": [
+      "DPSC",
+      "ISG"
+    ],
+    "ITPP-CHG-02": [
+      "ITPP",
+      "ISO27001",
+      "IS"
+    ],
+    "DPSC-SDLC-04": [
+      "DPSC",
+      "ISO27001",
+      "PCI_DSS"
+    ],
+    "PCI-DSS-6.2": [
+      "PCI_DSS",
+      "DPSC"
+    ],
+    "PCI-C1": [
+      "PCI_DSS"
+    ],
+    "PCI-C2": [
+      "PCI_DSS"
+    ],
+    "PCI-C3": [
+      "PCI_DSS"
+    ],
+    "PCI-C4": [
+      "PCI_DSS"
+    ],
+    "PCI-C5": [
+      "PCI_DSS"
+    ],
+    "PCI-C6": [
+      "PCI_DSS"
+    ],
+    "PCI-C7": [
+      "PCI_DSS"
+    ],
+    "PCI-C8": [
+      "PCI_DSS"
+    ],
+    "PCI-C9": [
+      "PCI_DSS"
+    ],
+    "PCI-C10": [
+      "PCI_DSS"
+    ],
+    "PCI-C11": [
+      "PCI_DSS"
+    ],
+    "PCI-C12": [
+      "PCI_DSS"
+    ],
+    "DPSC-C1": [
+      "DPSC"
+    ],
+    "DPSC-C2": [
+      "DPSC"
+    ],
+    "DPSC-C3": [
+      "DPSC"
+    ],
+    "DPSC-C4": [
+      "DPSC"
+    ],
+    "DPSC-C5": [
+      "DPSC"
+    ],
+    "DPSC-C6": [
+      "DPSC"
+    ],
+    "DPSC-C7": [
+      "DPSC"
+    ],
+    "DPSC-C8": [
+      "DPSC"
+    ],
+    "DPSC-C9": [
+      "DPSC"
+    ],
+    "DPSC-C10": [
+      "DPSC"
+    ],
+    "DPSC-C11": [
+      "DPSC"
+    ],
+    "DPSC-C12": [
+      "DPSC"
+    ],
+    "DPSC-C13": [
+      "DPSC"
+    ],
+    "DPSC-C14": [
+      "DPSC"
+    ],
+    "DPSC-C15": [
+      "DPSC"
+    ],
+    "DPSC-C16": [
+      "DPSC"
+    ],
+    "DPSC-C17": [
+      "DPSC"
+    ],
+    "DPSC-C18": [
+      "DPSC"
+    ],
+    "ITPP-C1": [
+      "ITPP"
+    ],
+    "ITPP-C2": [
+      "ITPP"
+    ],
+    "ITPP-C3": [
+      "ITPP"
+    ],
+    "ITPP-C4": [
+      "ITPP"
+    ],
+    "ITPP-C5": [
+      "ITPP"
+    ],
+    "ITPP-C6": [
+      "ITPP"
+    ],
+    "ITPP-C7": [
+      "ITPP"
+    ],
+    "ITPP-C8": [
+      "ITPP"
+    ],
+    "ITPP-C9": [
+      "ITPP"
+    ],
+    "ITPP-C10": [
+      "ITPP"
+    ],
+    "ITPP-C11": [
+      "ITPP"
+    ],
+    "ITPP-C12": [
+      "ITPP"
+    ],
+    "ITPP-C13": [
+      "ITPP"
+    ],
+    "ITPP-C14": [
+      "ITPP"
+    ],
+    "ITPP-C15": [
+      "ITPP"
+    ],
+    "ITPP-C16": [
+      "ITPP"
+    ],
+    "ITPP-C17": [
+      "ITPP"
+    ],
+    "ITPP-C18": [
+      "ITPP"
+    ],
+    "OSBL-C1": [
+      "OS_BASELINING"
+    ],
+    "OSBL-C2": [
+      "OS_BASELINING"
+    ],
+    "OSBL-C3": [
+      "OS_BASELINING"
+    ],
+    "OSBL-C4": [
+      "OS_BASELINING"
+    ],
+    "OSBL-C5": [
+      "OS_BASELINING"
+    ],
+    "OSBL-C6": [
+      "OS_BASELINING"
+    ],
+    "OSBL-C7": [
+      "OS_BASELINING"
+    ],
+    "OSBL-C8": [
+      "OS_BASELINING"
+    ],
+    "OSBL-C9": [
+      "OS_BASELINING"
+    ],
+    "OSBL-C10": [
+      "OS_BASELINING"
+    ],
+    "OSBL-C11": [
+      "OS_BASELINING"
+    ],
+    "OSBL-C12": [
+      "OS_BASELINING"
+    ],
+    "DBBL-C1": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C2": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C3": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C4": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C5": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C6": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C7": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C8": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C9": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C10": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C11": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C12": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C13": [
+      "DB_BASELINING"
+    ],
+    "DBBL-C14": [
+      "DB_BASELINING"
+    ],
+    "NGBL-C1": [
+      "NGINX_BASELINING"
+    ],
+    "NGBL-C2": [
+      "NGINX_BASELINING"
+    ],
+    "NGBL-C3": [
+      "NGINX_BASELINING"
+    ],
+    "NGBL-C4": [
+      "NGINX_BASELINING"
+    ],
+    "NGBL-C5": [
+      "NGINX_BASELINING"
+    ],
+    "NGBL-C6": [
+      "NGINX_BASELINING"
+    ],
+    "NGBL-C7": [
+      "NGINX_BASELINING"
+    ],
+    "NGBL-C8": [
+      "NGINX_BASELINING"
+    ],
+    "NGBL-C9": [
+      "NGINX_BASELINING"
+    ],
+    "NGBL-C10": [
+      "NGINX_BASELINING"
+    ],
+    "NGBL-C11": [
+      "NGINX_BASELINING"
+    ],
+    "NGBL-C12": [
+      "NGINX_BASELINING"
+    ],
+    "VAPT-C1": [
+      "VAPT"
+    ],
+    "VAPT-C2": [
+      "VAPT"
+    ],
+    "VAPT-C3": [
+      "VAPT"
+    ],
+    "VAPT-C4": [
+      "VAPT"
+    ],
+    "VAPT-C5": [
+      "VAPT"
+    ],
+    "VAPT-C6": [
+      "VAPT"
+    ],
+    "VAPT-C7": [
+      "VAPT"
+    ],
+    "VAPT-C8": [
+      "VAPT"
+    ],
+    "VAPT-C9": [
+      "VAPT"
+    ],
+    "VAPT-C10": [
+      "VAPT"
+    ],
+    "VAPT-C11": [
+      "VAPT"
+    ],
+    "CSITE-C1": [
+      "C-SITE"
+    ],
+    "CSITE-C2": [
+      "C-SITE"
+    ],
+    "CSITE-C3": [
+      "C-SITE"
+    ],
+    "CSITE-C4": [
+      "C-SITE"
+    ],
+    "CSITE-C5": [
+      "C-SITE"
+    ],
+    "CSITE-C6": [
+      "C-SITE"
+    ],
+    "CSITE-C7": [
+      "C-SITE"
+    ],
+    "CSITE-C8": [
+      "C-SITE"
+    ],
+    "CSITE-C9": [
+      "C-SITE"
+    ],
+    "CSITE-C10": [
+      "C-SITE"
+    ],
+    "CSITE-C11": [
+      "C-SITE"
+    ],
+    "CSITE-C12": [
+      "C-SITE"
+    ],
+    "CSITE-C13": [
+      "C-SITE"
+    ],
+    "CSITE-C14": [
+      "C-SITE"
+    ],
+    "CSITE-C15": [
+      "C-SITE"
+    ],
+    "CSITE-C16": [
+      "C-SITE"
+    ],
+    "ITDRM-C1": [
+      "ITDRM"
+    ],
+    "ITDRM-C2": [
+      "ITDRM"
+    ],
+    "ITDRM-C3": [
+      "ITDRM"
+    ],
+    "ITDRM-C4": [
+      "ITDRM"
+    ],
+    "ITDRM-C5": [
+      "ITDRM"
+    ],
+    "ITDRM-C6": [
+      "ITDRM"
+    ],
+    "ITDRM-C7": [
+      "ITDRM"
+    ],
+    "ITDRM-C8": [
+      "ITDRM"
+    ],
+    "ITDRM-C9": [
+      "ITDRM"
+    ],
+    "ITDRM-C10": [
+      "ITDRM"
+    ],
+    "IA-C1": [
+      "INTERNAL_AUDIT"
+    ],
+    "IA-C2": [
+      "INTERNAL_AUDIT"
+    ],
+    "IA-C3": [
+      "INTERNAL_AUDIT"
+    ],
+    "IA-C4": [
+      "INTERNAL_AUDIT"
+    ],
+    "IA-C5": [
+      "INTERNAL_AUDIT"
+    ],
+    "IA-C6": [
+      "INTERNAL_AUDIT"
+    ],
+    "IA-C7": [
+      "INTERNAL_AUDIT"
+    ],
+    "IA-C8": [
+      "INTERNAL_AUDIT"
+    ],
+    "IA-C9": [
+      "INTERNAL_AUDIT"
+    ],
+    "IA-C10": [
+      "INTERNAL_AUDIT"
+    ]
   }
 }

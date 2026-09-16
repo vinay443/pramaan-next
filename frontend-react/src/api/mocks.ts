@@ -21,6 +21,7 @@ import type {
   CheckResultView,
   CompletenessReport,
   ComplianceReport,
+  ControlCompletenessRow,
   ControlCoverage,
   ControlFrameworks,
   ControlReuseEvidence,
@@ -29,12 +30,17 @@ import type {
   ControlStatus,
   Coverage,
   Criticality,
+  CompletenessBand,
   DeterministicQueryResult,
+  EvidenceCompletenessFactor,
+  EvidenceCompletenessItem,
+  EvidenceCompletenessReport,
   EvidenceDashboard,
   EvaluationSummary,
   EvidenceSummary,
   EvidenceQueryParams,
   EvidenceView,
+  FrameworkCompletenessRow,
   FrameworkFiling,
   FrameworkPosture,
   AuditPrepReport,
@@ -995,6 +1001,7 @@ export function mockBulkIngestFiles(
     controlId: meta.controlId,
     framework: meta.framework,
     sourceSystem: meta.sourceSystem || 'BULK_UPLOAD',
+    sourceObjectId: f.name,
     title: f.name,
     contentText: f.name,
   }))
@@ -1013,6 +1020,7 @@ export function mockBulkIngest(items: IngestRequest[]): BulkIngestResponse {
     version: 1,
     sha256: 'b'.repeat(64),
     sizeBytes: (it.contentText ?? it.contentBase64 ?? '').length,
+    sourceObjectId: it.sourceObjectId ?? it.title ?? null,
   }))
   const duplicates = results.filter((r) => r.outcome === 'DUPLICATE').length
   return { received: items.length, created: results.length - duplicates, newVersions: 0, duplicates, failed: 0, results, errors: [] }
@@ -1247,6 +1255,232 @@ export function mockCompleteness(applicationSlug: string, framework?: string): C
     completenessPct: controls.length === 0 ? 0 : round1((100 * covered) / controls.length),
     controls,
   }
+}
+
+// ---- per-evidence-item completeness (mirrors backend/insight/EvidenceCompletenessService) ----
+
+const EC_WEIGHT_INTEGRITY = 25
+const EC_WEIGHT_CONTENT = 20
+const EC_WEIGHT_FRESHNESS = 20
+const EC_WEIGHT_CONTROL_MAPPING = 15
+const EC_WEIGHT_COLLECTED_BY = 10
+const EC_WEIGHT_TECHNOLOGY = 10
+const EC_MIN_SUBSTANTIVE_BYTES = 10
+
+function ecBand(score: number): CompletenessBand {
+  if (score >= 90) return 'COMPLETE'
+  if (score >= 60) return 'PARTIAL'
+  return 'INCOMPLETE'
+}
+
+function isControlMapped(controlId: string): boolean {
+  return controlId?.toUpperCase() in CONTROL_FRAMEWORKS
+}
+
+function scoreEvidenceCompleteness(e: EvidenceView): EvidenceCompletenessItem {
+  const factors: EvidenceCompletenessFactor[] = []
+  let score = 0
+  const ok = (factor: string, detail: string) => factors.push({ factor, status: 'ok', detail })
+  const fail = (factor: string, detail: string) => factors.push({ factor, status: 'fail', detail })
+
+  ok('Application', `Application recorded: ${e.applicationSlug}.`)
+  ok('Framework', `Framework recorded: ${e.framework}.`)
+  ok('Source system', `Source system recorded: ${e.sourceSystem}.`)
+
+  const integrityStatus = e.integrityStatus ?? 'UNKNOWN'
+  if (!e.latest) {
+    fail('Integrity', 'No version recorded — nothing to verify.')
+    fail('Evidence content', 'No evidence content has ever been collected.')
+  } else if (integrityStatus === 'VERIFIED') {
+    score += EC_WEIGHT_INTEGRITY
+    ok('Integrity', 'SHA-256 matches the recorded hash.')
+    if (e.latest.sizeBytes >= EC_MIN_SUBSTANTIVE_BYTES) {
+      score += EC_WEIGHT_CONTENT
+      ok('Evidence content', `Content is present and non-trivial (${e.latest.sizeBytes} bytes).`)
+    } else {
+      fail('Evidence content', `Content is empty or looks like a placeholder (${e.latest.sizeBytes} bytes).`)
+    }
+  } else if (integrityStatus === 'TAMPERED') {
+    fail('Integrity', 'Recorded hash does not match current content — integrity check failed.')
+    fail('Evidence content', 'Content cannot be trusted: the integrity check on it failed.')
+  } else {
+    fail('Integrity', 'Stored object could not be verified against the object store.')
+    fail('Evidence content', 'Content is unavailable — cannot confirm it is non-trivial.')
+  }
+
+  let ageInDays: number | null = null
+  if (e.latest) {
+    ageInDays = Math.floor(ageDays(e.latest.collectedAt))
+    if (ageInDays <= STALE_DAYS) {
+      score += EC_WEIGHT_FRESHNESS
+      ok('Freshness', `Last collected ${ageInDays} day(s) ago.`)
+    } else {
+      fail('Freshness', `Last collected ${ageInDays} days ago, exceeds the ${STALE_DAYS}-day threshold.`)
+    }
+  } else {
+    fail('Freshness', 'No collection date recorded.')
+  }
+
+  const collectedBy = e.latest?.collectedBy
+  if (collectedBy && collectedBy.trim()) {
+    score += EC_WEIGHT_COLLECTED_BY
+    ok('Collected by', `Recorded as "${collectedBy}".`)
+  } else {
+    fail('Collected by', 'Missing: collector identity not recorded.')
+  }
+
+  const technology = e.tags.technology
+  const technologyKnown = !!technology && technology.toLowerCase() !== 'unknown'
+  if (technologyKnown) {
+    score += EC_WEIGHT_TECHNOLOGY
+    ok('Technology', `Recorded as "${technology}".`)
+  } else {
+    fail('Technology', 'Missing: technology not recorded.')
+  }
+
+  const mapped = isControlMapped(e.controlId)
+  if (mapped) {
+    score += EC_WEIGHT_CONTROL_MAPPING
+    ok('Control mapping', `Control ${e.controlId} is mapped to a known framework set.`)
+  } else {
+    fail('Control mapping', `Control ${e.controlId} is not in the control-framework catalogue (orphaned/unmapped).`)
+  }
+
+  return {
+    evidenceId: e.evidenceId,
+    applicationSlug: e.applicationSlug,
+    framework: e.framework,
+    controlId: e.controlId,
+    sourceSystem: e.sourceSystem,
+    collectedBy: collectedBy ?? null,
+    technology: technologyKnown ? technology : null,
+    currentVersion: e.currentVersion,
+    lastCollectedAt: e.latest?.collectedAt ?? null,
+    ageDays: ageInDays,
+    sha256: e.latest?.sha256 ?? null,
+    integrityStatus,
+    completenessPct: score,
+    band: ecBand(score),
+    factors,
+  }
+}
+
+export function mockEvidenceCompleteness(applicationSlug?: string, framework?: string): EvidenceCompletenessReport {
+  let scope = mockEvidence.slice()
+  if (applicationSlug) scope = scope.filter((e) => e.applicationSlug === applicationSlug)
+  if (framework) scope = scope.filter((e) => e.framework === framework.toUpperCase())
+
+  const items = scope
+    .map(scoreEvidenceCompleteness)
+    .sort(
+      (a, b) =>
+        a.applicationSlug.localeCompare(b.applicationSlug) ||
+        a.controlId.localeCompare(b.controlId) ||
+        a.evidenceId.localeCompare(b.evidenceId),
+    )
+
+  const completeCount = items.filter((i) => i.band === 'COMPLETE').length
+  const partialCount = items.filter((i) => i.band === 'PARTIAL').length
+  const incompleteCount = items.length - completeCount - partialCount
+  const avgCompletenessPct = items.length === 0 ? 0 : round1(items.reduce((s, i) => s + i.completenessPct, 0) / items.length)
+
+  return {
+    applicationSlug: applicationSlug ?? null,
+    framework: framework ?? null,
+    generatedAt: NOW,
+    staleAfterDays: STALE_DAYS,
+    totalItems: items.length,
+    avgCompletenessPct,
+    completeCount,
+    partialCount,
+    incompleteCount,
+    items,
+  }
+}
+
+// ---- framework/control rollup (mirrors backend/insight/EvidenceCompletenessService rollup) ----
+
+function rollupKey(framework: string, controlId: string): string {
+  return `${framework.toUpperCase()}|${controlId.toUpperCase()}`
+}
+
+function groupByRollupKey(items: EvidenceCompletenessItem[]): Map<string, EvidenceCompletenessItem[]> {
+  const byKey = new Map<string, EvidenceCompletenessItem[]>()
+  for (const i of items) {
+    const key = rollupKey(i.framework, i.controlId)
+    const list = byKey.get(key)
+    if (list) list.push(i)
+    else byKey.set(key, [i])
+  }
+  return byKey
+}
+
+export function mockEvidenceCompletenessFrameworks(applicationSlug?: string): FrameworkCompletenessRow[] {
+  const byKey = groupByRollupKey(mockEvidenceCompleteness(applicationSlug).items)
+
+  const byFramework = new Map<string, typeof CONTROL_CATALOG>()
+  for (const c of CONTROL_CATALOG) {
+    const list = byFramework.get(c.framework)
+    if (list) list.push(c)
+    else byFramework.set(c.framework, [c])
+  }
+
+  return Array.from(byFramework.entries())
+    .map(([framework, controls]) => {
+      let evaluated = 0
+      const perControlAvg: number[] = []
+      for (const c of controls) {
+        const mapped = byKey.get(rollupKey(framework, c.id)) ?? []
+        if (mapped.length > 0) {
+          evaluated++
+          perControlAvg.push(mapped.reduce((s, i) => s + i.completenessPct, 0) / mapped.length)
+        }
+      }
+      const avgCompletenessPct =
+        perControlAvg.length === 0 ? null : round1(perControlAvg.reduce((s, v) => s + v, 0) / perControlAvg.length)
+      return {
+        framework,
+        totalControls: controls.length,
+        controlsEvaluated: evaluated,
+        controlsNotEvaluated: controls.length - evaluated,
+        avgCompletenessPct,
+      }
+    })
+    .sort((a, b) => a.framework.localeCompare(b.framework))
+}
+
+export function mockEvidenceCompletenessControls(
+  framework: string,
+  applicationSlug?: string,
+): ControlCompletenessRow[] {
+  const byControl = new Map<string, EvidenceCompletenessItem[]>()
+  for (const i of mockEvidenceCompleteness(applicationSlug, framework).items) {
+    const key = i.controlId.toUpperCase()
+    const list = byControl.get(key)
+    if (list) list.push(i)
+    else byControl.set(key, [i])
+  }
+
+  return CONTROL_CATALOG.filter((c) => c.framework === framework.toUpperCase())
+    .map((c) => {
+      const mapped = byControl.get(c.id.toUpperCase()) ?? []
+      const evaluated = mapped.length > 0
+      const completenessPct = evaluated
+        ? round1(mapped.reduce((s, i) => s + i.completenessPct, 0) / mapped.length)
+        : null
+      return { controlId: c.id, title: c.title, evaluated, completenessPct, evidenceCount: mapped.length }
+    })
+    .sort((a, b) => a.controlId.localeCompare(b.controlId))
+}
+
+export function mockEvidenceCompletenessControlEvidence(
+  framework: string,
+  controlId: string,
+  applicationSlug?: string,
+): EvidenceCompletenessItem[] {
+  return mockEvidenceCompleteness(applicationSlug, framework).items.filter(
+    (i) => i.controlId.toUpperCase() === controlId.toUpperCase(),
+  )
 }
 
 function postureFor(app: string, framework: string, controlId: string): ControlStatus {

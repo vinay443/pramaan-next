@@ -25,14 +25,14 @@ class SimulatedTechnologyIntegrationsConfig {
             @Override protected String collector() { return "database"; }
             @Override protected List<SimCheck> checks() {
                 return List.of(
-                        new SimCheck("PCI_DSS", "DB-TLS-IN-TRANSIT", "DB-PG-01",
-                                "TLS enabled for database connections", "on", "on", "PASS"),
-                        new SimCheck("PCI_DSS", "DB-AUDIT-LOGGING", "DB-PG-02",
-                                "Connection/statement auditing enabled", "on", "on", "PASS"),
-                        new SimCheck("C-SITE", "DB-PASSWORD-STORAGE", "DB-PG-03",
-                                "Strong password hashing", "scram-sha-256", "scram-sha-256", "PASS"),
-                        new SimCheck("C-SITE", "DB-AUTH-NO-TRUST", "DB-PG-04",
-                                "No trust auth in pg_hba", "0", "0", "PASS"));
+                        new SimCheck("DB_BASELINING", "DBBL-C8", "DB-PG-01",
+                                "Encryption in Transit", "on", "on", "PASS"),
+                        new SimCheck("DB_BASELINING", "DBBL-C9", "DB-PG-02",
+                                "Database Audit Logging", "on", "on", "PASS"),
+                        new SimCheck("DB_BASELINING", "DBBL-C4", "DB-PG-03",
+                                "Password Policy", "scram-sha-256", "scram-sha-256", "PASS"),
+                        new SimCheck("DB_BASELINING", "DBBL-C11", "DB-PG-04",
+                                "Secure Database Configuration", "0", "0", "PASS"));
             }
         };
     }
@@ -45,12 +45,12 @@ class SimulatedTechnologyIntegrationsConfig {
             @Override protected String collector() { return "database"; }
             @Override protected List<SimCheck> checks() {
                 return List.of(
-                        new SimCheck("PCI_DSS", "DB-TLS-IN-TRANSIT", "DB-MY-01",
-                                "TLS required for MySQL connections", "on", "on", "PASS"),
-                        new SimCheck("PCI_DSS", "DB-AUDIT-LOGGING", "DB-MY-02",
-                                "MySQL audit/general logging enabled", "true", "true", "PASS"),
-                        new SimCheck("C-SITE", "DB-AUTH-NO-TRUST", "DB-MY-03",
-                                "Local file import disabled", "off", "off", "PASS"));
+                        new SimCheck("DB_BASELINING", "DBBL-C8", "DB-MY-01",
+                                "Encryption in Transit", "on", "on", "PASS"),
+                        new SimCheck("DB_BASELINING", "DBBL-C9", "DB-MY-02",
+                                "Database Audit Logging", "true", "true", "PASS"),
+                        new SimCheck("DB_BASELINING", "DBBL-C12", "DB-MY-03",
+                                "Unnecessary Feature Disablement (local file import)", "off", "off", "PASS"));
             }
         };
     }
@@ -63,12 +63,12 @@ class SimulatedTechnologyIntegrationsConfig {
             @Override protected String collector() { return "middleware"; }
             @Override protected List<SimCheck> checks() {
                 return List.of(
-                        new SimCheck("PCI_DSS", "MW-TLS-VERSION", "MW-01",
-                                "Only TLS 1.2+ protocols enabled", "TLSv1.2,TLSv1.3", "no legacy TLS", "PASS"),
-                        new SimCheck("C-SITE", "MW-BANNER-SUPPRESSION", "MW-02",
-                                "Server version banner suppressed", "server_tokens off", "off", "PASS"),
-                        new SimCheck("DPSC", "MW-HSTS", "MW-03",
-                                "HSTS response header configured", "present", "present", "PASS"));
+                        new SimCheck("NGINX_BASELINING", "NGBL-C5", "MW-01",
+                                "TLS Protocol Compliance", "TLSv1.2,TLSv1.3", "no legacy TLS", "PASS"),
+                        new SimCheck("NGINX_BASELINING", "NGBL-C9", "MW-02",
+                                "Server Information Protection", "server_tokens off", "off", "PASS"),
+                        new SimCheck("NGINX_BASELINING", "NGBL-C8", "MW-03",
+                                "Secure HTTP Headers (HSTS)", "present", "present", "PASS"));
             }
         };
     }
@@ -80,11 +80,14 @@ class SimulatedTechnologyIntegrationsConfig {
             @Override protected String technology() { return "tomcat"; }
             @Override protected String collector() { return "middleware"; }
             @Override protected List<SimCheck> checks() {
+                // No xlsx framework covers Tomcat/middleware baselining specifically
+                // (only NGINX Baselining is technology-specific) — filed against ITPP,
+                // the general IT-policy framework, as the nearest catalog fit.
                 return List.of(
-                        new SimCheck("PCI_DSS", "MW-TLS-VERSION", "MW-01",
-                                "Only TLS 1.2+ protocols enabled", "TLSv1.2,TLSv1.3", "no legacy TLS", "PASS"),
-                        new SimCheck("C-SITE", "MW-AUTODEPLOY", "MW-04",
-                                "Hot auto-deploy disabled", "false", "false", "PASS"));
+                        new SimCheck("ITPP", "ITPP-C9", "MW-01",
+                                "Encryption in Transit", "TLSv1.2,TLSv1.3", "no legacy TLS", "PASS"),
+                        new SimCheck("ITPP", "ITPP-C5", "MW-04",
+                                "Secure Configuration (hot auto-deploy disabled)", "false", "false", "PASS"));
             }
         };
     }

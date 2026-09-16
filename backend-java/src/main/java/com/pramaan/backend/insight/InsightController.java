@@ -6,8 +6,12 @@ import com.pramaan.backend.insight.InsightDtos.ComparisonReport;
 import com.pramaan.backend.insight.InsightDtos.ControlReuseResult;
 import com.pramaan.backend.insight.InsightDtos.ComplianceReport;
 import com.pramaan.backend.insight.InsightDtos.CompletenessReport;
+import com.pramaan.backend.insight.InsightDtos.ControlCompletenessRow;
 import com.pramaan.backend.insight.InsightDtos.EnterpriseDashboard;
+import com.pramaan.backend.insight.InsightDtos.EvidenceCompletenessItem;
+import com.pramaan.backend.insight.InsightDtos.EvidenceCompletenessReport;
 import com.pramaan.backend.insight.InsightDtos.EvidenceContext;
+import com.pramaan.backend.insight.InsightDtos.FrameworkCompletenessRow;
 import com.pramaan.backend.insight.InsightDtos.EvidenceSummary;
 import com.pramaan.backend.insight.InsightDtos.LeadershipDashboard;
 import com.pramaan.backend.insight.InsightDtos.NationalDashboard;
@@ -34,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class InsightController {
 
     private final CompletenessService completeness;
+    private final EvidenceCompletenessService evidenceCompleteness;
     private final EvidenceReuseService reuse;
     private final EvidenceSummaryService summaries;
     private final NlQueryService nlQuery;
@@ -46,13 +51,15 @@ public class InsightController {
     private final EvidenceEmbeddingIndexer indexer;
     private final EvidenceContextService evidenceContext;
 
-    public InsightController(CompletenessService completeness, EvidenceReuseService reuse,
+    public InsightController(CompletenessService completeness, EvidenceCompletenessService evidenceCompleteness,
+                             EvidenceReuseService reuse,
                              EvidenceSummaryService summaries, NlQueryService nlQuery,
                              ComplianceService compliance, LeadershipService leadership,
                              ComparisonService comparison, EnterpriseDashboardService enterprise,
                              AuditPrepService auditPrep, TrendService trend,
                              EvidenceEmbeddingIndexer indexer, EvidenceContextService evidenceContext) {
         this.completeness = completeness;
+        this.evidenceCompleteness = evidenceCompleteness;
         this.reuse = reuse;
         this.summaries = summaries;
         this.nlQuery = nlQuery;
@@ -70,6 +77,36 @@ public class InsightController {
     public CompletenessReport completeness(@RequestParam String applicationSlug,
                                            @RequestParam(required = false) String framework) {
         return completeness.forApplication(applicationSlug, framework);
+    }
+
+    /** Per-evidence-item completeness (audit-readiness at the item level) — see {@link EvidenceCompletenessService}. */
+    @GetMapping("/evidence-completeness")
+    public EvidenceCompletenessReport evidenceCompleteness(@RequestParam(required = false) String applicationSlug,
+                                                            @RequestParam(required = false) String framework) {
+        return evidenceCompleteness.forScope(applicationSlug, framework);
+    }
+
+    /** Evidence Completeness — Framework -> Control rollup: one row per framework. */
+    @GetMapping("/evidence-completeness/frameworks")
+    public List<FrameworkCompletenessRow> evidenceCompletenessFrameworks(
+            @RequestParam(required = false) String applicationSlug) {
+        return evidenceCompleteness.frameworkRollup(applicationSlug);
+    }
+
+    /** One row per control in the given framework. */
+    @GetMapping("/evidence-completeness/frameworks/{framework}/controls")
+    public List<ControlCompletenessRow> evidenceCompletenessControls(
+            @PathVariable String framework,
+            @RequestParam(required = false) String applicationSlug) {
+        return evidenceCompleteness.controlRollup(applicationSlug, framework);
+    }
+
+    /** Per-evidence-item completeness records backing one control's score (drill-down). */
+    @GetMapping("/evidence-completeness/frameworks/{framework}/controls/{controlId}/evidence")
+    public List<EvidenceCompletenessItem> evidenceCompletenessControlEvidence(
+            @PathVariable String framework, @PathVariable String controlId,
+            @RequestParam(required = false) String applicationSlug) {
+        return evidenceCompleteness.evidenceForControl(applicationSlug, framework, controlId);
     }
 
     @GetMapping("/compliance")

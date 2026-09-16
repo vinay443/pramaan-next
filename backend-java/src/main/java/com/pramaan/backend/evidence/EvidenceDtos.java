@@ -30,6 +30,9 @@ public final class EvidenceDtos {
 
     public enum IngestOutcome { CREATED, NEW_VERSION, DUPLICATE }
 
+    /** {@code sourceObjectId} echoes the request's source object id (e.g. the uploaded
+     *  filename for a bulk file upload) so a caller can map an outcome — in particular
+     *  {@code DUPLICATE} — back to the specific item that produced it. */
     public record IngestResult(
             String evidenceId,
             String evidenceKey,
@@ -40,7 +43,8 @@ public final class EvidenceDtos {
             IngestOutcome outcome,
             int version,
             String sha256,
-            long sizeBytes) {}
+            long sizeBytes,
+            String sourceObjectId) {}
 
     public record BulkIngestResponse(
             int received,
