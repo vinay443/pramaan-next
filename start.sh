@@ -191,6 +191,24 @@ wait_for_container_healthy() {
   return 1
 }
 
+# Postgres accepting a TCP connection isn't the same as Postgres accepting
+# queries — pg_isready is the actual readiness check (same one backend-java's
+# run-local.sh and the postgres service's own healthcheck use), so this is the
+# one source of truth for "is Postgres actually ready" across every path.
+wait_for_postgres_ready() {
+  local container="$1" name="$2" timeout="${3:-120}" waited=0
+  echo "Waiting for $name ($container) to accept connections..."
+  while (( waited < timeout )); do
+    if docker exec "$container" pg_isready -U pramaan -d pramaan >/dev/null 2>&1; then
+      echo "  $name is accepting connections."
+      return 0
+    fi
+    sleep 2; waited=$((waited + 2))
+  done
+  echo "  ERROR: $name did not become ready within ${timeout}s." >&2
+  return 1
+}
+
 wait_for_http() {
   local url="$1" name="$2" timeout="${3:-120}" waited=0
   echo "Waiting for $name ($url, up to ${timeout}s)..."
@@ -449,13 +467,13 @@ run_lowmem() {
   echo "Low-mem mode: starting storage containers only: ${STORAGE_SERVICES[*]}"
   if [[ -n "$DRYRUN" ]]; then
     echo "[dry-run] docker compose up -d ${STORAGE_SERVICES[*]}"
-    echo "[dry-run] wait for tcp localhost:$COMPOSE_PG_HOST_PORT (PostgreSQL)"
+    echo "[dry-run] wait for pramaan-postgres container to accept connections (pg_isready)"
     start_app_layer ""; return 0
   fi
   COMPOSE_SERVICES=( "${STORAGE_SERVICES[@]}" )
   compose up -d "${STORAGE_SERVICES[@]}" || { echo "docker compose up failed." >&2; exit 1; }
   STARTED_COMPOSE=1
-  wait_for_port localhost "$COMPOSE_PG_HOST_PORT" "PostgreSQL" 120 || exit 1
+  wait_for_postgres_ready "pramaan-postgres" "PostgreSQL" 120 || exit 1
   start_app_layer ""      # default profile -> Docker Postgres/pgvector/MinIO
 }
 

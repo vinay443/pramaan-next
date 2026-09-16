@@ -71,6 +71,18 @@ pramaan:
   # Use Case 13 — evidence lifecycle: retention window for APPROVED evidence.
   evidence:
     retention-days: ${PRAMAAN_EVIDENCE_RETENTION_DAYS:365}
+  # Predefined technical-query catalogue execution. mode: SIMULATED (default) | LIVE.
+  # LIVE only executes for real against PostgreSQL (the postgres container already
+  # migrated by Flyway); every other technology falls back to simulated output,
+  # tagged executionMode=SIMULATED_FALLBACK so it's never mistaken for a real run.
+  predefined-queries:
+    mode: ${PRAMAAN_PREDEFINED_QUERIES_MODE:SIMULATED}
+  # Real target for the Aerospike predefined-query controls in LIVE mode — see
+  # docker-compose.yml's `aerospike` service (same default port/namespace).
+  aerospike:
+    host: ${PRAMAAN_AEROSPIKE_HOST:localhost}
+    port: ${PRAMAAN_AEROSPIKE_PORT:3000}
+    namespace: ${PRAMAAN_AEROSPIKE_NAMESPACE:test}
   scheduler:
     # Background @Scheduled trigger. Off by default; runs are normally API-triggered.
     auto-enabled: ${PRAMAAN_SCHEDULER_AUTO:false}
