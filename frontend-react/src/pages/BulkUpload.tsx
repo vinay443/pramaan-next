@@ -20,6 +20,13 @@ export function BulkUpload() {
   const [controlId, setControlId] = useState('')
   const [technology, setTechnology] = useState('')
   const [files, setFiles] = useState<File[]>([])
+  // Bumped on every add/remove to force the file input below to remount. Removing a
+  // file only updates this `files` state — the native <input> element is untouched,
+  // and browsers can fail to fire `change` when the same file(s) are reselected in a
+  // later dialog session on that same persisted element (regardless of the value=''
+  // reset in its onChange). A fresh DOM node has no native memory of a prior
+  // selection, so re-adding a removed file is never blocked at the browser level.
+  const [inputKey, setInputKey] = useState(0)
   const [dragOver, setDragOver] = useState(false)
   const [result, setResult] = useState<BulkIngestResponse>()
   const [error, setError] = useState<string>()
@@ -35,14 +42,19 @@ export function BulkUpload() {
   function addFiles(list: FileList | null) {
     if (!list || list.length === 0) return
     setFiles((fs) => {
+      // Dedup is scoped to the currently-selected files only (`fs`, the live state),
+      // never a separately-tracked "ever seen" set — so a file removed via removeFile
+      // is no longer in `fs` and is free to be re-added.
       const existing = new Set(fs.map((f) => `${f.name}|${f.size}`))
       const next = Array.from(list).filter((f) => !existing.has(`${f.name}|${f.size}`))
       return [...fs, ...next]
     })
+    setInputKey((k) => k + 1)
   }
 
   function removeFile(i: number) {
     setFiles((fs) => fs.filter((_, idx) => idx !== i))
+    setInputKey((k) => k + 1)
   }
 
   async function submit() {
@@ -153,6 +165,7 @@ export function BulkUpload() {
           <p>Drag and drop files here, or click to browse.</p>
           <p className="muted">Multiple individual files, or a single .zip archive.</p>
           <input
+            key={inputKey}
             ref={inputRef}
             type="file"
             multiple
