@@ -59,6 +59,7 @@ docker compose down          # add -v to wipe data volumes
 
 # backend
 cd backend-java && ./mvnw verify        # mvnw.cmd on Windows
+./backend-java/run-local.sh             # manual run against Docker Postgres — waits for pg_isready, avoids the start-order race below
 
 # agents
 cd agents-go && go build ./... && go test ./...
@@ -87,3 +88,12 @@ See `docs/DEVELOPER_SETUP.md` for tool installation and verification.
   env var on the `postgres` service would NOT fix this — it only changes the
   container's own default zone, not the value the client sends, which is
   what Postgres validates and rejects.
+- **2026-09-15** — Manually chaining `docker compose up -d && cd backend-java
+  && ./mvnw spring-boot:run` is a race: `docker compose up -d` returns as soon
+  as the container process starts, not once Postgres accepts connections, so
+  Flyway intermittently hits `Connection to localhost:5433 refused` on a cold
+  start. `start.sh` already avoids this for its own flows (`wait_for_port` /
+  `wait_for_container_healthy` before starting the backend). For manual runs
+  outside `start.sh`, use `backend-java/run-local.sh`, which polls
+  `pg_isready` on the `pramaan-postgres` container before handing off to
+  Maven — do not reintroduce the bare `&&` chain in docs or scripts.

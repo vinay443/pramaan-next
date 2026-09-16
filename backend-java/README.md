@@ -37,9 +37,19 @@ Behavioural reference: the ECS system (`../../ecs-enterprise-backup`, read-only)
 ## Run
 
 ```bash
-# from repo root: docker compose up -d   (postgres on 5433)
-./mvnw spring-boot:run
+# Manual backend-only start (waits for Postgres, sets required JVM flags):
+./run-local.sh
+
+# With an env var override, e.g. LIVE predefined-query execution:
+PRAMAAN_PREDEFINED_QUERIES_MODE=LIVE ./run-local.sh
 ```
+
+Do not chain `docker compose up -d && ./mvnw spring-boot:run` manually — `docker
+compose up -d` returns as soon as the container process starts, not once
+Postgres actually accepts connections, so Flyway can race it on a cold start
+(`FlywaySqlException: Connection to localhost:5433 refused`, intermittent —
+timing-dependent). `run-local.sh` polls `pg_isready` before handing off to
+Maven, so it never races.
 
 ## Test
 
