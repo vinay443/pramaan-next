@@ -1,0 +1,1066 @@
+[
+  {
+    "framework": "PCI DSS",
+    "controlCode": "PCI-C1",
+    "controlName": "Network Security Controls",
+    "controlDescription": "Protect the cardholder data environment using appropriately configured network security controls.",
+    "sourceStatus": "OFFICIAL",
+    "sourceReference": null
+  },
+  {
+    "framework": "PCI DSS",
+    "controlCode": "PCI-C2",
+    "controlName": "Secure System Configuration",
+    "controlDescription": "Apply secure configurations and remove/change insecure vendor defaults.",
+    "sourceStatus": "OFFICIAL",
+    "sourceReference": null
+  },
+  {
+    "framework": "PCI DSS",
+    "controlCode": "PCI-C3",
+    "controlName": "Stored Account Data Protection",
+    "controlDescription": "Protect stored cardholder/account data through appropriate storage, masking, retention and cryptographic controls.",
+    "sourceStatus": "OFFICIAL",
+    "sourceReference": null
+  },
+  {
+    "framework": "PCI DSS",
+    "controlCode": "PCI-C4",
+    "controlName": "Encryption in Transit",
+    "controlDescription": "Protect cardholder data transmitted over open/public networks using strong cryptography.",
+    "sourceStatus": "OFFICIAL",
+    "sourceReference": null
+  },
+  {
+    "framework": "PCI DSS",
+    "controlCode": "PCI-C5",
+    "controlName": "Malware Protection",
+    "controlDescription": "Protect applicable systems against malicious software.",
+    "sourceStatus": "OFFICIAL",
+    "sourceReference": null
+  },
+  {
+    "framework": "PCI DSS",
+    "controlCode": "PCI-C6",
+    "controlName": "Secure Systems & Software",
+    "controlDescription": "Securely develop and maintain systems/software and remediate security vulnerabilities.",
+    "sourceStatus": "OFFICIAL",
+    "sourceReference": null
+  },
+  {
+    "framework": "PCI DSS",
+    "controlCode": "PCI-C7",
+    "controlName": "Access Restriction",
+    "controlDescription": "Restrict access to system components and cardholder data according to business need-to-know.",
+    "sourceStatus": "OFFICIAL",
+    "sourceReference": null
+  },
+  {
+    "framework": "PCI DSS",
+    "controlCode": "PCI-C8",
+    "controlName": "User Identification & Authentication",
+    "controlDescription": "Uniquely identify users and securely authenticate access to system components.",
+    "sourceStatus": "OFFICIAL",
+    "sourceReference": null
+  },
+  {
+    "framework": "PCI DSS",
+    "controlCode": "PCI-C9",
+    "controlName": "Physical Access Protection",
+    "controlDescription": "Restrict physical access to cardholder data and relevant systems/media.",
+    "sourceStatus": "OFFICIAL",
+    "sourceReference": null
+  },
+  {
+    "framework": "PCI DSS",
+    "controlCode": "PCI-C10",
+    "controlName": "Audit Logging & Monitoring",
+    "controlDescription": "Log and monitor access to system components and cardholder data.",
+    "sourceStatus": "OFFICIAL",
+    "sourceReference": null
+  },
+  {
+    "framework": "PCI DSS",
+    "controlCode": "PCI-C11",
+    "controlName": "Security Testing",
+    "controlDescription": "Regularly test security systems, processes and relevant technical controls.",
+    "sourceStatus": "OFFICIAL",
+    "sourceReference": null
+  },
+  {
+    "framework": "PCI DSS",
+    "controlCode": "PCI-C12",
+    "controlName": "Information Security Governance",
+    "controlDescription": "Maintain organizational policies and programs supporting information security.",
+    "sourceStatus": "OFFICIAL",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C1",
+    "controlName": "Security Governance",
+    "controlDescription": "Establish governance and oversight for digital payment security.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C2",
+    "controlName": "Application Security",
+    "controlDescription": "Protect digital payment applications through secure design and security controls.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C3",
+    "controlName": "Secure Authentication",
+    "controlDescription": "Implement strong customer/user authentication appropriate to payment risk.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C4",
+    "controlName": "Access Control",
+    "controlDescription": "Restrict administrative, privileged and operational access.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C5",
+    "controlName": "Encryption at Rest",
+    "controlDescription": "Protect sensitive payment information while stored.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C6",
+    "controlName": "Encryption in Transit",
+    "controlDescription": "Protect payment information during network transmission.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C7",
+    "controlName": "Cryptographic Key Management",
+    "controlDescription": "Securely generate, store, rotate and manage cryptographic keys.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C8",
+    "controlName": "Secure Configuration",
+    "controlDescription": "Maintain securely configured payment infrastructure and components.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C9",
+    "controlName": "Vulnerability & Patch Management",
+    "controlDescription": "Identify and remediate vulnerabilities and security patches within required timelines.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C10",
+    "controlName": "Audit Logging",
+    "controlDescription": "Maintain security and transaction audit trails.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C11",
+    "controlName": "Security Monitoring",
+    "controlDescription": "Monitor payment systems for suspicious/security events.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C12",
+    "controlName": "Network Security",
+    "controlDescription": "Protect payment systems through segmentation and network controls.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C13",
+    "controlName": "API Security",
+    "controlDescription": "Protect APIs used for payment transactions and integrations.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C14",
+    "controlName": "Secure SDLC",
+    "controlDescription": "Integrate security controls into payment-application development and change processes.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C15",
+    "controlName": "VAPT & Security Testing",
+    "controlDescription": "Perform periodic vulnerability assessment and penetration/security testing.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C16",
+    "controlName": "Incident Management",
+    "controlDescription": "Detect, investigate, respond to and close digital-payment security incidents.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C17",
+    "controlName": "Business Continuity",
+    "controlDescription": "Maintain availability and recovery arrangements for payment services.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DPSC",
+    "controlCode": "DPSC-C18",
+    "controlName": "Third-Party Security",
+    "controlDescription": "Manage security risks arising from payment service providers and other third parties.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C1",
+    "controlName": "Asset Management",
+    "controlDescription": "Maintain ownership and inventory of technology assets.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C2",
+    "controlName": "Access Management",
+    "controlDescription": "Control user access according to authorization and business need.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C3",
+    "controlName": "Privileged Access Management",
+    "controlDescription": "Restrict and monitor privileged access.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C4",
+    "controlName": "Password & Authentication Controls",
+    "controlDescription": "Enforce approved authentication/password requirements.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C5",
+    "controlName": "Secure Configuration",
+    "controlDescription": "Maintain systems according to approved security configurations.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C6",
+    "controlName": "Patch Management",
+    "controlDescription": "Deploy applicable security patches within approved timelines.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C7",
+    "controlName": "Vulnerability Management",
+    "controlDescription": "Identify, assess and remediate vulnerabilities.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C8",
+    "controlName": "Encryption at Rest",
+    "controlDescription": "Protect sensitive stored information using approved cryptography.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C9",
+    "controlName": "Encryption in Transit",
+    "controlDescription": "Protect information transmitted over networks.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C10",
+    "controlName": "Logging & Monitoring",
+    "controlDescription": "Generate, protect and monitor security-relevant logs.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C11",
+    "controlName": "Network Security",
+    "controlDescription": "Protect network connectivity, boundaries and security zones.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C12",
+    "controlName": "Change Management",
+    "controlDescription": "Authorize, test and track technology changes.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C13",
+    "controlName": "Backup & Recovery",
+    "controlDescription": "Maintain and test backups and recovery mechanisms.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C14",
+    "controlName": "Incident Management",
+    "controlDescription": "Manage security/technology incidents through closure.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C15",
+    "controlName": "Secure Development",
+    "controlDescription": "Apply security requirements throughout application development.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C16",
+    "controlName": "Third-Party Risk",
+    "controlDescription": "Control technology/security risks associated with third parties.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C17",
+    "controlName": "Data Protection",
+    "controlDescription": "Protect sensitive information throughout its lifecycle.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITPP",
+    "controlCode": "ITPP-C18",
+    "controlName": "Security Testing",
+    "controlDescription": "Conduct applicable security assessments and testing.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "OS Baselining",
+    "controlCode": "OSBL-C1",
+    "controlName": "Supported OS Version",
+    "controlDescription": "OS must run an approved and supported version.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "OS Baselining",
+    "controlCode": "OSBL-C2",
+    "controlName": "Security Patch Compliance",
+    "controlDescription": "Required OS security patches must be installed.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "OS Baselining",
+    "controlCode": "OSBL-C3",
+    "controlName": "Unnecessary Services Disabled",
+    "controlDescription": "Unnecessary OS services/daemons must be disabled.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "OS Baselining",
+    "controlCode": "OSBL-C4",
+    "controlName": "Secure Port Configuration",
+    "controlDescription": "Only approved network ports/services may be enabled.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "OS Baselining",
+    "controlCode": "OSBL-C5",
+    "controlName": "Default Account Restriction",
+    "controlDescription": "Default/unnecessary accounts must be secured or disabled.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "OS Baselining",
+    "controlCode": "OSBL-C6",
+    "controlName": "Password Policy",
+    "controlDescription": "OS authentication settings must meet bank password standards.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "OS Baselining",
+    "controlCode": "OSBL-C7",
+    "controlName": "Privileged Account Restriction",
+    "controlDescription": "Root/administrator access must be appropriately restricted.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "OS Baselining",
+    "controlCode": "OSBL-C8",
+    "controlName": "File & Directory Permissions",
+    "controlDescription": "Sensitive system files/directories must have secure permissions.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "OS Baselining",
+    "controlCode": "OSBL-C9",
+    "controlName": "Audit Logging",
+    "controlDescription": "Required OS security events must be logged.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "OS Baselining",
+    "controlCode": "OSBL-C10",
+    "controlName": "Log Protection",
+    "controlDescription": "OS logs must be appropriately protected and retained.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "OS Baselining",
+    "controlCode": "OSBL-C11",
+    "controlName": "Time Synchronization",
+    "controlDescription": "Server time must synchronize with an approved time source.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "OS Baselining",
+    "controlCode": "OSBL-C12",
+    "controlName": "Endpoint Protection",
+    "controlDescription": "Required malware/EDR protection must be active.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C1",
+    "controlName": "Supported Database Version",
+    "controlDescription": "Database must use an approved/supported version.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C2",
+    "controlName": "Database Patch Compliance",
+    "controlDescription": "Required security patches must be installed.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C3",
+    "controlName": "Default Account Restriction",
+    "controlDescription": "Default/sample/unnecessary database accounts must be restricted.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C4",
+    "controlName": "Password Policy",
+    "controlDescription": "Database authentication must meet approved requirements.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C5",
+    "controlName": "Privileged DBA Access",
+    "controlDescription": "DBA/administrative privileges must be restricted and controlled.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C6",
+    "controlName": "Least Privilege",
+    "controlDescription": "Database users must receive only required privileges.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C7",
+    "controlName": "Encryption at Rest",
+    "controlDescription": "Sensitive database information must be encrypted at rest.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C8",
+    "controlName": "Encryption in Transit",
+    "controlDescription": "Database connections must use approved encrypted protocols.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C9",
+    "controlName": "Database Audit Logging",
+    "controlDescription": "Security-relevant database activity must be audited.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C10",
+    "controlName": "Privileged Activity Logging",
+    "controlDescription": "Administrative/DBA activity must be logged.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C11",
+    "controlName": "Secure Database Configuration",
+    "controlDescription": "Security parameters must comply with the approved database baseline.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C12",
+    "controlName": "Unnecessary Feature Disablement",
+    "controlDescription": "Unneeded database components/features must be disabled.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C13",
+    "controlName": "Backup Protection",
+    "controlDescription": "Database backups must be securely protected.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "DB Baselining",
+    "controlCode": "DBBL-C14",
+    "controlName": "Time Synchronization",
+    "controlDescription": "Database/server timestamps must use approved synchronized time.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Middleware Baselining",
+    "controlCode": "NGBL-C1",
+    "controlName": "Supported NGINX Version",
+    "controlDescription": "Use an approved/supported NGINX version.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Middleware Baselining",
+    "controlCode": "NGBL-C2",
+    "controlName": "Patch Compliance",
+    "controlDescription": "Applicable security patches must be deployed.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Middleware Baselining",
+    "controlCode": "NGBL-C3",
+    "controlName": "Unnecessary Module Disablement",
+    "controlDescription": "Disable/remove unnecessary modules and functionality.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Middleware Baselining",
+    "controlCode": "NGBL-C4",
+    "controlName": "Secure Port Configuration",
+    "controlDescription": "Only required listeners and ports should be exposed.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Middleware Baselining",
+    "controlCode": "NGBL-C5",
+    "controlName": "TLS Protocol Compliance",
+    "controlDescription": "Only approved TLS versions may be enabled.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Middleware Baselining",
+    "controlCode": "NGBL-C6",
+    "controlName": "Cipher Suite Compliance",
+    "controlDescription": "Weak/unapproved cryptographic cipher suites must be disabled.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Middleware Baselining",
+    "controlCode": "NGBL-C7",
+    "controlName": "Certificate Validity",
+    "controlDescription": "TLS certificates must be valid, trusted and unexpired.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Middleware Baselining",
+    "controlCode": "NGBL-C8",
+    "controlName": "Secure HTTP Headers",
+    "controlDescription": "Required security headers must be configured.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Middleware Baselining",
+    "controlCode": "NGBL-C9",
+    "controlName": "Server Information Protection",
+    "controlDescription": "Unnecessary server/version information must not be exposed.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Middleware Baselining",
+    "controlCode": "NGBL-C10",
+    "controlName": "Access Logging",
+    "controlDescription": "Required web/access events must be logged.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Middleware Baselining",
+    "controlCode": "NGBL-C11",
+    "controlName": "Error Logging",
+    "controlDescription": "Security-relevant errors must be appropriately logged.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Middleware Baselining",
+    "controlCode": "NGBL-C12",
+    "controlName": "Administrative/File Permissions",
+    "controlDescription": "Configuration, key and administrative files must be appropriately protected.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "VAPT",
+    "controlCode": "VAPT-C1",
+    "controlName": "Vulnerability Assessment",
+    "controlDescription": "Perform vulnerability assessment against in-scope assets.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "VAPT",
+    "controlCode": "VAPT-C2",
+    "controlName": "Penetration Testing",
+    "controlDescription": "Perform penetration testing against applicable attack surfaces.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "VAPT",
+    "controlCode": "VAPT-C3",
+    "controlName": "Application Security Testing",
+    "controlDescription": "Test application security vulnerabilities.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "VAPT",
+    "controlCode": "VAPT-C4",
+    "controlName": "Network Security Testing",
+    "controlDescription": "Assess network-level vulnerabilities and exposures.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "VAPT",
+    "controlCode": "VAPT-C5",
+    "controlName": "API Security Testing",
+    "controlDescription": "Test APIs for applicable security weaknesses.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "VAPT",
+    "controlCode": "VAPT-C6",
+    "controlName": "Authentication Testing",
+    "controlDescription": "Assess authentication mechanisms for weaknesses.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "VAPT",
+    "controlCode": "VAPT-C7",
+    "controlName": "Authorization Testing",
+    "controlDescription": "Assess privilege escalation and access-control weaknesses.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "VAPT",
+    "controlCode": "VAPT-C8",
+    "controlName": "Vulnerability Risk Classification",
+    "controlDescription": "Classify findings according to approved severity/risk criteria.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "VAPT",
+    "controlCode": "VAPT-C9",
+    "controlName": "Vulnerability Remediation",
+    "controlDescription": "Remediate findings within approved timelines.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "VAPT",
+    "controlCode": "VAPT-C10",
+    "controlName": "Retesting & Closure",
+    "controlDescription": "Retest remediated findings before closure.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "VAPT",
+    "controlCode": "VAPT-C11",
+    "controlName": "Exception Management",
+    "controlDescription": "Formally approve and track accepted/unresolved vulnerabilities.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C1",
+    "controlName": "Cyber Security Governance",
+    "controlDescription": "Maintain appropriate cyber-security governance and oversight.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C2",
+    "controlName": "Asset Management",
+    "controlDescription": "Identify and maintain technology/information assets.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C3",
+    "controlName": "Identity & Access Management",
+    "controlDescription": "Control user and privileged access.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C4",
+    "controlName": "Data Protection",
+    "controlDescription": "Protect sensitive information throughout its lifecycle.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C5",
+    "controlName": "Encryption",
+    "controlDescription": "Apply approved cryptographic protection where required.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C6",
+    "controlName": "Secure Configuration",
+    "controlDescription": "Maintain secure technology configurations.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C7",
+    "controlName": "Patch Management",
+    "controlDescription": "Deploy security patches within defined timelines.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C8",
+    "controlName": "Vulnerability Management",
+    "controlDescription": "Identify and remediate security vulnerabilities.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C9",
+    "controlName": "Network Security",
+    "controlDescription": "Protect networks, boundaries and security zones.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C10",
+    "controlName": "Logging & Monitoring",
+    "controlDescription": "Maintain and monitor security-relevant logs.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C11",
+    "controlName": "Security Incident Management",
+    "controlDescription": "Detect, respond to and close cyber-security incidents.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C12",
+    "controlName": "Application Security",
+    "controlDescription": "Protect applications throughout development and operation.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C13",
+    "controlName": "Security Testing",
+    "controlDescription": "Conduct periodic technical security assessments.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C14",
+    "controlName": "Third-Party Security",
+    "controlDescription": "Manage cyber risks associated with service providers.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C15",
+    "controlName": "Backup & Recovery",
+    "controlDescription": "Maintain protected and recoverable backups.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "CSITE",
+    "controlCode": "CSITE-C16",
+    "controlName": "Cyber Resilience",
+    "controlDescription": "Maintain capabilities to withstand and recover from cyber events.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITDRM",
+    "controlCode": "ITDRM-C1",
+    "controlName": "Business Impact Assessment",
+    "controlDescription": "Identify critical services and recovery requirements.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITDRM",
+    "controlCode": "ITDRM-C2",
+    "controlName": "Recovery Time Objective",
+    "controlDescription": "Define and validate applicable RTO.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITDRM",
+    "controlCode": "ITDRM-C3",
+    "controlName": "Recovery Point Objective",
+    "controlDescription": "Define and validate applicable RPO.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITDRM",
+    "controlCode": "ITDRM-C4",
+    "controlName": "DR Infrastructure Readiness",
+    "controlDescription": "Ensure required recovery infrastructure is available and maintained.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITDRM",
+    "controlCode": "ITDRM-C5",
+    "controlName": "Data Replication",
+    "controlDescription": "Maintain required replication of critical data.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITDRM",
+    "controlCode": "ITDRM-C6",
+    "controlName": "Backup Availability",
+    "controlDescription": "Ensure required backups are available for recovery.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITDRM",
+    "controlCode": "ITDRM-C7",
+    "controlName": "DR Plan Maintenance",
+    "controlDescription": "Maintain current recovery procedures and documentation.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITDRM",
+    "controlCode": "ITDRM-C8",
+    "controlName": "DR Testing",
+    "controlDescription": "Periodically execute required DR exercises.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITDRM",
+    "controlCode": "ITDRM-C9",
+    "controlName": "DR Test Success",
+    "controlDescription": "Verify recovery objectives and critical functions during testing.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "ITDRM",
+    "controlCode": "ITDRM-C10",
+    "controlName": "DR Observation Closure",
+    "controlDescription": "Track DR-test observations through remediation and closure.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Internal Audit",
+    "controlCode": "IA-C1",
+    "controlName": "Audit Scope Coverage",
+    "controlDescription": "Ensure required applications/processes/control areas are included in audit scope.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Internal Audit",
+    "controlCode": "IA-C2",
+    "controlName": "Evidence Availability",
+    "controlDescription": "Required audit evidence must be available and traceable.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Internal Audit",
+    "controlCode": "IA-C3",
+    "controlName": "Control Design Assessment",
+    "controlDescription": "Assess whether controls are appropriately designed.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Internal Audit",
+    "controlCode": "IA-C4",
+    "controlName": "Control Operating Effectiveness",
+    "controlDescription": "Verify controls operated effectively during the assessment period.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Internal Audit",
+    "controlCode": "IA-C5",
+    "controlName": "Observation Classification",
+    "controlDescription": "Classify identified audit observations according to approved criteria.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Internal Audit",
+    "controlCode": "IA-C6",
+    "controlName": "Observation Ownership",
+    "controlDescription": "Assign accountable owners to audit observations.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Internal Audit",
+    "controlCode": "IA-C7",
+    "controlName": "Target Closure Date",
+    "controlDescription": "Establish approved closure dates for observations.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Internal Audit",
+    "controlCode": "IA-C8",
+    "controlName": "Remediation Evidence",
+    "controlDescription": "Maintain evidence demonstrating remediation.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Internal Audit",
+    "controlCode": "IA-C9",
+    "controlName": "Closure Validation",
+    "controlDescription": "Independently validate remediation before closure.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  },
+  {
+    "framework": "Internal Audit",
+    "controlCode": "IA-C10",
+    "controlName": "Overdue Observation Monitoring",
+    "controlDescription": "Identify and escalate observations exceeding approved closure dates.",
+    "sourceStatus": "PROPOSED",
+    "sourceReference": null
+  }
+]
