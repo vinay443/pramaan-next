@@ -26,7 +26,7 @@
     "evidenceType": "SQL Output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Password / Authentication"
+    "controlFamily": "Password & Authentication Controls"
   },
   {
     "controlId": "DB-003",
@@ -40,7 +40,7 @@
     "evidenceType": "SQL Output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Backup / Resilience"
+    "controlFamily": "Backup & Recovery"
   },
   {
     "controlId": "DB-004",
@@ -84,7 +84,7 @@
     "evidenceType": "SQL Output",
     "executableNow": false,
     "runtimeStatus": "Configuration Required",
-    "controlFamily": "Backup / Resilience"
+    "controlFamily": "Backup & Recovery"
   },
   {
     "controlId": "DB-007",
@@ -115,7 +115,7 @@
     "evidenceType": "Command Output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Patch Compliance"
+    "controlFamily": "Patch Management"
   },
   {
     "controlId": "OS-002",
@@ -129,7 +129,7 @@
     "evidenceType": "Configuration File",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "OS-003",
@@ -156,7 +156,7 @@
     "evidenceType": "Configuration File",
     "executableNow": false,
     "runtimeStatus": "Configuration Required",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "OS-005",
@@ -169,7 +169,7 @@
     "evidenceType": "Command Output",
     "executableNow": false,
     "runtimeStatus": "Configuration Required",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "OS-006",
@@ -185,7 +185,7 @@
     "evidenceType": "PowerShell Output",
     "executableNow": false,
     "runtimeStatus": "Connector Missing",
-    "controlFamily": "Patch Compliance"
+    "controlFamily": "Patch Management"
   },
   {
     "controlId": "OS-007",
@@ -199,7 +199,7 @@
     "evidenceType": "PowerShell Output",
     "executableNow": false,
     "runtimeStatus": "Connector Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Malware & Endpoint Protection"
   },
   {
     "controlId": "MW-001",
@@ -243,7 +243,7 @@
     "evidenceType": "Configuration File",
     "executableNow": false,
     "runtimeStatus": "Configuration Required",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "PCI-001",
@@ -258,7 +258,7 @@
     "evidenceType": "PowerShell Output",
     "executableNow": false,
     "runtimeStatus": "Connector Missing",
-    "controlFamily": "Password / Authentication"
+    "controlFamily": "Password & Authentication Controls"
   },
   {
     "controlId": "PCI-002",
@@ -287,7 +287,7 @@
     "evidenceType": "SQL Output",
     "executableNow": false,
     "runtimeStatus": "Configuration Required",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "PCI-004",
@@ -317,7 +317,7 @@
     "evidenceType": "API Output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Vulnerability / Security Testing"
+    "controlFamily": "Vulnerability & Security Testing"
   },
   {
     "controlId": "APP-002",
@@ -332,7 +332,7 @@
     "evidenceType": "Scan Report",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Vulnerability / Security Testing"
+    "controlFamily": "Vulnerability & Security Testing"
   },
   {
     "controlId": "APP-003",
@@ -346,7 +346,7 @@
     "evidenceType": "Scan Report",
     "executableNow": false,
     "runtimeStatus": "Unsupported Technology",
-    "controlFamily": "Vulnerability / Security Testing"
+    "controlFamily": "Vulnerability & Security Testing"
   },
   {
     "controlId": "APP-004",
@@ -360,7 +360,7 @@
     "evidenceType": "Scan Report",
     "executableNow": false,
     "runtimeStatus": "Configuration Required",
-    "controlFamily": "Vulnerability / Security Testing"
+    "controlFamily": "Vulnerability & Security Testing"
   },
   {
     "controlId": "DPSC-001",
@@ -403,7 +403,7 @@
     "evidenceType": "API Output",
     "executableNow": false,
     "runtimeStatus": "Unsupported Technology",
-    "controlFamily": "Vulnerability / Security Testing"
+    "controlFamily": "Vulnerability & Security Testing"
   },
   {
     "controlId": "VAPT-002",
@@ -417,7 +417,7 @@
     "evidenceType": "API Output",
     "executableNow": false,
     "runtimeStatus": "Unsupported Technology",
-    "controlFamily": "Vulnerability / Security Testing"
+    "controlFamily": "Vulnerability & Security Testing"
   },
   {
     "controlId": "VAPT-003",
@@ -431,7 +431,7 @@
     "evidenceType": "API Output",
     "executableNow": false,
     "runtimeStatus": "Unsupported Technology",
-    "controlFamily": "Vulnerability / Security Testing"
+    "controlFamily": "Vulnerability & Security Testing"
   },
   {
     "controlId": "ITPP-001",
@@ -445,7 +445,7 @@
     "evidenceType": "Log Output",
     "executableNow": false,
     "runtimeStatus": "Unsupported Technology",
-    "controlFamily": "Backup / Resilience"
+    "controlFamily": "Backup & Recovery"
   },
   {
     "controlId": "ITPP-002",
@@ -458,7 +458,7 @@
     "evidenceType": "Command Output",
     "executableNow": false,
     "runtimeStatus": "Configuration Required",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "ITPP-003",
@@ -471,7 +471,7 @@
     "evidenceType": "Command Output",
     "executableNow": false,
     "runtimeStatus": "Configuration Required",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "ITPP-004",
@@ -484,7 +484,7 @@
     "evidenceType": "Command Output",
     "executableNow": false,
     "runtimeStatus": "Unsupported Technology",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "AI-001",
@@ -497,7 +497,7 @@
     "evidenceType": "SQL Output",
     "executableNow": false,
     "runtimeStatus": "Unsupported Technology",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "AI-002",
@@ -510,7 +510,7 @@
     "evidenceType": "SQL Output",
     "executableNow": false,
     "runtimeStatus": "Unsupported Technology",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "AI / LLM Governance"
   },
   {
     "controlId": "AI-003",
@@ -523,7 +523,7 @@
     "evidenceType": "SQL Output",
     "executableNow": false,
     "runtimeStatus": "Unsupported Technology",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "AI / LLM Governance"
   },
   {
     "controlId": "PGX-001",
@@ -553,7 +553,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Password / Authentication"
+    "controlFamily": "Password & Authentication Controls"
   },
   {
     "controlId": "PGX-003",
@@ -568,7 +568,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Backup / Resilience"
+    "controlFamily": "Backup & Recovery"
   },
   {
     "controlId": "PGX-004",
@@ -583,7 +583,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "PGX-005",
@@ -598,7 +598,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "PGX-006",
@@ -613,7 +613,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "PGX-007",
@@ -628,7 +628,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "PGX-008",
@@ -658,7 +658,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "PGX-010",
@@ -673,7 +673,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "PGX-011",
@@ -688,7 +688,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Backup / Resilience"
+    "controlFamily": "Backup & Recovery"
   },
   {
     "controlId": "PGX-012",
@@ -703,7 +703,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "PGX-013",
@@ -733,7 +733,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "YBX-002",
@@ -748,7 +748,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "YBX-003",
@@ -763,7 +763,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "YBX-004",
@@ -778,7 +778,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "YBX-005",
@@ -793,7 +793,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "YBX-006",
@@ -808,7 +808,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "YBX-007",
@@ -823,7 +823,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "YBX-008",
@@ -853,7 +853,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "YBX-010",
@@ -868,7 +868,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "YBX-011",
@@ -958,7 +958,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "MYX-006",
@@ -973,7 +973,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "MYX-007",
@@ -988,7 +988,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "MYX-008",
@@ -1018,7 +1018,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "MYX-010",
@@ -1048,7 +1048,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "MYX-012",
@@ -1078,7 +1078,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Audit Logging"
   },
   {
     "controlId": "MYX-014",
@@ -1093,7 +1093,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Backup / Resilience"
+    "controlFamily": "Backup & Recovery"
   },
   {
     "controlId": "ORX-001",
@@ -1108,7 +1108,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "ORX-002",
@@ -1123,7 +1123,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "ORX-003",
@@ -1168,7 +1168,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Password / Authentication"
+    "controlFamily": "Password & Authentication Controls"
   },
   {
     "controlId": "ORX-006",
@@ -1183,7 +1183,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "ORX-007",
@@ -1198,7 +1198,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "ORX-008",
@@ -1213,7 +1213,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "ORX-009",
@@ -1228,7 +1228,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Encryption at Rest"
   },
   {
     "controlId": "ORX-010",
@@ -1243,7 +1243,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "ORX-011",
@@ -1258,7 +1258,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "ORX-012",
@@ -1273,7 +1273,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Backup / Resilience"
+    "controlFamily": "Backup & Recovery"
   },
   {
     "controlId": "ORX-013",
@@ -1288,7 +1288,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "ORX-014",
@@ -1303,7 +1303,7 @@
     "evidenceType": "Database configuration query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "MSX-001",
@@ -1318,7 +1318,7 @@
     "evidenceType": "SQL Server query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "MSX-002",
@@ -1333,7 +1333,7 @@
     "evidenceType": "SQL Server query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "MSX-003",
@@ -1348,7 +1348,7 @@
     "evidenceType": "SQL Server query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Password / Authentication"
+    "controlFamily": "Password & Authentication Controls"
   },
   {
     "controlId": "MSX-004",
@@ -1363,7 +1363,7 @@
     "evidenceType": "SQL Server query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "MSX-005",
@@ -1378,7 +1378,7 @@
     "evidenceType": "SQL Server query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "MSX-006",
@@ -1393,7 +1393,7 @@
     "evidenceType": "SQL Server query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "MSX-007",
@@ -1408,7 +1408,7 @@
     "evidenceType": "SQL Server query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Encryption at Rest"
   },
   {
     "controlId": "MSX-008",
@@ -1423,7 +1423,7 @@
     "evidenceType": "SQL Server query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "MSX-009",
@@ -1468,7 +1468,7 @@
     "evidenceType": "SQL Server query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "MSX-012",
@@ -1483,7 +1483,7 @@
     "evidenceType": "SQL Server query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "MSX-013",
@@ -1498,7 +1498,7 @@
     "evidenceType": "SQL Server query output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Backup / Resilience"
+    "controlFamily": "Backup & Recovery"
   },
   {
     "controlId": "MGX-001",
@@ -1513,7 +1513,7 @@
     "evidenceType": "MongoDB command output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "MGX-002",
@@ -1528,7 +1528,7 @@
     "evidenceType": "MongoDB command output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "MGX-003",
@@ -1543,7 +1543,7 @@
     "evidenceType": "MongoDB command output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Password & Authentication Controls"
   },
   {
     "controlId": "MGX-004",
@@ -1573,7 +1573,7 @@
     "evidenceType": "MongoDB command output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "MGX-006",
@@ -1588,7 +1588,7 @@
     "evidenceType": "MongoDB command output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "MGX-007",
@@ -1603,7 +1603,7 @@
     "evidenceType": "MongoDB command output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "MGX-008",
@@ -1633,7 +1633,7 @@
     "evidenceType": "MongoDB command output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Backup / Resilience"
+    "controlFamily": "Backup & Recovery"
   },
   {
     "controlId": "MGX-010",
@@ -1648,7 +1648,7 @@
     "evidenceType": "MongoDB command output",
     "executableNow": false,
     "runtimeStatus": "Dependency Missing",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "NGX-001",
@@ -1663,7 +1663,7 @@
     "evidenceType": "Middleware command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "NGX-002",
@@ -1678,7 +1678,7 @@
     "evidenceType": "Middleware command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "NGX-003",
@@ -1723,7 +1723,7 @@
     "evidenceType": "Middleware command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "NGX-006",
@@ -1738,7 +1738,7 @@
     "evidenceType": "Middleware command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "NGX-007",
@@ -1753,7 +1753,7 @@
     "evidenceType": "Middleware command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "NGX-008",
@@ -1768,7 +1768,7 @@
     "evidenceType": "Middleware command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "LNX-001",
@@ -1783,7 +1783,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "LNX-002",
@@ -1798,7 +1798,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "LNX-003",
@@ -1813,7 +1813,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "LNX-004",
@@ -1843,7 +1843,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "LNX-006",
@@ -1858,7 +1858,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Password / Authentication"
+    "controlFamily": "Password & Authentication Controls"
   },
   {
     "controlId": "LNX-007",
@@ -1873,7 +1873,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "LNX-008",
@@ -1888,7 +1888,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "RH8-001",
@@ -1903,7 +1903,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "RH8-002",
@@ -1918,7 +1918,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Encryption in Transit"
   },
   {
     "controlId": "RH8-003",
@@ -1933,7 +1933,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "RH8-004",
@@ -1978,7 +1978,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "RH8-007",
@@ -1993,7 +1993,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Password / Authentication"
+    "controlFamily": "Password & Authentication Controls"
   },
   {
     "controlId": "RH8-008",
@@ -2008,7 +2008,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Patch Management"
   },
   {
     "controlId": "RH9-001",
@@ -2023,7 +2023,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "RH9-002",
@@ -2038,7 +2038,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Encryption in Transit"
   },
   {
     "controlId": "RH9-003",
@@ -2053,7 +2053,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "RH9-004",
@@ -2098,7 +2098,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "RH9-007",
@@ -2113,7 +2113,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Password / Authentication"
+    "controlFamily": "Password & Authentication Controls"
   },
   {
     "controlId": "RH9-008",
@@ -2128,7 +2128,7 @@
     "evidenceType": "OS configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Encryption in Transit"
   },
   {
     "controlId": "RDX-001",
@@ -2143,7 +2143,7 @@
     "evidenceType": "Redis configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "RDX-002",
@@ -2158,7 +2158,7 @@
     "evidenceType": "Redis configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "RDX-003",
@@ -2173,7 +2173,7 @@
     "evidenceType": "Redis configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "RDX-004",
@@ -2188,7 +2188,7 @@
     "evidenceType": "Redis configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "RDX-005",
@@ -2203,7 +2203,7 @@
     "evidenceType": "Redis configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "RDX-006",
@@ -2218,7 +2218,7 @@
     "evidenceType": "Redis configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "RDX-007",
@@ -2248,7 +2248,7 @@
     "evidenceType": "Redis configuration command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "APX-001",
@@ -2263,7 +2263,7 @@
     "evidenceType": "Apache HTTPD command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "APX-002",
@@ -2278,7 +2278,7 @@
     "evidenceType": "Apache HTTPD command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "APX-003",
@@ -2293,7 +2293,7 @@
     "evidenceType": "Apache HTTPD command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "APX-004",
@@ -2308,7 +2308,7 @@
     "evidenceType": "Apache HTTPD command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "APX-005",
@@ -2323,7 +2323,7 @@
     "evidenceType": "Apache HTTPD command output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "APX-006",
@@ -2383,7 +2383,7 @@
     "evidenceType": "Tomcat command/config output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "TCX-002",
@@ -2398,7 +2398,7 @@
     "evidenceType": "Tomcat command/config output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "TCX-003",
@@ -2413,7 +2413,7 @@
     "evidenceType": "Tomcat command/config output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "TCX-004",
@@ -2428,7 +2428,7 @@
     "evidenceType": "Tomcat command/config output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Network Security"
   },
   {
     "controlId": "TCX-005",
@@ -2443,7 +2443,7 @@
     "evidenceType": "Tomcat command/config output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "TCX-006",
@@ -2458,7 +2458,7 @@
     "evidenceType": "Tomcat command/config output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "TCX-007",
@@ -2473,7 +2473,7 @@
     "evidenceType": "Tomcat command/config output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "TCX-008",
@@ -2503,7 +2503,7 @@
     "evidenceType": "Kubernetes kubectl output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "K8X-002",
@@ -2518,7 +2518,7 @@
     "evidenceType": "Kubernetes kubectl output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "K8X-003",
@@ -2533,7 +2533,7 @@
     "evidenceType": "Kubernetes kubectl output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "K8X-004",
@@ -2548,7 +2548,7 @@
     "evidenceType": "Kubernetes kubectl output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "K8X-005",
@@ -2563,7 +2563,7 @@
     "evidenceType": "Kubernetes kubectl output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "K8X-006",
@@ -2578,7 +2578,7 @@
     "evidenceType": "Kubernetes kubectl output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "K8X-007",
@@ -2608,7 +2608,7 @@
     "evidenceType": "Kubernetes kubectl output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "K8X-009",
@@ -2623,7 +2623,7 @@
     "evidenceType": "Kubernetes kubectl output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "K8X-010",
@@ -2638,7 +2638,7 @@
     "evidenceType": "Kubernetes kubectl output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "OCX-001",
@@ -2653,7 +2653,7 @@
     "evidenceType": "OpenShift oc output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "OCX-002",
@@ -2668,7 +2668,7 @@
     "evidenceType": "OpenShift oc output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "OCX-003",
@@ -2683,7 +2683,7 @@
     "evidenceType": "OpenShift oc output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "OCX-004",
@@ -2698,7 +2698,7 @@
     "evidenceType": "OpenShift oc output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "OCX-005",
@@ -2713,7 +2713,7 @@
     "evidenceType": "OpenShift oc output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "OCX-006",
@@ -2728,7 +2728,7 @@
     "evidenceType": "OpenShift oc output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "OCX-007",
@@ -2743,7 +2743,7 @@
     "evidenceType": "OpenShift oc output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "OCX-008",
@@ -2758,7 +2758,7 @@
     "evidenceType": "OpenShift oc output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "OCX-009",
@@ -2788,7 +2788,7 @@
     "evidenceType": "OpenShift oc output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "ASX-001",
@@ -2803,7 +2803,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "ASX-002",
@@ -2818,7 +2818,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "ASX-003",
@@ -2833,7 +2833,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Asset / Inventory"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "ASX-004",
@@ -2848,7 +2848,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "ASX-005",
@@ -2863,7 +2863,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "ASX-006",
@@ -2878,7 +2878,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Identity & Privileged Access"
+    "controlFamily": "Identity & Access Management"
   },
   {
     "controlId": "ASX-007",
@@ -2908,7 +2908,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "ASX-009",
@@ -2938,7 +2938,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "ASX-011",
@@ -2953,7 +2953,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "ASX-012",
@@ -2983,7 +2983,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "ASX-014",
@@ -2998,7 +2998,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "ASX-015",
@@ -3013,7 +3013,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Capacity & Performance Management"
   },
   {
     "controlId": "ASX-016",
@@ -3028,7 +3028,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "ASX-017",
@@ -3043,7 +3043,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "ASX-018",
@@ -3058,7 +3058,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Secure Configuration / Baseline"
+    "controlFamily": "Secure Configuration"
   },
   {
     "controlId": "ASX-019",
@@ -3073,7 +3073,7 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Other / Framework-specific"
+    "controlFamily": "Asset Management"
   },
   {
     "controlId": "ASX-020",
@@ -3088,6 +3088,6 @@
     "evidenceType": "Aerospike asinfo/asadm output",
     "executableNow": true,
     "runtimeStatus": "Ready",
-    "controlFamily": "Operational / Capacity"
+    "controlFamily": "Capacity & Performance Management"
   }
 ]
