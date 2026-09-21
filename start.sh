@@ -449,7 +449,15 @@ run_demo() {
   # also the only place object-store/vector-store default away from
   # filesystem/memory. L and R keep the filesystem/memory defaults from
   # application.yml unless a developer overrides them explicitly.
-  BACKEND_EXTRA_JVM_ARGS="-Duser.timezone=Asia/Kolkata -Dpramaan.object-store.driver=minio -Dpramaan.ai.vector-store=pgvector"
+  #
+  # Same reasoning for predefined-queries.mode=LIVE: D's `compose up -d` (no
+  # service list) brings up every service in docker-compose.yml, including
+  # aerospike/nginx/aurora-mysql — the full set every TechnologyLiveExecutor
+  # needs. L only starts STORAGE_SERVICES (postgres/pgvector/minio), so LIVE
+  # there would make the ECS-status badge claim "Ready" for Aerospike/NGINX/
+  # Aurora MySQL controls whose containers were never started — stays
+  # SIMULATED (the application.yml default) for both L and R.
+  BACKEND_EXTRA_JVM_ARGS="-Duser.timezone=Asia/Kolkata -Dpramaan.object-store.driver=minio -Dpramaan.ai.vector-store=pgvector -Dpramaan.predefined-queries.mode=LIVE"
   if [[ -n "$DRYRUN" ]]; then
     echo "[dry-run] docker compose up -d"
     echo "[dry-run] wait for pramaan-postgres container health status (PostgreSQL)"

@@ -10,9 +10,19 @@ public final class PredefinedQueryDtos {
     public record CatalogItemView(String controlId, String technology, String controlName,
                                   String command, List<String> frameworks, String evidenceType,
                                   boolean executableNow, String runtimeStatus, String controlFamily) {
-        public static CatalogItemView from(PredefinedQuery q) {
+        /**
+         * {@code liveSupported} — whether the active executor can run this control for
+         * real right now (see {@link PredefinedQueryExecutor#supportsLive}). When true,
+         * overrides the catalogue's static legacy {@code executableNow}/{@code runtimeStatus}
+         * (carried through from the original ECS import, predating any live executor) with
+         * an honest {@code true}/{@code "Ready"} instead. The underlying {@link
+         * PredefinedQuery} record — and catalog.json — are untouched either way.
+         */
+        public static CatalogItemView from(PredefinedQuery q, boolean liveSupported) {
             return new CatalogItemView(q.controlId(), q.technology(), q.controlName(), q.command(),
-                    q.frameworksOrEmpty(), q.evidenceType(), q.executableNow(), q.runtimeStatus(),
+                    q.frameworksOrEmpty(), q.evidenceType(),
+                    liveSupported ? true : q.executableNow(),
+                    liveSupported ? "Ready" : q.runtimeStatus(),
                     q.controlFamily());
         }
     }

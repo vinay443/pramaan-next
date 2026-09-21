@@ -59,7 +59,8 @@ public class PredefinedQueryService {
 
     public CatalogResponse list(String technology, String framework, String controlFamily) {
         List<CatalogItemView> items = catalog.filter(technology, framework, controlFamily).stream()
-                .map(CatalogItemView::from).toList();
+                .map(q -> CatalogItemView.from(q, executor.supportsLive(q)))
+                .toList();
         return new CatalogResponse(items.size(), catalog.technologies(), catalog.frameworks(),
                 catalog.controlFamilies(), items);
     }
