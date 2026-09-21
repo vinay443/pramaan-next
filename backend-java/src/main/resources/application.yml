@@ -86,6 +86,27 @@ pramaan:
     host: ${PRAMAAN_AEROSPIKE_HOST:localhost}
     port: ${PRAMAAN_AEROSPIKE_PORT:3000}
     namespace: ${PRAMAAN_AEROSPIKE_NAMESPACE:test}
+  # Real target for the NGINX predefined-query controls in LIVE mode — see
+  # docker-compose.yml's `nginx` service (host-mapped to 8081 — 8080 inside the
+  # container collides with this app's own server.port). config-path must point
+  # at the same file bind-mounted into that container (relative to backend-java/,
+  # this app's working directory) so the grep-based controls read the config the
+  # server is actually running.
+  nginx:
+    host: ${PRAMAAN_NGINX_HOST:localhost}
+    port: ${PRAMAAN_NGINX_PORT:8081}
+    status-path: ${PRAMAAN_NGINX_STATUS_PATH:/nginx_status}
+    config-path: ${PRAMAAN_NGINX_CONFIG_PATH:../infra/nginx/nginx.conf}
+  # Real target for the Aurora MySQL predefined-query controls in LIVE mode — see
+  # docker-compose.yml's `aurora-mysql` service (plain mysql:8.0 standing in for
+  # Aurora — no official local Aurora image exists; wire/protocol compatible for
+  # every control this catalogue currently has).
+  aurora-mysql:
+    host: ${PRAMAAN_AURORA_MYSQL_HOST:localhost}
+    port: ${PRAMAAN_AURORA_MYSQL_PORT:3307}
+    database: ${PRAMAAN_AURORA_MYSQL_DATABASE:pramaan}
+    user: ${PRAMAAN_AURORA_MYSQL_USER:root}
+    password: ${PRAMAAN_AURORA_MYSQL_PASSWORD:pramaan}
   scheduler:
     # Background @Scheduled trigger. Off by default; runs are normally API-triggered.
     auto-enabled: ${PRAMAAN_SCHEDULER_AUTO:false}
