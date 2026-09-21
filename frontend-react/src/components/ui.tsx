@@ -6,14 +6,17 @@ export function StatCard({
   value,
   hint,
   icon,
+  size = 'md',
 }: {
   label: string
   value: ReactNode
   hint?: string
   icon?: ReactNode
+  /** 'lg' for a hero-row headline tile (bigger value type) — same card, larger scale. */
+  size?: 'md' | 'lg'
 }) {
   return (
-    <div className="card stat">
+    <div className={size === 'lg' ? 'card stat stat-lg' : 'card stat'}>
       {icon ? <div className="stat-icon">{icon}</div> : null}
       <div className="stat-value">{value}</div>
       <div className="stat-label">{label}</div>
@@ -49,9 +52,9 @@ const PILL_MUTED = new Set([
   'NOT_EVALUATED',
 ])
 
-export function StatusPill({ status }: { status: string }) {
+export function StatusPill({ status, tone: forced }: { status: string; tone?: 'ok' | 'bad' | 'muted' | 'warn' }) {
   const s = status.toUpperCase()
-  const tone = PILL_OK.has(s) ? 'ok' : PILL_BAD.has(s) ? 'bad' : PILL_MUTED.has(s) ? 'muted' : 'warn'
+  const tone = forced ?? (PILL_OK.has(s) ? 'ok' : PILL_BAD.has(s) ? 'bad' : PILL_MUTED.has(s) ? 'muted' : 'warn')
   return <span className={`pill pill-${tone}`}>{status}</span>
 }
 

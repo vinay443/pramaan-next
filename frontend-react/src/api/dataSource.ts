@@ -33,3 +33,35 @@ export function mocksForced(): boolean {
     return false
   }
 }
+
+// Screens that are intentionally always-mock (Evidence Reuse -> "Find similar evidence") can ask the
+// shell to hide the "Backend unavailable" banner while they are mounted: it would be a misleading
+// warning for expected behaviour. Reference-counted so overlapping mounts can't un-hide it early.
+let bannerSuppressions = 0
+const bannerListeners = new Set<() => void>()
+
+function notifyBanner(): void {
+  bannerListeners.forEach((l) => l())
+}
+
+/** Hide the global mock-data banner until the returned release function is called. */
+export function suppressDataSourceBanner(): () => void {
+  bannerSuppressions++
+  notifyBanner()
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    bannerSuppressions--
+    notifyBanner()
+  }
+}
+
+export function isDataSourceBannerSuppressed(): boolean {
+  return bannerSuppressions > 0
+}
+
+export function subscribeBannerSuppression(fn: () => void): () => void {
+  bannerListeners.add(fn)
+  return () => bannerListeners.delete(fn)
+}

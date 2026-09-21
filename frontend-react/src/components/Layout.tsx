@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { useDataSource } from '../hooks/useDataSource'
+import { useDataSource, useDataSourceBannerSuppressed } from '../hooks/useDataSource'
 import { PERSONA_STORAGE_KEY, PERSONAS } from '../pages/PersonaLogin'
 
 interface NavItem {
@@ -106,6 +106,7 @@ const NAV: NavGroup[] = [
 
 export function Layout() {
   const source = useDataSource()
+  const bannerSuppressed = useDataSourceBannerSuppressed()
   const navigate = useNavigate()
   const personaCode = localStorage.getItem(PERSONA_STORAGE_KEY)
   const persona = PERSONAS.find((p) => p.code === personaCode)
@@ -124,9 +125,7 @@ export function Layout() {
         </div>
         {persona ? (
           <div className="persona-bar">
-            <span className="pill pill-muted">
-              {persona.name} ({persona.code})
-            </span>
+            <span className="pill pill-muted">{persona.name}</span>
             <button type="button" className="ghost persona-logout" onClick={handleLogout}>
               Logout
             </button>
@@ -160,7 +159,7 @@ export function Layout() {
         </div>
       </aside>
       <main className="content">
-        {source === 'mock' ? (
+        {source === 'mock' && !bannerSuppressed ? (
           <div className="banner banner-warn" role="status">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
               <path d="M12 8v5M12 16h.01M10.3 3.9 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />

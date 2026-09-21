@@ -755,6 +755,28 @@ export interface ReuseResult {
   matches: SimilarEvidence[]
 }
 
+/** Mock-only detail record behind a "Find similar evidence" result row (drives the detail modal). */
+export interface ReuseEvidenceDetail {
+  evidenceId: string
+  applicationSlug: string
+  framework: string
+  controlId: string
+  evidenceType: string
+  technology: string
+  sourceSystem: string
+  /** Short human summary, also part of the demo similarity text. */
+  title: string
+  fileName: string
+  contentType: string
+  sizeBytes: number
+  uploadedAt: string
+  collectedBy: string
+  version: number
+  sha256: string
+  /** Short mock content preview. */
+  preview: string
+}
+
 // ---- reuse by control (cross-framework) ---------------------------
 
 export interface ControlFrameworks {

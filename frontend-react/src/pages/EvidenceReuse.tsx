@@ -1,15 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  addEvidenceFramework,
-  getEvidenceReuse,
-  getReuseByControl,
-  listReuseControls,
-  searchEvidenceReuse,
-} from '../api/endpoints'
-import type { ReuseResult } from '../api/types'
+import { addEvidenceFramework, getReuseByControl, isMockSourced, listReuseControls } from '../api/endpoints'
+import { suppressDataSourceBanner } from '../api/dataSource'
+import type { ReuseEvidenceDetail, ReuseResult, SimilarEvidence } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
-import { DataTable, Empty, ErrorNote, Loading, Section, StatCard, StatusPill } from '../components/ui'
+import { DataTable, Empty, ErrorNote, Loading, Modal, Section, StatCard, StatusPill } from '../components/ui'
 
 type Tab = 'similar' | 'control'
 
@@ -17,7 +12,7 @@ export function EvidenceReuse() {
   const [tab, setTab] = useState<Tab>('similar')
 
   return (
-    <div className="page">
+    <div className="page reuse-page">
       <h1>Evidence Reuse</h1>
       <p className="muted">
         Reuse evidence already held instead of re-collecting it — by content similarity, or across the
@@ -46,70 +41,250 @@ export function EvidenceReuse() {
   )
 }
 
-// ---- existing embedding-based similarity search (unchanged behaviour) -------
+// ---- embedding-based similarity search --------------------------------------
+
+const RESULT_LIMITS = [5, 10, 20] as const
+
+/** Match strictness → minimum similarity score. Broad/Standard anchor on the previous
+ *  UI default (0.1) and the backend default (0.3); Strict adds a tier above them. */
+const STRICTNESS = {
+  broad: { label: 'Broad', minScore: 0.1 },
+  standard: { label: 'Standard', minScore: 0.3 },
+  strict: { label: 'Strict', minScore: 0.6 },
+} as const
+type Strictness = keyof typeof STRICTNESS
+
+/** Evidence-type presets → the similarity-search query. The keys are the canonical `evidenceType`
+ *  tag values (EvidenceNaming.resolveEvidenceType in the backend). Each query pairs the type's own
+ *  words with the technology / collector / control words that evidence of that type typically
+ *  carries in its metadata. Bare category labels ("TLS configuration") share too few tokens with
+ *  a record to clear the Broad threshold in mock mode; these longer phrases do. */
+const EVIDENCE_TYPE_QUERIES = {
+  'HOST-CONFIG': 'host config linux os agent',
+  'DB-CONFIG': 'db config database postgresql agent',
+  'MIDDLEWARE-CONFIG': 'middleware config nginx agent tls',
+  'TLS-SCAN': 'tls scan cert expiry agent',
+  'CHANGE-TICKET': 'change ticket chg jira itpp',
+  'CODE-REVIEW': 'code review sdlc github dpsc',
+  'AGENT-SCAN': 'agent scan network firewall rules',
+  GENERAL: 'general policy document access review',
+} as const
+type EvidenceType = keyof typeof EVIDENCE_TYPE_QUERIES
+const EVIDENCE_TYPES = Object.keys(EVIDENCE_TYPE_QUERIES) as EvidenceType[]
+
+function evidenceLabel(e: ReuseEvidenceDetail): string {
+  return `${e.controlId} — ${e.fileName}`
+}
+
+/** This tab is intentionally self-contained: it reads the local demo corpus in mocks.ts directly and
+ *  never calls the backend (no Ollama / pgvector dependency). Loaded lazily, like endpoints.ts does. */
+const loadReuseMocks = () => import('../api/mocks')
+
+function FlagPills({ m }: { m: SimilarEvidence }) {
+  const flags = [
+    m.exactDuplicate ? <StatusPill key="dup" status="Exact duplicate" tone="ok" /> : null,
+    m.sameControl ? <StatusPill key="ctl" status="Same control" tone="warn" /> : null,
+    m.crossApplication ? <StatusPill key="app" status="Cross-application" tone="muted" /> : null,
+  ].filter(Boolean)
+  return flags.length > 0 ? <span className="row-actions">{flags}</span> : <span className="muted small">—</span>
+}
 
 function FindSimilar() {
-  const navigate = useNavigate()
-  const [mode, setMode] = useState<'evidence' | 'text'>('text')
+  const [mode, setMode] = useState<'evidence' | 'type'>('type')
+  const [applicationSlug, setApplicationSlug] = useState('')
   const [evidenceId, setEvidenceId] = useState('')
-  const [text, setText] = useState('SSH root login disabled on a linux host')
+  const [evidenceType, setEvidenceType] = useState<EvidenceType | ''>('')
+  const [limit, setLimit] = useState<number>(RESULT_LIMITS[0])
+  // Broad (0.1) is the default so the page keeps returning what it did before strictness was exposed.
+  const [strictness, setStrictness] = useState<Strictness>('broad')
   const [result, setResult] = useState<ReuseResult>()
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
+  const [selected, setSelected] = useState<SimilarEvidence>()
+  const latest = useRef(0)
 
-  async function run() {
+  // Always-mock tab: hide the shell's "Backend unavailable" banner while it is mounted.
+  useEffect(() => suppressDataSourceBanner(), [])
+
+  const apps = useAsync(async () => (await loadReuseMocks()).mockReuseApplications(), [])
+  const evidenceList = useAsync(
+    async () => (applicationSlug ? (await loadReuseMocks()).mockReuseEvidenceFor(applicationSlug) : undefined),
+    [applicationSlug],
+  )
+  const evidenceOptions = applicationSlug ? evidenceList.data ?? [] : []
+
+  const minScore = STRICTNESS[strictness].minScore
+
+  async function run(kind: 'evidence' | 'type' = mode) {
+    const ticket = ++latest.current
     setBusy(true)
     setError(undefined)
     try {
-      setResult(
-        mode === 'evidence'
-          ? await getEvidenceReuse(evidenceId.trim(), 5, 0.1)
-          : await searchEvidenceReuse(text.trim(), 5, 0.1),
-      )
+      const mocks = await loadReuseMocks()
+      const out =
+        kind === 'evidence'
+          ? mocks.mockSimilarByEvidence(evidenceId, limit, minScore)
+          : mocks.mockSimilarByText(EVIDENCE_TYPE_QUERIES[evidenceType as EvidenceType], limit, minScore)
+      if (ticket === latest.current) setResult(out)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      if (ticket === latest.current) setError(e instanceof Error ? e.message : String(e))
     } finally {
-      setBusy(false)
+      if (ticket === latest.current) setBusy(false)
     }
   }
 
+  // Neither mode has a Search button: picking an item / type (or changing the result
+  // count / strictness while one is picked) runs the search.
+  useEffect(() => {
+    if (mode === 'evidence' && evidenceId) void run('evidence')
+    else if (mode === 'type' && evidenceType) void run('type')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, evidenceId, evidenceType, limit, minScore])
+
+  function clearResult() {
+    latest.current++
+    setResult(undefined)
+    setError(undefined)
+    setBusy(false)
+    setSelected(undefined)
+  }
+
+  function changeMode(next: 'evidence' | 'type') {
+    setMode(next)
+    clearResult()
+  }
+
+  function changeApplication(slug: string) {
+    setApplicationSlug(slug)
+    setEvidenceId('')
+    clearResult()
+  }
+
+  function changeEvidenceType(t: EvidenceType | '') {
+    setEvidenceType(t)
+    if (!t) clearResult()
+  }
+
+  function changeEvidence(id: string) {
+    setEvidenceId(id)
+    if (!id) clearResult()
+  }
+
+  const columns = [
+    { header: 'Score', cell: (m: SimilarEvidence) => m.score.toFixed(3), align: 'right' as const },
+    { header: 'Application', cell: (m: SimilarEvidence) => m.applicationSlug },
+    { header: 'Framework', cell: (m: SimilarEvidence) => m.framework },
+    { header: 'Control', cell: (m: SimilarEvidence) => m.controlId },
+    { header: 'Flags', cell: (m: SimilarEvidence) => <FlagPills m={m} /> },
+    { header: 'Hint', cell: (m: SimilarEvidence) => m.reuseHint },
+  ]
+
+  const hasQuery = mode === 'evidence' ? !!evidenceId : !!evidenceType
+
   return (
     <>
-      <Section
-        title="Find similar evidence"
-        actions={
-          <button
-            className="primary"
-            onClick={run}
-            disabled={busy || (mode === 'evidence' ? !evidenceId.trim() : !text.trim())}
-          >
-            {busy ? 'Searching…' : 'Search'}
-          </button>
-        }
-      >
+      <Section title="Find similar evidence">
         <div className="filter-row">
           <label>
             Mode
-            <select aria-label="Mode" value={mode} onChange={(e) => setMode(e.target.value as 'evidence' | 'text')}>
-              <option value="text">Free text</option>
+            <select aria-label="Mode" value={mode} onChange={(e) => changeMode(e.target.value as 'evidence' | 'type')}>
+              <option value="type">By evidence type</option>
               <option value="evidence">By evidence ID</option>
             </select>
           </label>
           {mode === 'evidence' ? (
-            <label>
-              Evidence ID
-              <input aria-label="Evidence ID" value={evidenceId} onChange={(e) => setEvidenceId(e.target.value)} />
-            </label>
+            <>
+              <label>
+                Application
+                <select aria-label="Application" value={applicationSlug} onChange={(e) => changeApplication(e.target.value)}>
+                  <option value="">(select an application)</option>
+                  {(apps.data ?? []).map((a) => (
+                    <option key={a.slug} value={a.slug}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Evidence
+                <select
+                  aria-label="Evidence"
+                  value={evidenceId}
+                  disabled={!applicationSlug || evidenceList.loading}
+                  onChange={(e) => changeEvidence(e.target.value)}
+                >
+                  <option value="">{applicationSlug ? '(select evidence)' : '(select an application first)'}</option>
+                  {evidenceOptions.map((e) => (
+                    <option key={e.evidenceId} value={e.evidenceId}>
+                      {evidenceLabel(e)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
           ) : (
             <label>
-              Text
-              <input aria-label="Text" value={text} onChange={(e) => setText(e.target.value)} />
+              Evidence type
+              <select
+                aria-label="Evidence type"
+                value={evidenceType}
+                onChange={(e) => changeEvidenceType(e.target.value as EvidenceType | '')}
+              >
+                <option value="">(select a type)</option>
+                {EVIDENCE_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
             </label>
           )}
+          <label>
+            Number of results
+            <select aria-label="Number of results" value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
+              {RESULT_LIMITS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Match strictness
+            <select
+              aria-label="Match strictness"
+              value={strictness}
+              onChange={(e) => setStrictness(e.target.value as Strictness)}
+            >
+              {(Object.keys(STRICTNESS) as Strictness[]).map((k) => (
+                <option key={k} value={k}>
+                  {STRICTNESS[k].label} (≥ {STRICTNESS[k].minScore})
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
+        {mode === 'evidence' && applicationSlug && !evidenceList.loading && evidenceOptions.length === 0 ? (
+          <p className="muted small">No evidence is held for this application yet.</p>
+        ) : null}
+        {evidenceList.error ? <ErrorNote message={evidenceList.error} /> : null}
+        {apps.error ? <ErrorNote message={apps.error} /> : null}
       </Section>
 
       {error ? <ErrorNote message={error} /> : null}
+      {busy && !result ? <Loading what="similar evidence" /> : null}
+
+      {!result && !busy && !error && !hasQuery ? (
+        <Section title="Matches">
+          <Empty
+            message={
+              mode === 'evidence'
+                ? 'Select an application and an evidence item to find similar evidence'
+                : 'Select an evidence type to find similar evidence'
+            }
+          />
+        </Section>
+      ) : null}
 
       {result ? (
         <>
@@ -130,48 +305,103 @@ function FindSimilar() {
               <DataTable
                 rows={result.exactDuplicates}
                 rowKey={(m) => m.evidenceId}
-                onRowClick={(m) => navigate(`/evidence/${m.evidenceId}`)}
-                columns={[
-                  { header: 'Application', cell: (m) => m.applicationSlug },
-                  { header: 'Framework', cell: (m) => m.framework },
-                  { header: 'Control', cell: (m) => m.controlId },
-                  { header: 'Hint', cell: (m) => m.reuseHint },
-                ]}
+                onRowClick={setSelected}
+                columns={columns.filter((c) => c.header !== 'Score')}
               />
             </Section>
           ) : null}
 
           <Section title="Matches">
             {result.matches.length === 0 ? (
-              <Empty message="No evidence above the similarity threshold." />
+              <Empty message="No evidence above the similarity threshold. Try a broader match strictness." />
             ) : (
               <DataTable
                 rows={result.matches}
                 rowKey={(m) => m.evidenceId}
-                onRowClick={(m) => navigate(`/evidence/${m.evidenceId}`)}
-                columns={[
-                  { header: 'Score', cell: (m) => m.score.toFixed(3), align: 'right' },
-                  { header: 'Application', cell: (m) => m.applicationSlug },
-                  { header: 'Framework', cell: (m) => m.framework },
-                  { header: 'Control', cell: (m) => m.controlId },
-                  {
-                    header: 'Flags',
-                    cell: (m) => (
-                      <>
-                        {m.exactDuplicate ? <StatusPill status="exact dup" /> : null}
-                        {m.sameControl ? <StatusPill status="same control" /> : null}
-                        {m.crossApplication ? <StatusPill status="cross-app" /> : null}
-                      </>
-                    ),
-                  },
-                  { header: 'Hint', cell: (m) => m.reuseHint },
-                ]}
+                onRowClick={setSelected}
+                columns={columns}
               />
             )}
           </Section>
         </>
       ) : null}
+
+      {selected ? <ReuseDetailModal match={selected} onClose={() => setSelected(undefined)} /> : null}
     </>
+  )
+}
+
+/** Detail view for one result row. All fields come from the local mock corpus. */
+function ReuseDetailModal({ match, onClose }: { match: SimilarEvidence; onClose: () => void }) {
+  const detail = useAsync(async () => (await loadReuseMocks()).mockReuseDetail(match.evidenceId), [match.evidenceId])
+  const d = detail.data
+
+  return (
+    <Modal title="Evidence detail" onClose={onClose} size="lg">
+      {detail.loading && !d ? <Loading what="evidence detail" /> : null}
+      {!detail.loading && !d ? <Empty message="No detail is available for this evidence." /> : null}
+      {d ? (
+        <>
+          <dl className="kv">
+            <dt>Evidence ID</dt>
+            <dd>
+              <code>{d.evidenceId}</code>
+            </dd>
+            <dt>Application</dt>
+            <dd>{d.applicationSlug}</dd>
+            <dt>Framework</dt>
+            <dd>{d.framework}</dd>
+            <dt>Control</dt>
+            <dd>{d.controlId}</dd>
+            <dt>Similarity score</dt>
+            <dd>
+              {match.score.toFixed(3)} <FlagPills m={match} />
+            </dd>
+            <dt>Reuse hint</dt>
+            <dd>{match.reuseHint}</dd>
+            <dt>Evidence type</dt>
+            <dd>{d.evidenceType}</dd>
+            <dt>File name</dt>
+            <dd>
+              <code>{d.fileName}</code>
+            </dd>
+            <dt>File type</dt>
+            <dd>
+              {d.contentType} · {formatBytes(d.sizeBytes)}
+            </dd>
+            <dt>Uploaded</dt>
+            <dd>{new Date(d.uploadedAt).toLocaleString()}</dd>
+            <dt>Collected by</dt>
+            <dd>
+              {d.collectedBy} via {d.sourceSystem} (v{d.version})
+            </dd>
+            <dt>SHA-256</dt>
+            <dd>
+              <code>{d.sha256}</code>
+            </dd>
+          </dl>
+          <h3>Content preview</h3>
+          <pre className="json">{d.preview}</pre>
+        </>
+      ) : null}
+      <div className="modal-foot">
+        <button onClick={onClose}>Close</button>
+      </div>
+    </Modal>
+  )
+}
+
+function formatBytes(n: number): string {
+  return n >= 1024 ? `${(n / 1024).toFixed(1)} KB` : `${n} B`
+}
+
+/** Shown when the data on screen came from the built-in mock fixtures, not the backend. */
+function MockBadge({ show }: { show: boolean }) {
+  if (!show) return null
+  return (
+    <span title="The backend was unreachable or returned an error; this data comes from built-in sample fixtures.">
+      <StatusPill status="Sample data (mock fallback)" tone="warn" />
+    </span>
   )
 }
 
@@ -182,14 +412,9 @@ function BrowseByControl() {
   const controls = useAsync(() => listReuseControls(), [])
   const [controlId, setControlId] = useState('')
 
-  const trimmed = controlId.trim().toUpperCase()
-  const known = useMemo(
-    () => (controls.data ?? []).some((c) => c.controlId.toUpperCase() === trimmed),
-    [controls.data, trimmed],
-  )
   const result = useAsync(
-    () => (known ? getReuseByControl(trimmed) : Promise.resolve(undefined)),
-    [known ? trimmed : ''],
+    () => (controlId ? getReuseByControl(controlId) : Promise.resolve(undefined)),
+    [controlId],
   )
 
   const [acting, setActing] = useState<string>()
@@ -208,28 +433,36 @@ function BrowseByControl() {
     }
   }
 
-  const data = result.data
+  function pick(id: string) {
+    setControlId(id)
+    setActionError(undefined)
+  }
+
+  // useAsync keeps the previous data while a new fetch is in flight — only trust it
+  // when it belongs to the control currently selected.
+  const data = controlId && result.data?.controlId.toUpperCase() === controlId.toUpperCase() ? result.data : undefined
+  const mockSourced = isMockSourced(data) || isMockSourced(controls.data)
+
+  const satisfied = data ? data.frameworks.filter((f) => data.evidence.some((e) => e.mappedFrameworks.includes(f))) : []
+  const unmapped = data ? data.frameworks.filter((f) => !satisfied.includes(f)) : []
 
   return (
     <>
-      <Section title="Pick a control">
+      <Section
+        title="Pick a control"
+        actions={<MockBadge show={mockSourced} />}
+      >
         <div className="filter-row">
           <label>
             Control
-            <input
-              aria-label="Control"
-              list="reuse-control-list"
-              value={controlId}
-              onChange={(e) => setControlId(e.target.value)}
-              placeholder="OS-SSH-ROOT-LOGIN"
-            />
-            <datalist id="reuse-control-list">
+            <select aria-label="Control" value={controlId} onChange={(e) => pick(e.target.value)}>
+              <option value="">(select a control)</option>
               {(controls.data ?? []).map((c) => (
                 <option key={c.controlId} value={c.controlId}>
-                  {c.frameworks.join(', ')}
+                  {c.frameworks.length > 0 ? `${c.controlId} — ${c.frameworks.join(', ')}` : c.controlId}
                 </option>
               ))}
-            </datalist>
+            </select>
           </label>
         </div>
         {controls.error ? <ErrorNote message={controls.error} /> : null}
@@ -239,35 +472,44 @@ function BrowseByControl() {
         </p>
       </Section>
 
-      {controlId && !known && !controls.loading ? (
-        <Empty message={`"${controlId}" is not a known control. Pick one from the list.`} />
+      {!controlId ? (
+        <Section title="Reusable evidence">
+          <Empty message="Select a control to see reusable evidence" />
+        </Section>
       ) : null}
 
-      {result.loading ? <Loading what="evidence for this control" /> : null}
-      {result.error ? <ErrorNote message={result.error} /> : null}
+      {controlId && result.loading && !data ? <Loading what="evidence for this control" /> : null}
+      {controlId && result.error ? <ErrorNote message={result.error} /> : null}
       {actionError ? <ErrorNote message={actionError} /> : null}
 
       {data ? (
         <>
           <div className="stat-grid">
-            <StatCard label="Frameworks satisfied" value={data.frameworks.length} />
-            <StatCard label="Evidence records" value={data.evidence.length} />
-            <StatCard
-              label="Applications covered"
-              value={new Set(data.evidence.map((e) => e.applicationSlug)).size}
-            />
+            <StatCard label="Evidence matched" value={data.evidence.length} />
+            <StatCard label="Frameworks satisfied" value={satisfied.length} hint={`of ${data.frameworks.length} required`} />
+            <StatCard label="Frameworks unmapped" value={unmapped.length} hint="no evidence tagged yet" />
           </div>
 
           <Section title={`Frameworks requiring ${data.controlId}`}>
             {data.frameworks.length === 0 ? (
               <Empty message="This control is not mapped to any framework in the UC03 catalogue." />
             ) : (
-              <p>
-                {data.frameworks.map((f) => (
-                  <StatusPill key={f} status={f} />
+              <div className="row-actions">
+                {satisfied.map((f) => (
+                  <span key={f} title="Existing evidence is already tagged to this framework">
+                    <StatusPill status={f} tone="ok" />
+                  </span>
                 ))}
-              </p>
+                {unmapped.map((f) => (
+                  <span key={f} title="No held evidence is tagged to this framework yet">
+                    <StatusPill status={f} tone="muted" />
+                  </span>
+                ))}
+              </div>
             )}
+            {data.frameworks.length > 0 ? (
+              <p className="muted small">Green = satisfied by existing evidence · grey = still unmapped.</p>
+            ) : null}
           </Section>
 
           <Section title={`Existing evidence — ${data.evidence.length}`}>
@@ -288,7 +530,7 @@ function BrowseByControl() {
                   { header: 'SHA-256', cell: (e) => <code>{(e.sha256 ?? '—').slice(0, 16)}…</code> },
                   {
                     header: 'Mapped frameworks',
-                    cell: (e) => e.mappedFrameworks.map((f) => <StatusPill key={f} status={f} />),
+                    cell: (e) => e.mappedFrameworks.map((f) => <StatusPill key={f} status={f} tone="ok" />),
                   },
                   {
                     header: 'Reuse',

@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react'
-import { evaluateChecks, listCheckResults } from '../api/endpoints'
+import { evaluateChecks } from '../api/endpoints'
 import type { CheckResultParams, EvaluationSummary } from '../api/types'
-import { useAsync } from '../hooks/useAsync'
+import { useControlResultsSummary } from '../hooks/useControlResultsSummary'
 import { DataTable, Empty, ErrorNote, Loading, Section, StatCard, StatusPill } from '../components/ui'
 
 const STATUSES = ['', 'PASS', 'WARNING', 'FAIL', 'NOT_APPLICABLE'] as const
-const PAGE_SIZE = 100
 
 export function ControlResults() {
   const [filters, setFilters] = useState<CheckResultParams>({})
@@ -13,20 +12,11 @@ export function ControlResults() {
   const [evaluating, setEvaluating] = useState(false)
   const [actionError, setActionError] = useState<string>()
 
-  const query = useMemo<CheckResultParams>(
-    () => ({ ...clean(filters), page: 0, size: PAGE_SIZE }),
-    [filters],
-  )
-  const { data, loading, error, reload } = useAsync(
-    () => listCheckResults(query),
-    [JSON.stringify(query), summary?.evaluatedAt ?? ''],
-  )
-
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { PASS: 0, WARNING: 0, FAIL: 0, NOT_APPLICABLE: 0 }
-    ;(data?.items ?? []).forEach((r) => (c[r.status] = (c[r.status] ?? 0) + 1))
-    return c
-  }, [data])
+  const cleanedFilters = useMemo(() => clean(filters), [filters])
+  const { data, loading, error, reload, counts } = useControlResultsSummary(cleanedFilters, [
+    JSON.stringify(cleanedFilters),
+    summary?.evaluatedAt ?? '',
+  ])
 
   function update(field: keyof CheckResultParams, value: string) {
     setFilters((f) => ({ ...f, [field]: value || undefined }))

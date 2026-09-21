@@ -2,22 +2,14 @@ import { Fragment, useMemo, useState } from 'react'
 import {
   getEvidenceCompletenessControlEvidence,
   getEvidenceCompletenessControls,
-  getEvidenceCompletenessFrameworks,
   listApplications,
 } from '../api/endpoints'
-import type { ControlCompletenessRow, EvidenceCompletenessItem, FrameworkCompletenessRow } from '../api/types'
+import type { ControlCompletenessRow, EvidenceCompletenessItem } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
+import { frameworkStatus, useCompletenessSummary } from '../hooks/useCompletenessSummary'
 import { DataTable, Empty, ErrorNote, Loading, Modal, Section, StatCard, StatusPill } from '../components/ui'
 
 const ALL_APPLICATIONS = ''
-
-type FrameworkStatus = 'EVALUATED' | 'PARTIAL' | 'NOT_EVALUATED'
-
-function frameworkStatus(row: FrameworkCompletenessRow): FrameworkStatus {
-  if (row.controlsEvaluated === 0) return 'NOT_EVALUATED'
-  if (row.controlsEvaluated >= row.totalControls) return 'EVALUATED'
-  return 'PARTIAL'
-}
 
 export function Completeness() {
   const apps = useAsync(() => listApplications(), [])
@@ -29,10 +21,7 @@ export function Completeness() {
   )
   const [selectedItem, setSelectedItem] = useState<EvidenceCompletenessItem | null>(null)
 
-  const frameworksReq = useAsync(
-    () => getEvidenceCompletenessFrameworks(slug || undefined),
-    [slug],
-  )
+  const frameworksReq = useCompletenessSummary(slug || undefined)
 
   const controlsReq = useAsync(
     () => (expanded ? getEvidenceCompletenessControls(expanded, slug || undefined) : Promise.resolve([])),

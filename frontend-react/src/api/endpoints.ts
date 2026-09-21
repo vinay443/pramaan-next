@@ -152,7 +152,7 @@ async function withFallback<T>(
 export function listApplications(): Promise<ApplicationView[]> {
   return withFallback(
     () => apiFetch<ApplicationView[]>('/api/v1/applications'),
-    () => mock.mockApplications,
+    tagMockSourced(() => mock.mockApplications),
   )
 }
 
@@ -309,7 +309,7 @@ export function getEvidenceDashboard(): Promise<EvidenceDashboard> {
 export function listEvidence(params: EvidenceQueryParams): Promise<Page<EvidenceView>> {
   return withFallback(
     () => apiFetch<Page<EvidenceView>>(`/api/v1/evidence${buildQuery(params as Record<string, unknown>)}`),
-    () => mock.mockEvidencePage(params),
+    tagMockSourced(() => mock.mockEvidencePage(params)),
   )
 }
 
@@ -702,28 +702,64 @@ export function getEvidenceSummary(id: string): Promise<EvidenceSummary> {
   )
 }
 
+/** Per-call timeout for the two similarity endpoints. Both run the backend's
+ *  EvidenceEmbeddingIndexer.ensureIndexed(), which does a full synchronous reindex on the first
+ *  call after every backend start (and whenever evidence has been ingested since). That can
+ *  exceed apiFetch's 8s default, which would be misread as "backend offline" and flip the global
+ *  mock banner. 30s is a client-side patience allowance for that known-slow cold start, not a
+ *  claim about how long it should take. by-control and /reuse/controls never touch the indexer,
+ *  so they keep the default. */
+const REUSE_SIMILARITY_TIMEOUT_MS = 30_000
+
 export function getEvidenceReuse(id: string, limit = 5, minScore = 0.3): Promise<ReuseResult> {
   return withFallback(
-    () => apiFetch<ReuseResult>(`/api/v1/insight/reuse/${id}${buildQuery({ limit, minScore })}`),
-    () => mock.mockReuseByEvidence(id, limit, minScore),
+    () =>
+      apiFetch<ReuseResult>(`/api/v1/insight/reuse/${id}${buildQuery({ limit, minScore })}`, {
+        timeoutMs: REUSE_SIMILARITY_TIMEOUT_MS,
+      }),
+    tagMockSourced(() => mock.mockReuseByEvidence(id, limit, minScore)),
     true,
   )
 }
 
 export function searchEvidenceReuse(text: string, limit = 5, minScore = 0.3): Promise<ReuseResult> {
   return withFallback(
-    () => apiFetch<ReuseResult>('/api/v1/insight/reuse/search', { method: 'POST', body: { text, limit, minScore } }),
-    () => mock.mockReuseByText(text, limit, minScore),
+    () =>
+      apiFetch<ReuseResult>('/api/v1/insight/reuse/search', {
+        method: 'POST',
+        body: { text, limit, minScore },
+        timeoutMs: REUSE_SIMILARITY_TIMEOUT_MS,
+      }),
+    tagMockSourced(() => mock.mockReuseByText(text, limit, minScore)),
     true,
   )
 }
 
 // ---- reuse by control (cross-framework) ---------------------------
 
+// Per-result provenance for the Evidence Reuse page's calls (reuse endpoints + the application / evidence pickers). withFallback's return shape is
+// unchanged: results produced by the mock fallback are recorded in a WeakSet (keyed by the
+// returned object), and `isMockSourced` reads it. The global data-source store can't be used
+// for this — it is last-call-wins across the whole app, not per response.
+const mockSourced = new WeakSet<object>()
+
+/** True when `result` came from the mock fallback rather than the live backend. */
+export function isMockSourced(result: unknown): boolean {
+  return typeof result === 'object' && result !== null && mockSourced.has(result)
+}
+
+function tagMockSourced<T>(fallback: () => T): () => T {
+  return () => {
+    const out = fallback()
+    if (typeof out === 'object' && out !== null) mockSourced.add(out)
+    return out
+  }
+}
+
 export function listReuseControls(): Promise<ControlFrameworks[]> {
   return withFallback(
     () => apiFetch<ControlFrameworks[]>('/api/v1/insight/reuse/controls'),
-    () => mock.mockReuseControls(),
+    tagMockSourced(() => mock.mockReuseControls()),
     true,
   )
 }
@@ -731,7 +767,7 @@ export function listReuseControls(): Promise<ControlFrameworks[]> {
 export function getReuseByControl(controlId: string): Promise<ControlReuseResult> {
   return withFallback(
     () => apiFetch<ControlReuseResult>(`/api/v1/insight/reuse/by-control${buildQuery({ controlId })}`),
-    () => mock.mockReuseByControl(controlId),
+    tagMockSourced(() => mock.mockReuseByControl(controlId)),
     true,
   )
 }

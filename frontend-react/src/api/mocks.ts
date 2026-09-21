@@ -66,6 +66,7 @@ import type {
   ReportInfo,
   TrendReport,
   Page,
+  ReuseEvidenceDetail,
   ReuseResult,
   RunRequest,
   RunView,
@@ -163,9 +164,84 @@ function withNamingConvention(e: EvidenceView): EvidenceView {
   }
 }
 
+// The shared fixtures (contracts/mock-data/evidence.json) hold one record per evidence type
+// for six of the eight types, and none for AGENT-SCAN or GENERAL. These two supplemental demo
+// records close that gap for the Evidence Reuse type presets in mock mode. They are deliberately
+// NOT part of `mockEvidence`: that array feeds the repository, dashboards, completeness and
+// onboarding mocks, whose counts/fixtures other pages and tests assert on. They exist only in the
+// reuse corpus (`reuseCorpus()`) and the by-id lookup, and go through the same naming-convention
+// pass, so evidenceTypeFor() classifies them exactly as the backend would.
+const SUPPLEMENTAL_RAW_EVIDENCE = [
+  {
+    evidenceId: 'ev-007',
+    evidenceKey: 'net-banking|PCI_DSS|NET-FIREWALL-RULES|AGENT_NETWORK_FIREWALL|agent_network_firewall-net-firewall-rules',
+    applicationSlug: 'net-banking',
+    environment: 'prod',
+    controlId: 'NET-FIREWALL-RULES',
+    framework: 'PCI_DSS',
+    sourceSystem: 'AGENT_NETWORK_FIREWALL',
+    sourceObjectId: 'agent_network_firewall-net-firewall-rules',
+    assetId: null,
+    agentId: null,
+    title: 'NET-FIREWALL-RULES network firewall rule scan',
+    currentVersion: 1,
+    createdAt: '2026-09-02T08:00:00Z',
+    updatedAt: '2026-09-02T08:00:00Z',
+    tags: { team: 'netbanking', source: 'AGENT_NETWORK_FIREWALL', technology: 'firewall', collectionMethod: 'scheduled' },
+    latest: {
+      version: 1,
+      sha256: '7a8b9c0d7a8b9c0d7a8b9c0d7a8b9c0d7a8b9c0d7a8b9c0d7a8b9c0d7a8b9c0d',
+      contentType: 'application/json',
+      sizeBytes: 812,
+      objectKey: 'evidence/ev-007/v1/7a8b9c0d',
+      collectedAt: '2026-09-02T08:00:00Z',
+      collectedBy: 'pramaan-agent',
+      ingestionRunId: 'run-001',
+      metadata: { collector: 'agent', sourceSystem: 'AGENT_NETWORK_FIREWALL', simulated: 'true' },
+    },
+  },
+  {
+    evidenceId: 'ev-008',
+    evidenceKey: 'payments|ISO27001|POLICY-ACCESS-REVIEW|MOCK_SHAREPOINT|mock_sharepoint-policy-access-review',
+    applicationSlug: 'payments',
+    environment: 'prod',
+    controlId: 'POLICY-ACCESS-REVIEW',
+    framework: 'ISO27001',
+    sourceSystem: 'MOCK_SHAREPOINT',
+    sourceObjectId: 'mock_sharepoint-policy-access-review',
+    assetId: null,
+    agentId: null,
+    title: 'POLICY-ACCESS-REVIEW access review policy document',
+    currentVersion: 1,
+    createdAt: '2026-08-15T08:00:00Z',
+    updatedAt: '2026-08-15T08:00:00Z',
+    tags: { team: 'payments', source: 'MOCK_SHAREPOINT', technology: 'unknown', collectionMethod: 'manual' },
+    latest: {
+      version: 1,
+      sha256: '9d0e1f2a9d0e1f2a9d0e1f2a9d0e1f2a9d0e1f2a9d0e1f2a9d0e1f2a9d0e1f2a',
+      contentType: 'application/pdf',
+      sizeBytes: 20480,
+      objectKey: 'evidence/ev-008/v1/9d0e1f2a',
+      collectedAt: '2026-08-15T08:00:00Z',
+      collectedBy: 'pramaan-agent',
+      ingestionRunId: 'run-001',
+      metadata: { collector: 'integration', sourceSystem: 'MOCK_SHAREPOINT', simulated: 'true' },
+    },
+  },
+]
+
 export const mockEvidence: EvidenceView[] = (evidenceRaw.evidence as unknown as EvidenceView[]).map(
   withNamingConvention,
 )
+
+const supplementalEvidence: EvidenceView[] = (SUPPLEMENTAL_RAW_EVIDENCE as unknown as EvidenceView[]).map(
+  withNamingConvention,
+)
+
+/** What the similarity mocks search: the shared fixtures plus the reuse-only supplemental records. */
+function reuseCorpus(): EvidenceView[] {
+  return [...mockEvidence, ...supplementalEvidence]
+}
 
 // Demo seam for "Reuse by control": leave one record tagged to only its primary
 // framework so the "Reuse for [framework]" action has something to add. Live
@@ -215,7 +291,11 @@ export function mockEvidencePage(params: EvidenceQueryParams): Page<EvidenceView
 }
 
 export function mockEvidenceById(id: string): EvidenceView {
-  return mockEvidence.find((e) => e.evidenceId === id) ?? mockEvidence[0]
+  return (
+    mockEvidence.find((e) => e.evidenceId === id) ??
+    supplementalEvidence.find((e) => e.evidenceId === id) ??
+    mockEvidence[0]
+  )
 }
 
 export function mockVerify(id: string, version?: number): IntegrityReport {
@@ -1641,7 +1721,7 @@ function reuseMatches(
   queryControl: string | undefined,
   querySha?: string | null,
 ): SimilarEvidence[] {
-  return mockEvidence
+  return reuseCorpus()
     .filter((e) => e.evidenceId !== excludeId)
     .map((e) => {
       const score = round3(jaccard(queryTokens, tokens(e)))
@@ -1683,7 +1763,7 @@ export function mockReuseByEvidence(
 ): ReuseResult {
   const target = mockEvidenceById(evidenceId)
   const querySha = target.latest?.sha256 ?? null
-  const exactDuplicates: SimilarEvidence[] = mockEvidence
+  const exactDuplicates: SimilarEvidence[] = reuseCorpus()
     .filter((e) => e.evidenceId !== evidenceId && !!querySha && (e.latest?.sha256 ?? null) === querySha)
     .map((e) => ({
       evidenceId: e.evidenceId,
@@ -1702,7 +1782,7 @@ export function mockReuseByEvidence(
     queryText: null,
     embeddingModel: 'mock-embed:v1(dim=256)',
     vectorStore: 'memory',
-    indexed: mockEvidence.length,
+    indexed: reuseCorpus().length,
     querySha256: querySha,
     exactDuplicates,
     matches: reuseMatches(
@@ -1724,7 +1804,7 @@ export function mockReuseByText(text: string, limit = 5, minScore = 0.3): ReuseR
     queryText: text,
     embeddingModel: 'mock-embed:v1(dim=256)',
     vectorStore: 'memory',
-    indexed: mockEvidence.length,
+    indexed: reuseCorpus().length,
     querySha256: null,
     exactDuplicates: [],
     matches: reuseMatches(t, limit, minScore, undefined, undefined, undefined, null),
@@ -2082,4 +2162,268 @@ export function mockAdminUpsert(body: AdminUserUpsert): AdminUserView {
     createdAt: NOW,
     updatedAt: NOW,
   }
+}
+
+// ---- Evidence Reuse -> "Find similar evidence": self-contained demo corpus -----------------
+//
+// This tab is intentionally always-mock: it never calls the backend (no Ollama / pgvector /
+// object store dependency). The corpus below is deliberately separate from `mockEvidence`, which
+// other pages and tests assert on. Field values are invented but internally consistent (file name
+// follows the UC03 convention {app}_{control}_{type}_{yyyymmdd}_{seq}; hashes are deterministic).
+
+/** Deterministic 64-hex stand-in for a SHA-256 (same seed -> same "hash", so duplicates can be shown). */
+function fakeSha(seed: string): string {
+  let h = 2166136261
+  let out = ''
+  for (let i = 0; out.length < 64; i++) {
+    h ^= seed.charCodeAt(i % seed.length) + i
+    h = Math.imul(h, 16777619) >>> 0
+    out += h.toString(16).padStart(8, '0')
+  }
+  return out.slice(0, 64)
+}
+
+type DemoSeed = Omit<ReuseEvidenceDetail, 'fileName' | 'sha256'> & { hashSeed?: string; ext: string }
+
+const DEMO_SEEDS: DemoSeed[] = [
+  {
+    evidenceId: 'ev-101', applicationSlug: 'net-banking', framework: 'PCI_DSS', controlId: 'OS-SSH-ROOT-LOGIN',
+    evidenceType: 'HOST-CONFIG', technology: 'linux', sourceSystem: 'AGENT_OS_LINUX', title: 'SSH root login disabled on app servers',
+    contentType: 'application/json', ext: 'json', sizeBytes: 2148, uploadedAt: '2026-09-04T06:12:41Z', collectedBy: 'pramaan-agent', version: 2,
+    preview: '{\n  "check": "sshd_config",\n  "PermitRootLogin": "no",\n  "hosts": ["nb-app-01", "nb-app-02"],\n  "status": "PASS"\n}',
+  },
+  {
+    evidenceId: 'ev-102', applicationSlug: 'payments', framework: 'C-SITE', controlId: 'OS-SSH-ROOT-LOGIN',
+    evidenceType: 'HOST-CONFIG', technology: 'linux', sourceSystem: 'AGENT_OS_LINUX', title: 'Root SSH login blocked on payment hosts',
+    contentType: 'application/json', ext: 'json', sizeBytes: 1962, uploadedAt: '2026-09-02T05:47:09Z', collectedBy: 'pramaan-agent', version: 1,
+    preview: '{\n  "check": "sshd_config",\n  "PermitRootLogin": "prohibit-password",\n  "hosts": ["pay-gw-01"],\n  "status": "WARNING"\n}',
+  },
+  {
+    evidenceId: 'ev-103', applicationSlug: 'mobile-banking', framework: 'ISO27001', controlId: 'OS-SSH-PASSWORD-AUTH',
+    evidenceType: 'HOST-CONFIG', technology: 'linux', sourceSystem: 'AGENT_OS_LINUX', title: 'SSH password authentication disabled',
+    contentType: 'application/json', ext: 'json', sizeBytes: 1804, uploadedAt: '2026-08-28T09:30:55Z', collectedBy: 'pramaan-agent', version: 1,
+    preview: '{\n  "check": "sshd_config",\n  "PasswordAuthentication": "no",\n  "hosts": ["mb-api-01", "mb-api-02"],\n  "status": "PASS"\n}',
+  },
+  {
+    evidenceId: 'ev-104', applicationSlug: 'net-banking', framework: 'PCI_DSS', controlId: 'DB-TLS-IN-TRANSIT',
+    evidenceType: 'DB-CONFIG', technology: 'postgresql', sourceSystem: 'AGENT_DATABASE_POSTGRESQL', title: 'PostgreSQL connections require TLS 1.2+',
+    contentType: 'application/json', ext: 'json', sizeBytes: 3076, uploadedAt: '2026-09-05T07:03:18Z', collectedBy: 'pramaan-agent', version: 3,
+    hashSeed: 'std-postgres-tls-baseline',
+    preview: '{\n  "check": "postgresql.conf",\n  "ssl": "on",\n  "ssl_min_protocol_version": "TLSv1.2",\n  "status": "PASS"\n}',
+  },
+  {
+    evidenceId: 'ev-105', applicationSlug: 'payments', framework: 'DPSC', controlId: 'DB-TLS-IN-TRANSIT',
+    evidenceType: 'DB-CONFIG', technology: 'postgresql', sourceSystem: 'AGENT_DATABASE_POSTGRESQL', title: 'PostgreSQL connections require TLS 1.2+',
+    contentType: 'application/json', ext: 'json', sizeBytes: 3076, uploadedAt: '2026-09-03T11:21:44Z', collectedBy: 'pramaan-agent', version: 1,
+    hashSeed: 'std-postgres-tls-baseline',
+    preview: '{\n  "check": "postgresql.conf",\n  "ssl": "on",\n  "ssl_min_protocol_version": "TLSv1.2",\n  "status": "PASS"\n}',
+  },
+  {
+    evidenceId: 'ev-106', applicationSlug: 'payments', framework: 'PCI_DSS', controlId: 'DB-AUDIT-LOGGING',
+    evidenceType: 'DB-CONFIG', technology: 'postgresql', sourceSystem: 'AGENT_DATABASE_POSTGRESQL', title: 'Database audit logging enabled (pgaudit)',
+    contentType: 'application/json', ext: 'json', sizeBytes: 2590, uploadedAt: '2026-08-30T04:55:02Z', collectedBy: 'pramaan-agent', version: 2,
+    preview: '{\n  "check": "pgaudit",\n  "pgaudit.log": "write, ddl, role",\n  "log_connections": "on",\n  "status": "PASS"\n}',
+  },
+  {
+    evidenceId: 'ev-107', applicationSlug: 'payments', framework: 'PCI_DSS', controlId: 'MW-TLS-VERSION',
+    evidenceType: 'MIDDLEWARE-CONFIG', technology: 'nginx', sourceSystem: 'AGENT_MIDDLEWARE_NGINX', title: 'NGINX accepts only TLS 1.2 and 1.3',
+    contentType: 'text/plain', ext: 'conf', sizeBytes: 1210, uploadedAt: '2026-09-06T08:40:27Z', collectedBy: 'pramaan-agent', version: 3,
+    preview: 'server {\n  listen 443 ssl;\n  ssl_protocols TLSv1.2 TLSv1.3;\n  ssl_prefer_server_ciphers on;\n}',
+  },
+  {
+    evidenceId: 'ev-108', applicationSlug: 'mobile-banking', framework: 'DPSC', controlId: 'MW-HSTS',
+    evidenceType: 'MIDDLEWARE-CONFIG', technology: 'nginx', sourceSystem: 'AGENT_MIDDLEWARE_NGINX', title: 'HSTS header enforced on API gateway',
+    contentType: 'text/plain', ext: 'conf', sizeBytes: 980, uploadedAt: '2026-09-01T10:15:36Z', collectedBy: 'pramaan-agent', version: 1,
+    preview: 'add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;',
+  },
+  {
+    evidenceId: 'ev-109', applicationSlug: 'payments', framework: 'C-SITE', controlId: 'TLS-CERT-EXPIRY',
+    evidenceType: 'TLS-SCAN', technology: 'tls', sourceSystem: 'AGENT_TLS', title: 'Certificate expiry scan - 212 days remaining',
+    contentType: 'application/json', ext: 'json', sizeBytes: 1533, uploadedAt: '2026-09-07T03:02:50Z', collectedBy: 'pramaan-agent', version: 1,
+    preview: '{\n  "endpoint": "pay.example-bank.in:443",\n  "notAfter": "2027-04-21T00:00:00Z",\n  "daysRemaining": 212,\n  "status": "PASS"\n}',
+  },
+  {
+    evidenceId: 'ev-110', applicationSlug: 'mobile-banking', framework: 'ISG', controlId: 'TLS-CERT-TRUST',
+    evidenceType: 'TLS-SCAN', technology: 'tls', sourceSystem: 'AGENT_TLS', title: 'Certificate chain trusted by approved CA',
+    contentType: 'application/json', ext: 'json', sizeBytes: 1720, uploadedAt: '2026-08-26T12:44:13Z', collectedBy: 'pramaan-agent', version: 1,
+    preview: '{\n  "endpoint": "m.example-bank.in:443",\n  "issuer": "Internal Issuing CA G2",\n  "chainValid": true,\n  "status": "PASS"\n}',
+  },
+  {
+    evidenceId: 'ev-111', applicationSlug: 'net-banking', framework: 'PCI_DSS', controlId: 'TLS-PROTOCOL-VERSION',
+    evidenceType: 'TLS-SCAN', technology: 'tls', sourceSystem: 'AGENT_TLS', title: 'Legacy TLS 1.0/1.1 disabled on public endpoint',
+    contentType: 'application/json', ext: 'json', sizeBytes: 1688, uploadedAt: '2026-09-08T02:18:31Z', collectedBy: 'pramaan-agent', version: 2,
+    preview: '{\n  "endpoint": "nb.example-bank.in:443",\n  "TLSv1.0": false,\n  "TLSv1.1": false,\n  "TLSv1.2": true,\n  "TLSv1.3": true\n}',
+  },
+  {
+    evidenceId: 'ev-112', applicationSlug: 'payments', framework: 'ITPP', controlId: 'ITPP-CHG-02',
+    evidenceType: 'CHANGE-TICKET', technology: 'jira', sourceSystem: 'MOCK_JIRA', title: 'Approved change ticket CHG-20418 for gateway release',
+    contentType: 'application/json', ext: 'json', sizeBytes: 2412, uploadedAt: '2026-08-20T14:05:12Z', collectedBy: 'pramaan-agent', version: 1,
+    preview: '{\n  "ticket": "CHG-20418",\n  "summary": "Payment gateway v4.8 release",\n  "approvedBy": "cab.chair",\n  "state": "Implemented"\n}',
+  },
+  {
+    evidenceId: 'ev-113', applicationSlug: 'mobile-banking', framework: 'ITPP', controlId: 'ITPP-CHG-02',
+    evidenceType: 'CHANGE-TICKET', technology: 'jira', sourceSystem: 'MOCK_JIRA', title: 'Approved change ticket CHG-20377 for app store release',
+    contentType: 'application/json', ext: 'json', sizeBytes: 2296, uploadedAt: '2026-08-14T09:48:59Z', collectedBy: 'pramaan-agent', version: 1,
+    preview: '{\n  "ticket": "CHG-20377",\n  "summary": "Mobile app 7.2 production rollout",\n  "approvedBy": "cab.chair",\n  "state": "Closed"\n}',
+  },
+  {
+    evidenceId: 'ev-114', applicationSlug: 'mobile-banking', framework: 'DPSC', controlId: 'DPSC-SDLC-04',
+    evidenceType: 'CODE-REVIEW', technology: 'github', sourceSystem: 'MOCK_GITHUB', title: 'Pull request review with security sign-off',
+    contentType: 'application/json', ext: 'json', sizeBytes: 3390, uploadedAt: '2026-08-31T16:22:40Z', collectedBy: 'pramaan-agent', version: 1,
+    preview: '{\n  "repo": "mobile-banking/app",\n  "pullRequest": 1184,\n  "reviewers": ["sec.reviewer", "tech.lead"],\n  "decision": "APPROVED"\n}',
+  },
+  {
+    evidenceId: 'ev-115', applicationSlug: 'net-banking', framework: 'PCI_DSS', controlId: 'PCI-DSS-6.2',
+    evidenceType: 'CODE-REVIEW', technology: 'github', sourceSystem: 'MOCK_GITHUB', title: 'Secure code review evidence for release branch',
+    contentType: 'application/json', ext: 'json', sizeBytes: 2874, uploadedAt: '2026-08-25T13:10:05Z', collectedBy: 'pramaan-agent', version: 2,
+    preview: '{\n  "repo": "net-banking/portal",\n  "branch": "release/2026.09",\n  "sastFindings": {"critical": 0, "high": 0},\n  "decision": "APPROVED"\n}',
+  },
+  {
+    evidenceId: 'ev-116', applicationSlug: 'net-banking', framework: 'PCI_DSS', controlId: 'NET-FIREWALL-RULES',
+    evidenceType: 'AGENT-SCAN', technology: 'firewall', sourceSystem: 'AGENT_NETWORK_FIREWALL', title: 'Network firewall rule scan - default deny inbound',
+    contentType: 'application/json', ext: 'json', sizeBytes: 4108, uploadedAt: '2026-09-02T08:00:00Z', collectedBy: 'pramaan-agent', version: 1,
+    preview: '{\n  "policy": "default-deny-inbound",\n  "openPorts": [443, 8443],\n  "anyAnyRules": 0,\n  "status": "PASS"\n}',
+  },
+  {
+    evidenceId: 'ev-117', applicationSlug: 'payments', framework: 'ISO27001', controlId: 'POLICY-ACCESS-REVIEW',
+    evidenceType: 'GENERAL', technology: 'sharepoint', sourceSystem: 'MOCK_SHAREPOINT', title: 'Quarterly access review policy document',
+    contentType: 'application/pdf', ext: 'pdf', sizeBytes: 184320, uploadedAt: '2026-08-15T08:00:00Z', collectedBy: 'compliance.officer', version: 1,
+    preview: 'Access Review Policy - Payments (Q3 2026)\n1. Scope: all privileged and business roles\n2. Frequency: quarterly\n3. Sign-off: application owner + CISO office',
+  },
+  {
+    evidenceId: 'ev-118', applicationSlug: 'mobile-banking', framework: 'ISO27001', controlId: 'POLICY-ACCESS-REVIEW',
+    evidenceType: 'GENERAL', technology: 'sharepoint', sourceSystem: 'MOCK_SHAREPOINT', title: 'Access review sign-off sheet',
+    contentType: 'application/pdf', ext: 'pdf', sizeBytes: 96256, uploadedAt: '2026-08-18T10:30:00Z', collectedBy: 'compliance.officer', version: 1,
+    preview: 'Access Review Sign-off - Mobile Banking (Q3 2026)\nReviewed accounts: 142\nRevoked: 6\nApproved by: application owner',
+  },
+]
+
+const DEMO_CORPUS: ReuseEvidenceDetail[] = DEMO_SEEDS.map(({ hashSeed, ext, ...rest }) => {
+  const stamp = rest.uploadedAt.slice(0, 10).replace(/-/g, '')
+  return {
+    ...rest,
+    fileName: `${rest.applicationSlug}_${rest.controlId}_${rest.evidenceType}_${stamp}_${String(rest.version).padStart(3, '0')}.${ext}`,
+    sha256: fakeSha(hashSeed ?? rest.evidenceId),
+  }
+})
+
+function demoTokens(r: ReuseEvidenceDetail): Set<string> {
+  const raw = [r.applicationSlug, r.framework, r.controlId, r.evidenceType, r.technology, r.sourceSystem, r.title]
+    .join(' ')
+    .toLowerCase()
+    .match(/[a-z0-9]+/g)
+  return new Set(raw ?? [])
+}
+
+/** Blend of query coverage and Dice overlap, so scores spread across ~0.1-1.0 instead of clustering. */
+function demoScore(query: Set<string>, doc: Set<string>): number {
+  let inter = 0
+  query.forEach((t) => doc.has(t) && inter++)
+  if (query.size === 0 || inter === 0) return 0
+  const coverage = inter / query.size
+  const dice = (2 * inter) / (query.size + doc.size)
+  return Math.min(0.99, Math.round((0.7 * coverage + 0.3 * dice) * 1000) / 1000)
+}
+
+function demoHint(exact: boolean, sameControl: boolean, crossApp: boolean, appSlug: string, score: number): string {
+  if (exact) return 'exact SHA-256 duplicate - reuse instead of re-collecting'
+  if (sameControl && crossApp) return `same control already evidenced for ${appSlug} - candidate for reuse`
+  if (sameControl) return 'prior evidence for the same control'
+  if (score >= 0.9) return 'near-identical content - check for a shared/common control'
+  return 'related evidence'
+}
+
+function demoMatches(
+  query: Set<string>,
+  limit: number,
+  minScore: number,
+  excludeId?: string,
+  target?: ReuseEvidenceDetail,
+): SimilarEvidence[] {
+  return DEMO_CORPUS.filter((r) => r.evidenceId !== excludeId)
+    .map((r) => {
+      const exact = !!target && r.sha256 === target.sha256
+      const score = exact ? 1 : demoScore(query, demoTokens(r))
+      const crossApplication = !!target && target.applicationSlug !== r.applicationSlug
+      const sameControl = !!target && target.controlId === r.controlId
+      return {
+        evidenceId: r.evidenceId,
+        applicationSlug: r.applicationSlug,
+        framework: r.framework,
+        controlId: r.controlId,
+        sha256: r.sha256,
+        score,
+        crossApplication,
+        sameControl,
+        exactDuplicate: exact,
+        reuseHint: demoHint(exact, sameControl, crossApplication, r.applicationSlug, score),
+      }
+    })
+    .filter((m) => m.score >= minScore)
+    .sort((a, b) => b.score - a.score || a.evidenceId.localeCompare(b.evidenceId))
+    .slice(0, Math.max(1, limit))
+}
+
+const DEMO_MODEL = 'mock-embed:v1(dim=256)'
+
+/** Free-text / evidence-type search over the demo corpus. */
+export function mockSimilarByText(text: string, limit = 5, minScore = 0.1): ReuseResult {
+  const q = new Set((text ?? '').toLowerCase().match(/[a-z0-9]+/g) ?? [])
+  return {
+    queryEvidenceId: null,
+    queryText: text,
+    embeddingModel: DEMO_MODEL,
+    vectorStore: 'memory',
+    indexed: DEMO_CORPUS.length,
+    querySha256: null,
+    exactDuplicates: [],
+    matches: demoMatches(q, limit, minScore),
+  }
+}
+
+/** "More like this" for one demo evidence record; byte-identical records are listed as exact duplicates. */
+export function mockSimilarByEvidence(evidenceId: string, limit = 5, minScore = 0.1): ReuseResult {
+  const target = DEMO_CORPUS.find((r) => r.evidenceId === evidenceId)
+  if (!target) {
+    return {
+      queryEvidenceId: evidenceId,
+      queryText: null,
+      embeddingModel: DEMO_MODEL,
+      vectorStore: 'memory',
+      indexed: DEMO_CORPUS.length,
+      querySha256: null,
+      exactDuplicates: [],
+      matches: [],
+    }
+  }
+  const matches = demoMatches(demoTokens(target), limit, minScore, evidenceId, target)
+  const exactDuplicates = demoMatches(demoTokens(target), DEMO_CORPUS.length, 1, evidenceId, target).filter(
+    (m) => m.exactDuplicate,
+  )
+  return {
+    queryEvidenceId: evidenceId,
+    queryText: null,
+    embeddingModel: DEMO_MODEL,
+    vectorStore: 'memory',
+    indexed: DEMO_CORPUS.length,
+    querySha256: target.sha256,
+    exactDuplicates,
+    matches,
+  }
+}
+
+/** Applications that have demo reuse evidence (for the by-evidence picker). */
+export function mockReuseApplications(): ApplicationView[] {
+  const slugs = new Set(DEMO_CORPUS.map((r) => r.applicationSlug))
+  return mockApplications.filter((a) => slugs.has(a.slug))
+}
+
+/** Demo evidence held for one application (for the by-evidence picker). */
+export function mockReuseEvidenceFor(applicationSlug: string): ReuseEvidenceDetail[] {
+  return DEMO_CORPUS.filter((r) => r.applicationSlug === applicationSlug)
+}
+
+/** Full mock detail for one demo evidence record (drives the result-row detail modal). */
+export function mockReuseDetail(evidenceId: string): ReuseEvidenceDetail | undefined {
+  return DEMO_CORPUS.find((r) => r.evidenceId === evidenceId)
 }

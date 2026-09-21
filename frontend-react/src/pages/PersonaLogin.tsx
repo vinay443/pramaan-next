@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 export const PERSONA_STORAGE_KEY = 'pramaan_selected_persona'
 
-export type PersonaCode = 'APP' | 'AUDITOR' | 'FH' | 'VH' | 'CIO'
+export type PersonaCode = 'APP' | 'AUDITOR' | 'FH' | 'VH' | 'CIO' | 'ADMIN'
 
 interface Persona {
   code: PersonaCode
@@ -16,6 +16,7 @@ export const PERSONAS: Persona[] = [
   { code: 'FH', name: 'Functional Head' },
   { code: 'VH', name: 'Vertical Head' },
   { code: 'CIO', name: 'CIO' },
+  { code: 'ADMIN', name: 'Admin' },
 ]
 
 export function PersonaLogin() {

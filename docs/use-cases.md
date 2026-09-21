@@ -17,6 +17,22 @@ is addressed.
 
 ---
 
+## Common Frameworks (Phase 1)
+
+PCI DSS, DPSC, ISO 27001 / IS, and C-SITE apply across all Phase 1 use cases (UC1–UC5).
+ISG applies only to UC1 and UC3. VAPT does not apply to any Phase 1 use case.
+
+## Common Controls (Phase 1)
+
+- Encryption at Rest
+- Encryption in Transit
+
+These two are treated as baseline controls in effect across all Phase 1 use cases and
+are not repeated under each individual use case below. Any other control a use case
+relies on is listed under that use case's own "Controls used".
+
+---
+
 ## UC1 — Automated scheduled evidence pull
 
 **What it is.** This use case is ECS reaching out to a system on a recurring schedule
@@ -32,22 +48,6 @@ formats, at different times, sometimes right before a deadline under time pressu
 Automating the pull turns evidence collection into a continuous, predictable process
 rather than a scramble that happens once a year, and it removes the manual effort and
 error that comes with someone hand-copying configuration values.
-
-**Controls Used.**
-- *Encryption at rest* — the evidence, once pulled, must be stored in a way that
-  protects it from being read by anyone who shouldn't have access, even if the
-  underlying storage is ever compromised.
-- *Encryption in transit* — the same evidence must be protected while it is moving
-  from the source system to ECS, so it cannot be intercepted or altered mid-transfer.
-- *Automated evidence collection* — the mechanism of pulling evidence on a schedule
-  rather than through a manual, one-off request, which is what makes the evidence
-  trail continuous and repeatable.
-
-**Frameworks it maps to.** PCI DSS, DPSC, ISG, ISO 27001, IS, and C-SITE all apply to
-this use case. VAPT does **not** apply here — the `Controls_Framework_Mapping` sheet
-marks it with a "–" for this control set, because VAPT governs vulnerability
-assessment and penetration testing findings specifically, not the general encryption
-and automated-collection controls this use case relies on.
 
 **Why these controls are required.** Configuration data pulled straight from a live
 system — database credentials context, network topology, server settings — is
@@ -78,19 +78,6 @@ uploaded to the wrong place. Bulk upload turns a tedious, error-prone chore into
 single, auditable action, which matters especially at audit-deadline crunch time when
 large volumes of evidence need to move quickly and correctly.
 
-**Controls Used.**
-- *Secure data transfer* — the batch of files must be protected while it is being
-  uploaded, so a large amount of potentially sensitive evidence isn't exposed to
-  interception in a single transfer.
-- *Encrypted storage* — once uploaded, the files must be kept encrypted at rest, the
-  same as any other evidence, so that storing many files together doesn't create a
-  concentrated point of exposure.
-
-**Frameworks it maps to.** PCI DSS, DPSC, ISO 27001, IS, and C-SITE apply to this use
-case. ISG is not listed against this control set in the source sheet, and VAPT is
-explicitly excluded ("–" in the mapping sheet) — bulk upload is a data-handling
-concern, not a vulnerability-testing one, so VAPT's controls don't govern it.
-
 **Why these controls are required.** A bulk channel multiplies the consequence of any
 single weakness: where a one-off upload exposes at most one document if something goes
 wrong, a bulk upload can expose dozens of files from a single mishandled transfer or
@@ -118,19 +105,6 @@ ISO 27001 control all at once. Without consistent tagging and naming, there is n
 practical way to know that, and the organization ends up collecting the same evidence
 redundantly for every framework it happens to touch. Consistent metadata is what makes
 evidence reuse, cross-framework mapping, and fast retrieval possible.
-
-**Controls Used.**
-- *Evidence classification* — assigning each piece of evidence a defined category
-  (its type, its source, its collection method) so it can be filtered, searched, and
-  reasoned about systematically rather than read individually.
-- *Control mapping* — tying each piece of evidence explicitly to the specific control
-  it supports, so an auditor can trace directly from a control requirement to the
-  evidence that satisfies it, and back again.
-
-**Frameworks it maps to.** PCI DSS, DPSC, ISG, ISO 27001, IS, and C-SITE all apply.
-VAPT is excluded ("–" in the mapping sheet) — classification and control-mapping are
-about organizing evidence for audit traceability, not about vulnerability findings,
-which is VAPT's domain.
 
 **Why these controls are required.** Frameworks consistently require that audit
 evidence be traceable to a specific control requirement — evidence that exists but
@@ -161,28 +135,18 @@ than having to inspect records one by one to understand coverage and freshness. 
 use case addresses both: integrity assurance for trust, and a dashboard for
 visibility.
 
-**Controls Used.**
-- *Cryptographic integrity validation* — computing and re-checking a cryptographic
-  fingerprint of each piece of evidence, so any change to the underlying content after
-  submission is immediately detectable.
-- *Monitoring* — the ongoing, dashboard-level visibility into the state of the
-  evidence repository (volume, freshness, integrity status) rather than a one-time
-  check performed only when someone happens to ask.
-
-**Frameworks it maps to.** PCI DSS, DPSC, ISO 27001, IS, and C-SITE apply. ISG is not
-listed against this control set in the source sheet, and VAPT is excluded ("–") —
-integrity validation and monitoring here are about the evidence artifacts themselves,
-not about vulnerability assessment.
-
 **Why these controls are required.** An auditor's ability to rely on evidence collapses
 the moment tampering becomes plausible and undetectable — cryptographic integrity
 checking is the direct, mathematically verifiable way to guarantee that what's being
 reviewed today is exactly what was submitted, with no reliance on trusting whoever
-handled the file in between. Monitoring complements this by making compliance
-visibility a routine, always-available state rather than something reconstructed only
-under audit pressure — frameworks that expect continuous compliance oversight (such as
-ISO 27001 and C-SITE) are effectively asking for this kind of standing dashboard, not
-just a point-in-time report.
+handled the file in between.
+
+**Controls used (use-case-specific, beyond the Common Controls).**
+- *Logging & Monitoring* — the dashboard makes compliance visibility a routine,
+  always-available state rather than something reconstructed only under audit
+  pressure. Frameworks that expect continuous compliance oversight (such as ISO 27001
+  and C-SITE) are effectively asking for this kind of standing dashboard, not just a
+  point-in-time report.
 
 ---
 
@@ -204,23 +168,22 @@ question and the way it's answered, so the same technical check produces consist
 comparable evidence no matter who or what triggers it, and it can be reused across
 many applications and audit cycles without being redefined each time.
 
-**Controls Used.** The source sheet leaves the "Controls Used" cell blank for this use
-case. The `Controls_Framework_Mapping` sheet contains one control entry — "Evidence
-validation control" — that does not correspond to any other use case's stated control
-set and is the closest semantic fit for a query-and-validate capability like this one;
-it is presented here as the most reasonable inference, not as a value stated directly
-in the source. Read that way, the relevant control is:
+Beyond the Common Controls above, the source sheet leaves the "Controls Used" cell
+blank for this use case. The `Controls_Framework_Mapping` sheet contains one control
+entry — "Evidence validation control" — that does not correspond to any other use
+case's stated control set and is the closest semantic fit for a query-and-validate
+capability like this one; it is presented here as the most reasonable inference, not
+as a value stated directly in the source. Read that way, the relevant control is:
 - *Evidence validation control* — confirming that the output of a query is treated and
   handled as genuine audit evidence (attributable, traceable, tamper-checked), not
   merely as the raw output of a diagnostic script.
 
-**Frameworks it maps to.** Per the source sheet's own row for this use case: PCI DSS,
-DPSC, ISO 27001, IS, and C-SITE apply; ISG is not listed. Worth noting: the
-`Controls_Framework_Mapping` sheet's "Evidence validation control" row (the inferred
-control above) lists VAPT as applicable, which conflicts with this use case's own row
-in `MD_Usecases`, where VAPT is absent from the frameworks list. This is a genuine
-inconsistency between the two sheets in the source workbook, not a judgment call made
-here.
+Worth noting: the `Controls_Framework_Mapping` sheet's "Evidence validation control"
+row (the inferred control above) lists VAPT as applicable, which conflicts with this
+use case's own row in `MD_Usecases`, where VAPT is absent from the frameworks list, and
+with the Common Frameworks note above that VAPT does not apply to any Phase 1 use
+case. This is a genuine inconsistency between the two sheets in the source workbook,
+not a judgment call made here.
 
 **Why these controls are required.** A predefined query only has audit value if its
 result is trusted as evidence in the same way any other collected artifact is — that
