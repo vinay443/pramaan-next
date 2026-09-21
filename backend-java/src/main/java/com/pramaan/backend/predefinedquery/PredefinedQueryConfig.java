@@ -15,10 +15,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * {@code pramaan.predefined-queries.mode} (SIMULATED | LIVE, default SIMULATED).
  * In LIVE mode, wires up one {@link TechnologyLiveExecutor} per technology that
  * has a real target — currently PostgreSQL (reuses the app's own datasource),
- * Aerospike ({@code pramaan.aerospike.*}), NGINX ({@code pramaan.nginx.*}), and
- * Aurora MySQL ({@code pramaan.aurora-mysql.*}). A technology with no live
- * executor registered simply falls back to SIMULATED_FALLBACK per-control, it
- * doesn't disable LIVE mode for the technologies that do have one.
+ * Aerospike ({@code pramaan.aerospike.*}), NGINX ({@code pramaan.nginx.*}),
+ * Aurora MySQL ({@code pramaan.aurora-mysql.*}), YugabyteDB
+ * ({@code pramaan.yugabytedb.*}), and Oracle ({@code pramaan.oracle.*}). A
+ * technology with no live executor registered simply falls back to
+ * SIMULATED_FALLBACK per-control, it doesn't disable LIVE mode for the
+ * technologies that do have one.
  */
 @Configuration
 class PredefinedQueryConfig {
@@ -40,7 +42,17 @@ class PredefinedQueryConfig {
             @Value("${pramaan.aurora-mysql.port:3307}") int auroraPort,
             @Value("${pramaan.aurora-mysql.database:pramaan}") String auroraDatabase,
             @Value("${pramaan.aurora-mysql.user:root}") String auroraUser,
-            @Value("${pramaan.aurora-mysql.password:pramaan}") String auroraPassword) {
+            @Value("${pramaan.aurora-mysql.password:pramaan}") String auroraPassword,
+            @Value("${pramaan.yugabytedb.host:localhost}") String yugabyteHost,
+            @Value("${pramaan.yugabytedb.port:5435}") int yugabytePort,
+            @Value("${pramaan.yugabytedb.database:yugabyte}") String yugabyteDatabase,
+            @Value("${pramaan.yugabytedb.user:yugabyte}") String yugabyteUser,
+            @Value("${pramaan.yugabytedb.password:}") String yugabytePassword,
+            @Value("${pramaan.oracle.host:localhost}") String oracleHost,
+            @Value("${pramaan.oracle.port:1521}") int oraclePort,
+            @Value("${pramaan.oracle.service-name:FREEPDB1}") String oracleServiceName,
+            @Value("${pramaan.oracle.user:system}") String oracleUser,
+            @Value("${pramaan.oracle.password:pramaan}") String oraclePassword) {
         boolean live = "LIVE".equalsIgnoreCase(mode == null ? "" : mode.trim());
         if (!live) {
             log.info("predefined-query executor: SIMULATED");
@@ -58,10 +70,14 @@ class PredefinedQueryConfig {
         liveExecutors.add(new AerospikeLiveExecutor(aerospikeHost, aerospikePort, aerospikeNamespace));
         liveExecutors.add(new NginxLiveExecutor(nginxHost, nginxPort, nginxStatusPath, nginxConfigPath));
         liveExecutors.add(new AuroraMysqlLiveExecutor(auroraHost, auroraPort, auroraDatabase, auroraUser, auroraPassword));
+        liveExecutors.add(new YugabyteLiveExecutor(
+                yugabyteHost, yugabytePort, yugabyteDatabase, yugabyteUser, yugabytePassword));
+        liveExecutors.add(new OracleLiveExecutor(
+                oracleHost, oraclePort, oracleServiceName, oracleUser, oraclePassword));
 
-        log.info("predefined-query executor: LIVE (PostgreSQL + Aerospike + NGINX + Aurora MySQL controls "
-                + "executed for real when their target is reachable; every other technology falls back to "
-                + "SIMULATED_FALLBACK)");
+        log.info("predefined-query executor: LIVE (PostgreSQL + Aerospike + NGINX + Aurora MySQL + YugabyteDB "
+                + "+ Oracle controls executed for real when their target is reachable; every other technology "
+                + "falls back to SIMULATED_FALLBACK)");
         return new LivePredefinedQueryExecutor(liveExecutors);
     }
 }

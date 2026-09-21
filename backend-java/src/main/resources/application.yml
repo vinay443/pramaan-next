@@ -107,6 +107,30 @@ pramaan:
     database: ${PRAMAAN_AURORA_MYSQL_DATABASE:pramaan}
     user: ${PRAMAAN_AURORA_MYSQL_USER:root}
     password: ${PRAMAAN_AURORA_MYSQL_PASSWORD:pramaan}
+  # Real target for the YugabyteDB predefined-query controls in LIVE mode — see
+  # docker-compose.yml's `yugabytedb` service (YSQL is PostgreSQL-wire-compatible,
+  # so this reuses org.postgresql, same as PostgresLiveExecutor). Host-mapped to
+  # 5435 — 5433/5434 are already used by the postgres/pgvector services.
+  yugabytedb:
+    host: ${PRAMAAN_YUGABYTEDB_HOST:localhost}
+    port: ${PRAMAAN_YUGABYTEDB_PORT:5435}
+    database: ${PRAMAAN_YUGABYTEDB_DATABASE:yugabyte}
+    user: ${PRAMAAN_YUGABYTEDB_USER:yugabyte}
+    password: ${PRAMAAN_YUGABYTEDB_PASSWORD:}
+  # Real target for the Oracle predefined-query controls in LIVE mode — see
+  # docker-compose.yml's `oracle` service (gvenzl/oracle-free, service name
+  # FREEPDB1 — the image's default pluggable database). Connects as SYSTEM:
+  # several controls query dba_*/v$session views that need SELECT_CATALOG_ROLE
+  # or DBA privilege, which an ordinary schema user doesn't have by default —
+  # SYSTEM has it out of the box on this dev image. Dev/demo-only; a real
+  # deployment should use a dedicated read-only user granted SELECT_CATALOG_ROLE
+  # instead of SYSTEM. See OracleLiveExecutor's Javadoc.
+  oracle:
+    host: ${PRAMAAN_ORACLE_HOST:localhost}
+    port: ${PRAMAAN_ORACLE_PORT:1521}
+    service-name: ${PRAMAAN_ORACLE_SERVICE_NAME:FREEPDB1}
+    user: ${PRAMAAN_ORACLE_USER:system}
+    password: ${PRAMAAN_ORACLE_PASSWORD:pramaan}
   scheduler:
     # Background @Scheduled trigger. Off by default; runs are normally API-triggered.
     auto-enabled: ${PRAMAAN_SCHEDULER_AUTO:false}
