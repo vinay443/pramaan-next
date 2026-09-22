@@ -169,6 +169,39 @@ services:
       retries: 10
       start_period: 60s
 
+  # Real target for the RHEL predefined-query controls in LIVE mode
+  # (backend-java's RhelLiveExecutor). No official RHEL image exists locally —
+  # rockylinux:9 stands in (binary-compatible OS/security-posture surface for
+  # every control this catalogue currently has) with openssh-server installed
+  # and started directly, since the base image has no systemd/PID 1 init.
+  # Known limitation from that: the firewalld/auditd controls (RH8/RH9
+  # -004/-005) return empty output here rather than a real service-status
+  # string — harmless, the catalog commands all end in `|| true`. Host-mapped
+  # to 2222 — port 22 isn't available for host binding without root and would
+  # collide with the host's own sshd.
+  rhel:
+    image: rockylinux:9
+    container_name: pramaan-rhel
+    command: >
+      bash -c "
+        dnf install -y openssh-server passwd >/dev/null &&
+        ssh-keygen -A &&
+        echo 'root:pramaan' | chpasswd &&
+        sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config &&
+        sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config &&
+        exec /usr/sbin/sshd -D
+      "
+    ports:
+      - "2222:22"
+    healthcheck:
+      # Reads the actual SSH banner rather than just checking the port is open,
+      # so this only reports healthy once sshd itself is accepting connections.
+      test: ["CMD-SHELL", "timeout 2 bash -c 'cat < /dev/tcp/127.0.0.1/22' | grep -q '^SSH-'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
 volumes:
   postgres-data:
   pgvector-data:

@@ -119,6 +119,21 @@ pramaan:
     database: ${PRAMAAN_YUGABYTEDB_DATABASE:yugabyte}
     user: ${PRAMAAN_YUGABYTEDB_USER:yugabyte}
     password: ${PRAMAAN_YUGABYTEDB_PASSWORD:}
+  # Real target for the RHEL predefined-query controls in LIVE mode — see
+  # docker-compose.yml's `rhel` service (rockylinux:9 + openssh-server, no
+  # systemd/PID 1 init — see that service's comment for the firewalld/auditd
+  # control limitation this implies). Host-mapped to 2222 — port 22 isn't
+  # available for host binding without root or would collide with the host's
+  # own sshd. password has a real default (unlike yugabytedb's blank one)
+  # since RHEL has no anonymous/passwordless mode the app should assume;
+  # private-key-path is optional and blank by default, for RhelLiveExecutor's
+  # key-based auth path.
+  rhel:
+    host: ${PRAMAAN_RHEL_HOST:localhost}
+    port: ${PRAMAAN_RHEL_PORT:2222}
+    user: ${PRAMAAN_RHEL_USER:root}
+    password: ${PRAMAAN_RHEL_PASSWORD:pramaan}
+    private-key-path: ${PRAMAAN_RHEL_PRIVATE_KEY_PATH:}
   # Real target for the Oracle predefined-query controls in LIVE mode — see
   # docker-compose.yml's `oracle` service (gvenzl/oracle-free, service name
   # FREEPDB1 — the image's default pluggable database). Connects as SYSTEM:
