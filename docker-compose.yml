@@ -126,6 +126,49 @@ services:
       retries: 10
       start_period: 30s
 
+  # Real target for the YugabyteDB predefined-query controls in LIVE mode
+  # (backend-java's YugabyteLiveExecutor). Single-node dev cluster via
+  # yugabyted; YSQL is PostgreSQL-wire-compatible so no separate driver is
+  # needed. Host-mapped to 5435 — 5433/5434 are already used by the
+  # postgres/pgvector services above.
+  yugabytedb:
+    image: yugabytedb/yugabyte:latest
+    container_name: pramaan-yugabytedb
+    command: ["bin/yugabyted", "start", "--background=false"]
+    ports:
+      - "5435:5433"
+    healthcheck:
+      # yugabyted binds YSQL to the container's own bridge IP, not loopback —
+      # `-h localhost` inside the container gets connection refused even once
+      # YSQL is ready, so resolve the container's own address first.
+      test: ["CMD-SHELL", "bin/ysqlsh -h $(hostname -i) -U yugabyte -c 'SELECT 1;'"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+
+  # Real target for the Oracle predefined-query controls in LIVE mode
+  # (backend-java's OracleLiveExecutor). gvenzl/oracle-free is the lightest
+  # official-adjacent Oracle image with a fast startup and its own built-in
+  # healthcheck.sh, so the healthcheck below calls that rather than a custom
+  # SQL probe. Default free-tier service name FREEPDB1, connects as SYSTEM
+  # (see OracleLiveExecutor's Javadoc for the privilege tradeoff).
+  oracle:
+    image: gvenzl/oracle-free:latest
+    container_name: pramaan-oracle
+    environment:
+      ORACLE_PASSWORD: pramaan
+      APP_USER: pramaan
+      APP_USER_PASSWORD: pramaan
+    ports:
+      - "1521:1521"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
 volumes:
   postgres-data:
   pgvector-data:

@@ -28,6 +28,11 @@ public class LivePredefinedQueryExecutor implements PredefinedQueryExecutor {
     }
 
     @Override
+    public boolean supportsLive(PredefinedQuery q) {
+        return liveExecutors.stream().anyMatch(e -> e.supports(q));
+    }
+
+    @Override
     public Output execute(PredefinedQuery q, String applicationSlug, Instant asOf) {
         for (TechnologyLiveExecutor live : liveExecutors) {
             if (live.supports(q)) {
