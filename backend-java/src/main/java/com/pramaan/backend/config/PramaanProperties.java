@@ -19,14 +19,19 @@ public record PramaanProperties(
     public record Admin(List<String> roles) {}
 
     /** Use Case 13 — evidence lifecycle. */
-    public record Evidence(Integer retentionDays) {
+    public record Evidence(Integer retentionDays, Integer auditorSlaDays) {
         public int retentionDaysOrDefault() {
             return retentionDays != null && retentionDays > 0 ? retentionDays : 365;
+        }
+
+        /** App Owner dashboard — Auditor SLA target: days from submission to review. */
+        public int auditorSlaDaysOrDefault() {
+            return auditorSlaDays != null && auditorSlaDays > 0 ? auditorSlaDays : 5;
         }
     }
 
     public Evidence evidenceOrDefault() {
-        return evidence != null ? evidence : new Evidence(365);
+        return evidence != null ? evidence : new Evidence(365, 5);
     }
 
     public record ObjectStore(String driver, Filesystem filesystem, Minio minio) {

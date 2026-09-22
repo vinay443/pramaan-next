@@ -74,6 +74,8 @@ pramaan:
   # Use Case 13 — evidence lifecycle: retention window for APPROVED evidence.
   evidence:
     retention-days: ${PRAMAAN_EVIDENCE_RETENTION_DAYS:365}
+    # App Owner dashboard — Auditor SLA: days from evidence submission to review considered on-time.
+    auditor-sla-days: ${PRAMAAN_EVIDENCE_AUDITOR_SLA_DAYS:5}
   # Predefined technical-query catalogue execution. mode: SIMULATED (default) | LIVE.
   # LIVE only executes for real against PostgreSQL (the postgres container already
   # migrated by Flyway); every other technology falls back to simulated output,

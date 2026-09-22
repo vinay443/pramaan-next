@@ -1530,3 +1530,281 @@ pre.json {
   color: var(--ink);
   font-weight: 600;
 }
+
+/* ---- persona dashboard tabs (dash-*) — shared by every persona's local-tab
+   layout in Dashboard.tsx (App Owner, Auditor, Functional Head, Vertical Head,
+   CIO, Admin); these classes had no rules before this pass. ---------------- */
+
+.dash-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+
+.dash-tabs button {
+  border-radius: 999px;
+}
+
+.dash-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dash-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.dash-hero-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.card.stat-lg .stat-value {
+  font-size: 34px;
+}
+
+.dash-rate-row {
+  margin-bottom: 18px;
+}
+
+.dash-urgency-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.dash-urgency-card {
+  border-left: 4px solid var(--line-strong);
+  padding-left: 16px;
+}
+
+.dash-urgency-amber {
+  border-left-color: var(--warn);
+}
+
+.dash-urgency-red {
+  border-left-color: var(--bad);
+}
+
+.dash-urgency-blue {
+  border-left-color: var(--accent);
+}
+
+.dash-urgency-value {
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.dash-urgency-label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-top: 2px;
+}
+
+.dash-urgency-context {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.dash-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.dash-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+
+.dash-chip strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-chip-ok {
+  border-color: var(--ok-line);
+  background: var(--ok-tint);
+  color: var(--ok);
+}
+
+.dash-chip-warn {
+  border-color: var(--warn-line);
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+
+.dash-chip-bad {
+  border-color: var(--bad-line);
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+
+.dash-chip-muted {
+  border-color: var(--line-strong);
+  background: var(--neutral-tint);
+  color: var(--ink-2);
+}
+
+.dash-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.dash-link-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dash-link-tile-icon {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.dash-link-tile-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.dash-link-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.dash-link-tile-label {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.dash-link-tile-hint {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.dash-link-tile-arrow {
+  color: var(--muted);
+}
+
+.dash-capped-table {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.dash-truncate {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* ---- App Owner dashboard header / cards (own-*) — POC-matched header,
+   findings grid and remediation list. Same .card/.stat/.pill primitives as
+   the rest of PRAMAAN; no new colors beyond the --warn/--bad/--accent accent
+   bars above (no equivalent "teal" token exists, so --accent stands in). --- */
+
+.own-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+.own-header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  padding-top: 4px;
+}
+
+.own-header-name {
+  font-weight: 600;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+
+.own-findings-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.own-finding-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.own-finding-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.own-remediation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.own-remediation-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.own-remediation-card strong {
+  display: block;
+}
+
+.primary-link-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: var(--r-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.primary-link-btn:hover {
+  background: var(--accent-strong);
+  color: var(--accent-ink);
+  text-decoration: none;
+}

@@ -285,7 +285,11 @@ public final class InsightDtos {
     public record NationalRollup(Instant generatedAt, double nationalCompliancePct,
                                  double nationalCompletenessPct, int applications,
                                  List<RegionFrameworkRow> byRegionFramework,
-                                 List<RegionGap> laggingRegions) {}
+                                 List<RegionGap> laggingRegions,
+                                 // merged in from the former /enterprise dashboard:
+                                 LeadershipDashboard portfolio, List<RegionPosture> regions,
+                                 List<GroupPosture> byBusinessUnit, List<GroupPosture> byCriticality,
+                                 List<AppPosture> topRisks) {}
 
     // ---- UC18 AI-assisted audit preparation ----------------------------
 
@@ -311,10 +315,31 @@ public final class InsightDtos {
     }
 
     public record ClosureStats(int approvals, int rejections, int resubmissions,
-                               Double avgDaysToApprove, Map<String, Integer> approvalsByWeek) {}
+                               Double avgDaysToApprove, Map<String, Integer> approvalsByWeek,
+                               /** Month-over-month % change in rejection count; null with &lt;2 months of data. */
+                               Double rejectionTrendPct) {}
 
     public record CollectionPoint(Instant at, int ingested, int duplicates, int failed) {}
 
     public record TrendReport(Instant generatedAt, TrendPoint current, List<TrendPoint> points,
                               ClosureStats closure, List<CollectionPoint> collection) {}
+
+    // ---- App Owner dashboard — evidence lifecycle summary (counts/rejections/SLA/aging) ----
+
+    public record LifecycleStateCounts(int draft, int submitted, int approved, int rejected,
+                                       int expired, int superseded) {}
+
+    public record RejectionAuditRow(String evidenceId, String applicationSlug, String framework,
+                                    String controlId, String reason, String rejectedBy,
+                                    Instant rejectedAt, String workflowState) {}
+
+    /** Computed metric — no direct backend source; see {@link PramaanProperties.Evidence#auditorSlaDaysOrDefault()}. */
+    public record AuditorSla(int reviewedWithinTarget, int totalReviewed, Double pct, int targetDays) {}
+
+    /** Computed metric — DRAFT/SUBMITTED evidence aging in the review queue. */
+    public record PendingAging(int count, Double avgDaysInQueue) {}
+
+    public record EvidenceLifecycleSummary(String applicationSlug, Instant generatedAt,
+                                           LifecycleStateCounts counts, List<RejectionAuditRow> rejections,
+                                           AuditorSla auditorSla, PendingAging pendingAging) {}
 }

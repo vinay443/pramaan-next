@@ -18,3 +18,14 @@ describe('NationalDashboard (national rollup, distinct from Enterprise.tsx)', ()
     expect(within(breakdown).getAllByRole('row').length).toBeGreaterThan(1)
   })
 })
+
+describe('NationalDashboard (merged national + enterprise rollup)', () => {
+  it('also shows business-unit / criticality cuts, top risks and region RAG (former Enterprise page)', async () => {
+    renderOffline(<NationalDashboard />)
+    expect(await screen.findByText('By business unit')).toBeInTheDocument()
+    expect(screen.getByText('By criticality')).toBeInTheDocument()
+    expect(screen.getByText(/Top risks/)).toBeInTheDocument()
+    const ranked = screen.getByText('Regions ranked by gap to national average (furthest-behind first)').closest('.card') as HTMLElement
+    expect(within(ranked).getByText('RAG')).toBeInTheDocument()
+  })
+})

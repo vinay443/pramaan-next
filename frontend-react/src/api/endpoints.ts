@@ -15,7 +15,6 @@ import type {
   AuditPrepReport,
   ComparisonReport,
   EnterpriseDashboard,
-  NationalDashboard,
   NationalRollup,
   ReportInfo,
   TrendReport,
@@ -38,6 +37,7 @@ import type {
   EvidenceSummary,
   EvidenceVersionView,
   EvidenceLifecycleView,
+  EvidenceLifecycleSummary,
   EvidenceView,
   GrcSyncStatus,
   IntegrityReport,
@@ -563,49 +563,60 @@ export function getEvidenceCompletenessControlEvidence(
   )
 }
 
-export function getLeadershipDashboard(): Promise<LeadershipDashboard> {
+/** Repeatable `businessUnit` scopes the rollup to those units (e.g. a vertical). */
+/** `?businessUnit=A&businessUnit=B` (empty when unscoped). */
+function unitsQuery(units?: string[]): string {
+  const qs = new URLSearchParams()
+  ;(units ?? []).forEach((u) => qs.append('businessUnit', u))
+  const q = qs.toString()
+  return q ? `?${q}` : ''
+}
+
+export function getLeadershipDashboard(businessUnits?: string[]): Promise<LeadershipDashboard> {
   return withFallback(
-    () => apiFetch<LeadershipDashboard>('/api/v1/insight/leadership'),
-    () => mock.mockLeadershipDashboard(),
+    () => apiFetch<LeadershipDashboard>(`/api/v1/insight/leadership${unitsQuery(businessUnits)}`),
+    () => mock.mockLeadershipDashboard(businessUnits),
     true,
   )
 }
 
-export function getComparison(applications?: string[], framework?: string): Promise<ComparisonReport> {
+export function getComparison(
+  applications?: string[],
+  framework?: string,
+  businessUnits?: string[],
+): Promise<ComparisonReport> {
   const qs = new URLSearchParams()
+  ;(businessUnits ?? []).forEach((b) => qs.append('businessUnit', b))
   ;(applications ?? []).forEach((a) => qs.append('applications', a))
   if (framework) qs.set('framework', framework)
   const q = qs.toString()
   return withFallback(
     () => apiFetch<ComparisonReport>(`/api/v1/insight/comparison${q ? `?${q}` : ''}`),
-    () => mock.mockComparison(applications, framework),
+    () => mock.mockComparison(applications, framework, businessUnits),
     true,
   )
 }
 
-export function getEnterpriseDashboard(): Promise<EnterpriseDashboard> {
+/** The merged national + enterprise dashboard (GET /insight/national/rollup) — the single source for the
+ *  former /enterprise and /national endpoints, both deprecated. Optional business units scope every part. */
+export function getNationalRollup(businessUnits?: string[]): Promise<NationalRollup> {
   return withFallback(
-    () => apiFetch<EnterpriseDashboard>('/api/v1/insight/enterprise'),
-    () => mock.mockEnterprise(),
+    () => apiFetch<NationalRollup>(`/api/v1/insight/national/rollup${unitsQuery(businessUnits)}`),
+    () => mock.mockNationalRollup(businessUnits),
     true,
   )
 }
 
-export function getNationalDashboard(): Promise<NationalDashboard> {
-  return withFallback(
-    () => apiFetch<NationalDashboard>('/api/v1/insight/national'),
-    () => mock.mockNational(),
-    true,
-  )
-}
-
-/** Region x framework breakdown + regions ranked by gap to the national average — distinct from the flat national() table above. */
-export function getNationalRollup(): Promise<NationalRollup> {
-  return withFallback(
-    () => apiFetch<NationalRollup>('/api/v1/insight/national/rollup'),
-    () => mock.mockNationalRollup(),
-    true,
-  )
+/** Enterprise view (portfolio, business-unit / criticality cuts, top risks) of the merged rollup. */
+export async function getEnterpriseDashboard(businessUnits?: string[]): Promise<EnterpriseDashboard> {
+  const r = await getNationalRollup(businessUnits)
+  return {
+    generatedAt: r.generatedAt,
+    portfolio: r.portfolio,
+    byBusinessUnit: r.byBusinessUnit,
+    byCriticality: r.byCriticality,
+    topRisks: r.topRisks,
+  }
 }
 
 export function getAuditPrep(applicationSlug?: string, framework?: string): Promise<AuditPrepReport> {
@@ -616,10 +627,35 @@ export function getAuditPrep(applicationSlug?: string, framework?: string): Prom
   )
 }
 
-export function getTrend(): Promise<TrendReport> {
+/** `businessUnit` scopes points and `current` to one function; closure/collection come back empty. */
+export function getTrend(businessUnit?: string | string[]): Promise<TrendReport> {
+  const units = businessUnit === undefined ? undefined : [businessUnit].flat()
   return withFallback(
-    () => apiFetch<TrendReport>('/api/v1/insight/trend'),
-    () => mock.mockTrend(),
+    () => apiFetch<TrendReport>(`/api/v1/insight/trend${unitsQuery(units)}`),
+    () => mock.mockTrend(units),
+    true,
+  )
+}
+
+/** Trend scoped to one application: `closure` (approvals/rejections/avg review time/rejection
+ *  trend) is computed only from this application's evidence lifecycle events — see App Owner
+ *  dashboard Overview. `current`/`points` stay portfolio-wide (not tracked per application). */
+export function getTrendForApplication(applicationSlug: string): Promise<TrendReport> {
+  return withFallback(
+    () => apiFetch<TrendReport>(`/api/v1/insight/trend?applicationSlug=${encodeURIComponent(applicationSlug)}`),
+    () => mock.mockTrendForApplication(applicationSlug),
+    true,
+  )
+}
+
+/** App Owner dashboard — evidence lifecycle counts, rejection audit trail, Auditor SLA, pending aging. */
+export function getEvidenceLifecycleSummary(applicationSlug: string): Promise<EvidenceLifecycleSummary> {
+  return withFallback(
+    () =>
+      apiFetch<EvidenceLifecycleSummary>(
+        `/api/v1/insight/evidence-lifecycle/summary?applicationSlug=${encodeURIComponent(applicationSlug)}`,
+      ),
+    () => mock.mockEvidenceLifecycleSummary(applicationSlug),
     true,
   )
 }

@@ -47,11 +47,22 @@ public class LeadershipService {
     }
 
     public LeadershipDashboard dashboard() {
+        return dashboard(null);
+    }
+
+    /** Rollup restricted to applications whose business unit is in {@code businessUnits} (null/empty = all). */
+    public LeadershipDashboard dashboard(java.util.Collection<String> businessUnits) {
+        java.util.Set<String> scope = ScopeFilter.of(businessUnits);
+        java.util.Set<String> inScope = new java.util.HashSet<>();
         List<AppPosture> byApp = new ArrayList<>();
         Map<String, int[]> fw = new TreeMap<>(); // framework -> [expected,compliant,partial,non,notAssessed,missingEv]
         int expected = 0, compliant = 0, covered = 0, stale = 0, missing = 0;
 
         for (ApplicationView app : applications.list()) {
+            if (!ScopeFilter.matches(scope, app.businessUnit())) {
+                continue;
+            }
+            inScope.add(app.slug());
             ComplianceReport cr = compliance.forApplication(app.slug(), null);
             CompletenessReport cp = completeness.forApplication(app.slug(), null);
 
@@ -90,16 +101,19 @@ public class LeadershipService {
         double completenessPct = expected == 0 ? 0.0 : CompletenessService.round(100.0 * covered / expected);
 
         return new LeadershipDashboard(clock.instant(), byApp.size(), expected, compliant, compliancePct,
-                covered, stale, missing, completenessPct, verdictCounts(), byApp, byFramework);
+                covered, stale, missing, completenessPct, verdictCounts(scope == null ? null : inScope), byApp, byFramework);
     }
 
-    /** Actual persisted check-verdict tally across the whole estate. */
-    private Map<String, Integer> verdictCounts() {
+    /** Actual persisted check-verdict tally across the estate (or only {@code onlySlugs} when scoped). */
+    private Map<String, Integer> verdictCounts(java.util.Set<String> onlySlugs) {
         Map<String, Integer> counts = new LinkedHashMap<>();
         for (CheckStatus s : CheckStatus.values()) {
             counts.put(s.name(), 0);
         }
         for (CheckResult r : checkResults.findAll()) {
+            if (onlySlugs != null && !onlySlugs.contains(r.getApplicationSlug())) {
+                continue;
+            }
             counts.merge(r.getStatus().name(), 1, Integer::sum);
         }
         return counts;

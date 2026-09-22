@@ -69,29 +69,22 @@ public class EnterpriseDashboardService {
     }
 
     public EnterpriseDashboard enterprise() {
-        LeadershipDashboard portfolio = leadership.dashboard();
-        Map<String, ApplicationView> meta = applications.list().stream()
-                .collect(Collectors.toMap(ApplicationView::slug, Function.identity()));
+        return enterprise(null);
+    }
 
-        List<GroupPosture> byUnit = group(portfolio.byApplication(),
-                p -> orDefault(meta.get(p.applicationSlug()) == null ? null
-                        : meta.get(p.applicationSlug()).businessUnit(), "Unassigned"));
-        List<GroupPosture> byCriticality = group(portfolio.byApplication(),
-                p -> orDefault(p.criticality(), "MEDIUM"));
-
-        List<AppPosture> topRisks = portfolio.byApplication().stream()
-                .sorted(Comparator
-                        .comparingInt((AppPosture p) -> -CRITICALITY_WEIGHT.getOrDefault(
-                                orDefault(p.criticality(), "MEDIUM"), 2))
-                        .thenComparingDouble(AppPosture::compliancePct))
-                .limit(5)
-                .toList();
-
-        return new EnterpriseDashboard(clock.instant(), portfolio, byUnit, byCriticality, topRisks);
+    /** Enterprise dashboard restricted to the given business units (null/empty = all). */
+    public EnterpriseDashboard enterprise(List<String> businessUnits) {
+        NationalRollup r = nationalRollup(businessUnits);
+        return new EnterpriseDashboard(r.generatedAt(), r.portfolio(), r.byBusinessUnit(), r.byCriticality(),
+                r.topRisks());
     }
 
     public NationalDashboard national() {
-        Map<String, AppPosture> byApp = leadership.dashboard().byApplication().stream()
+        return national(leadership.dashboard());
+    }
+
+    private NationalDashboard national(LeadershipDashboard portfolio) {
+        Map<String, AppPosture> byApp = portfolio.byApplication().stream()
                 .collect(Collectors.toMap(AppPosture::applicationSlug, Function.identity()));
 
         List<RegionPosture> out = new ArrayList<>();
@@ -126,17 +119,40 @@ public class EnterpriseDashboardService {
         return new NationalDashboard(clock.instant(), natPct, natCov, appCount, out);
     }
 
-    /**
-     * UC20+ — a nationally-aggregated rollup distinct from {@link #national()}'s flat
-     * per-region table: a region x framework compliance breakdown, plus regions ranked
-     * by how far they trail the national average (furthest-behind first). Built over
-     * the same region mapping and {@link ComplianceService} per-application posture
-     * already used elsewhere — no new scoring.
-     */
     public NationalRollup nationalRollup() {
-        NationalDashboard nationalDash = national();
-        Set<String> knownSlugs = leadership.dashboard().byApplication().stream()
+        return nationalRollup(null);
+    }
+
+    /**
+     * The single national + enterprise dashboard (source of truth; {@code /enterprise} and
+     * {@code /national} are deprecated views over it): region x framework compliance
+     * breakdown, regions ranked by how far they trail the national average (furthest-behind
+     * first) plus the per-region RAG table, and the business-unit / criticality cuts and top
+     * risks. {@code businessUnits} restricts every part to applications in those units
+     * (null/empty = all). Built over the same region mapping, {@link LeadershipService}
+     * rollup and {@link ComplianceService} posture used elsewhere — no new scoring.
+     */
+    public NationalRollup nationalRollup(List<String> businessUnits) {
+        LeadershipDashboard portfolio = leadership.dashboard(businessUnits);
+        NationalDashboard nationalDash = national(portfolio);
+        Set<String> knownSlugs = portfolio.byApplication().stream()
                 .map(AppPosture::applicationSlug).collect(Collectors.toSet());
+
+        Map<String, ApplicationView> meta = applications.list().stream()
+                .collect(Collectors.toMap(ApplicationView::slug, Function.identity()));
+        List<GroupPosture> byUnit = group(portfolio.byApplication(),
+                p -> orDefault(meta.get(p.applicationSlug()) == null ? null
+                        : meta.get(p.applicationSlug()).businessUnit(), "Unassigned"));
+        List<GroupPosture> byCriticality = group(portfolio.byApplication(),
+                p -> orDefault(p.criticality(), "MEDIUM"));
+        // most critical first, then lowest compliance — so critical apps with low compliance lead
+        List<AppPosture> topRisks = portfolio.byApplication().stream()
+                .sorted(Comparator
+                        .comparingInt((AppPosture p) -> -CRITICALITY_WEIGHT.getOrDefault(
+                                orDefault(p.criticality(), "MEDIUM"), 2))
+                        .thenComparingDouble(AppPosture::compliancePct))
+                .limit(5)
+                .toList();
 
         Map<String, int[]> byRegionFramework = new LinkedHashMap<>(); // "region|framework" -> [expected, compliant]
         for (Region r : regions) {
@@ -170,7 +186,8 @@ public class EnterpriseDashboardService {
                 .toList();
 
         return new NationalRollup(clock.instant(), nationalPct, nationalDash.nationalCompletenessPct(),
-                nationalDash.applications(), rows, laggingRegions);
+                nationalDash.applications(), rows, laggingRegions, portfolio, nationalDash.regions(),
+                byUnit, byCriticality, topRisks);
     }
 
     private static List<GroupPosture> group(List<AppPosture> apps, Function<AppPosture, String> key) {

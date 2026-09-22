@@ -2,8 +2,12 @@ package com.pramaan.backend.config;
 
 import com.pramaan.backend.insight.TrendService;
 import com.pramaan.backend.insight.domain.ComplianceSnapshot;
+import com.pramaan.backend.insight.domain.ComplianceSnapshotApp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +39,7 @@ public class TrendSeedRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         if (trend.snapshotCount() > 0) {
+            backfillAppRows();
             return;
         }
         Instant now = Instant.now();
@@ -56,6 +61,43 @@ public class TrendSeedRunner implements ApplicationRunner {
                     evidenceCount, integrityChecked, integrityIntact));
         }
         log.info("seeded {} synthetic compliance-trend snapshots", weeks);
+        backfillAppRows();
+    }
+
+    /**
+     * Synthetic per-application slices for snapshots that have none (the seeded history and
+     * any pre-V12 snapshot), so the business-unit-scoped trend has shape. Each app is offset
+     * around the snapshot's portfolio figure; real per-app rows come from
+     * {@code POST /api/v1/insight/trend/snapshot}.
+     */
+    private void backfillAppRows() {
+        var apps = trend.currentApps();
+        if (apps.isEmpty()) {
+            return;
+        }
+        Set<UUID> done = trend.snapshotIdsWithApps();
+        List<ComplianceSnapshotApp> rows = new ArrayList<>();
+        for (ComplianceSnapshot s : trend.allSnapshots()) {
+            if (done.contains(s.getId())) {
+                continue;
+            }
+            for (int i = 0; i < apps.size(); i++) {
+                var a = apps.get(i);
+                double offset = ((i % 3) - 1) * 8.0;
+                int compliant = (int) Math.round(a.expected() * clamp(s.getCompliancePct() + offset) / 100.0);
+                int covered = (int) Math.round(a.expected() * clamp(s.getCompletenessPct() + offset / 2) / 100.0);
+                rows.add(new ComplianceSnapshotApp(s.getId(), a.slug(), a.businessUnit(),
+                        a.expected(), compliant, covered));
+            }
+        }
+        if (!rows.isEmpty()) {
+            trend.saveAppRows(rows);
+            log.info("backfilled {} synthetic per-application trend rows", rows.size());
+        }
+    }
+
+    private static double clamp(double pct) {
+        return Math.max(0.0, Math.min(100.0, pct));
     }
 
     private static double round(double v) {

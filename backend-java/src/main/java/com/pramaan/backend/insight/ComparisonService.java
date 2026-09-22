@@ -37,8 +37,15 @@ public class ComparisonService {
     }
 
     public ComparisonReport compare(List<String> slugs, String framework) {
+        return compare(slugs, null, framework);
+    }
+
+    /** As above; with no explicit slugs, {@code businessUnits} restricts "all applications" to those units. */
+    public ComparisonReport compare(List<String> slugs, List<String> businessUnits, String framework) {
+        java.util.Set<String> scope = ScopeFilter.of(businessUnits);
         List<String> apps = slugs == null || slugs.isEmpty()
-                ? applications.list().stream().map(a -> a.slug()).toList()
+                ? applications.list().stream().filter(a -> ScopeFilter.matches(scope, a.businessUnit()))
+                        .map(a -> a.slug()).toList()
                 : slugs.stream().map(String::trim).filter(s -> !s.isBlank()).toList();
         if (apps.size() < 2) {
             throw ApiException.badRequest("comparison needs at least 2 applications");

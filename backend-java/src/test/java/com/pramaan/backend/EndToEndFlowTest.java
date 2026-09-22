@@ -133,6 +133,17 @@ class EndToEndFlowTest {
                 .andExpect(jsonPath("$.byBusinessUnit", org.hamcrest.Matchers.not(org.hamcrest.Matchers.empty())));
         mvc.perform(get("/api/v1/insight/national"))
                 .andExpect(jsonPath("$.regions[?(@.region=='North')]").exists());
+        // the merged endpoint carries region RAG + the former enterprise cuts; the two old ones are deprecated
+        mvc.perform(get("/api/v1/insight/national/rollup"))
+                .andExpect(jsonPath("$.regions[?(@.region=='North')].rag").exists())
+                .andExpect(jsonPath("$.byBusinessUnit", org.hamcrest.Matchers.not(org.hamcrest.Matchers.empty())))
+                .andExpect(jsonPath("$.byCriticality", org.hamcrest.Matchers.not(org.hamcrest.Matchers.empty())))
+                .andExpect(jsonPath("$.topRisks", org.hamcrest.Matchers.not(org.hamcrest.Matchers.empty())))
+                .andExpect(jsonPath("$.portfolio.applications").isNumber());
+        mvc.perform(get("/api/v1/insight/national"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Deprecation", "true"));
+        mvc.perform(get("/api/v1/insight/enterprise"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Deprecation", "true"));
         mvc.perform(get("/api/v1/insight/audit-prep").param("applicationSlug", "net-banking"))
                 .andExpect(jsonPath("$.simulated").value(true))
                 .andExpect(jsonPath("$.readinessScore").isNumber());

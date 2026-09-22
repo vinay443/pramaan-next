@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ingestBulkUpload } from '../api/endpoints'
 import type { BulkIngestResponse } from '../api/types'
 import { DataTable, ErrorNote, Section, StatCard, StatusPill } from '../components/ui'
@@ -15,9 +15,11 @@ function isZip(file: File): boolean {
 }
 
 export function BulkUpload() {
-  const [applicationSlug, setApp] = useState('net-banking')
-  const [framework, setFramework] = useState('PCI_DSS')
-  const [controlId, setControlId] = useState('')
+  // Compliance-tab "Upload evidence" links prefill these via query params.
+  const [searchParams] = useSearchParams()
+  const [applicationSlug, setApp] = useState(searchParams.get('applicationSlug') ?? 'net-banking')
+  const [framework, setFramework] = useState(searchParams.get('framework') ?? 'PCI_DSS')
+  const [controlId, setControlId] = useState(searchParams.get('controlId') ?? '')
   const [technology, setTechnology] = useState('')
   const [files, setFiles] = useState<File[]>([])
   // Bumped on every add/remove to force the file input below to remount. Removing a

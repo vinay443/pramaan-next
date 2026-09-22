@@ -47,6 +47,7 @@ import type {
   ComparisonReport,
   EnterpriseDashboard,
   EvidenceLifecycleView,
+  EvidenceLifecycleSummary,
   GrcSyncStatus,
   IngestRequest,
   IntegrityReport,
@@ -568,10 +569,10 @@ export function mockOnboardingScanById(id: string): OnboardingScanView {
 
 // ---- UC14 comparison / UC16 enterprise / UC20 national --------------
 
-export function mockComparison(applications?: string[], framework?: string): ComparisonReport {
+export function mockComparison(applications?: string[], framework?: string, businessUnits?: string[]): ComparisonReport {
   const apps = applications && applications.length >= 2
     ? applications
-    : mockApplications.map((a) => a.slug)
+    : mockApplications.filter((a) => inUnits(a.businessUnit, businessUnits)).map((a) => a.slug)
   const reports = apps.map((slug) => ({ slug, r: mockCompliance(slug, framework) }))
 
   const fwMap = new Map<string, Record<string, number>>()
@@ -608,8 +609,8 @@ export function mockComparison(applications?: string[], framework?: string): Com
   return { generatedAt: NOW, framework: framework ?? null, applications: apps, frameworks, controls, gaps }
 }
 
-export function mockEnterprise(): EnterpriseDashboard {
-  const portfolio = mockLeadershipDashboard()
+export function mockEnterprise(businessUnits?: string[]): EnterpriseDashboard {
+  const portfolio = mockLeadershipDashboard(businessUnits)
   const byMeta = new Map(mockApplications.map((a) => [a.slug, a]))
   const groupBy = (keyOf: (slug: string, crit: string) => string) => {
     const acc = new Map<string, number[]>()
@@ -655,8 +656,8 @@ const NAT_REGIONS: Record<string, string[]> = {
   Central: [],
 }
 
-export function mockNational(): NationalDashboard {
-  const byApp = new Map(mockLeadershipDashboard().byApplication.map((p) => [p.applicationSlug, p]))
+export function mockNational(businessUnits?: string[]): NationalDashboard {
+  const byApp = new Map(mockLeadershipDashboard(businessUnits).byApplication.map((p) => [p.applicationSlug, p]))
   let te = 0
   let tc = 0
   let tcov = 0
@@ -697,8 +698,9 @@ export function mockNational(): NationalDashboard {
 }
 
 /** Region x framework breakdown + regions ranked by gap to the national average — distinct from mockNational()'s flat table. */
-export function mockNationalRollup(): NationalRollup {
-  const national = mockNational()
+export function mockNationalRollup(businessUnits?: string[]): NationalRollup {
+  const national = mockNational(businessUnits)
+  const enterprise = mockEnterprise(businessUnits)
   const byRegionFramework: RegionFrameworkRow[] = []
   const acc = new Map<string, [number, number]>() // "region|framework" -> [expected, compliant]
   for (const [region, slugs] of Object.entries(NAT_REGIONS)) {
@@ -739,6 +741,11 @@ export function mockNationalRollup(): NationalRollup {
     applications: national.applications,
     byRegionFramework,
     laggingRegions,
+    portfolio: enterprise.portfolio,
+    regions: national.regions,
+    byBusinessUnit: enterprise.byBusinessUnit,
+    byCriticality: enterprise.byCriticality,
+    topRisks: enterprise.topRisks,
   }
 }
 
@@ -787,7 +794,8 @@ export function mockAuditPrep(applicationSlug?: string, framework?: string): Aud
 
 // ---- UC19 trend ---------------------------------------------------
 
-export function mockTrend(): TrendReport {
+export function mockTrend(businessUnits?: string[]): TrendReport {
+  if (businessUnits?.length) return scopeMockTrend(mockTrend(), businessUnits)
   const weeks = 8
   const points = Array.from({ length: weeks }, (_, i) => {
     const progress = i / (weeks - 1)
@@ -830,10 +838,112 @@ export function mockTrend(): TrendReport {
       resubmissions: 4,
       avgDaysToApprove: 2.4,
       approvalsByWeek: { '2026-W34': 4, '2026-W35': 6, '2026-W36': 11 },
+      rejectionTrendPct: -12,
     },
     collection: mockRuns
       .filter((r) => r.finishedAt)
       .map((r) => ({ at: r.finishedAt as string, ingested: r.ingested, duplicates: r.duplicates, failed: r.failed })),
+  }
+}
+
+/** Offline stand-in for GET /insight/trend?businessUnit=: shifts the portfolio series so it ends at the unit's live figure. */
+function scopeMockTrend(full: TrendReport, businessUnits: string[]): TrendReport {
+  const apps = mockLeadershipDashboard(businessUnits).byApplication
+  const expected = apps.reduce((s, a) => s + a.expected, 0)
+  const compliant = apps.reduce((s, a) => s + a.compliant, 0)
+  const covered = apps.reduce((s, a) => s + a.covered, 0)
+  const pct = (n: number) => (expected === 0 ? 0 : round1((100 * n) / expected))
+  const shift = pct(compliant) - full.current.compliancePct
+  const clamp = (v: number) => Math.max(0, Math.min(100, round1(v)))
+  const point = (t: string, compliancePct: number, completenessPct: number) => ({
+    takenAt: t, expected, compliant: Math.round((expected * compliancePct) / 100), compliancePct, completenessPct,
+    approvedEvidence: 0, openFindings: 0, evidenceCount: 0, integrityChecked: 0, integrityIntact: 0,
+  })
+  return {
+    generatedAt: full.generatedAt,
+    current: point(full.current.takenAt, pct(compliant), pct(covered)),
+    points: expected === 0 ? [] : full.points.map((p) => point(p.takenAt, clamp(p.compliancePct + shift), clamp(p.completenessPct + shift / 2))),
+    closure: { approvals: 0, rejections: 0, resubmissions: 0, avgDaysToApprove: null, approvalsByWeek: {}, rejectionTrendPct: null },
+    collection: [],
+  }
+}
+
+/** Offline stand-in for GET /insight/trend?applicationSlug=: same current/points as the
+ *  unscoped trend, but closure derived deterministically from this application's slug so
+ *  the App Owner Overview tab has stable, plausible-looking numbers offline. */
+export function mockTrendForApplication(applicationSlug: string): TrendReport {
+  const full = mockTrend()
+  const seed = hashSeed(applicationSlug)
+  const approvals = 8 + (seed % 12)
+  const rejections = seed % 5
+  const resubmissions = seed % 3
+  return {
+    ...full,
+    closure: {
+      approvals,
+      rejections,
+      resubmissions,
+      avgDaysToApprove: round1(1.5 + (seed % 40) / 10),
+      approvalsByWeek: { '2026-W35': Math.max(1, approvals - 4), '2026-W36': 4 },
+      rejectionTrendPct: rejections === 0 ? null : (seed % 2 === 0 ? -1 : 1) * (5 + (seed % 20)),
+    },
+  }
+}
+
+function hashSeed(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return h
+}
+
+/** Offline stand-in for GET /insight/evidence-lifecycle/summary?applicationSlug=. Counts and
+ *  rejection rows are derived from the shared evidence fixtures scoped to this application;
+ *  Auditor SLA / pending aging are computed the same way the real backend derives them
+ *  (there's no direct backend source for either — see EvidenceLifecycleSummaryService). */
+export function mockEvidenceLifecycleSummary(applicationSlug: string): EvidenceLifecycleSummary {
+  const appEvidence = mockEvidence.filter((e) => e.applicationSlug === applicationSlug)
+  const seed = hashSeed(applicationSlug)
+  const stateOf = (e: EvidenceView, i: number): string => {
+    const s = (e.lifecycleState as string) || ''
+    if (s) return s
+    // Fixtures rarely carry a lifecycleState — synthesize a plausible mix, deterministic per row.
+    const mix = ['DRAFT', 'SUBMITTED', 'DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED']
+    return mix[(seed + i) % mix.length]
+  }
+  const counts = { draft: 0, submitted: 0, approved: 0, rejected: 0, expired: 0, superseded: 0 }
+  appEvidence.forEach((e, i) => {
+    const s = stateOf(e, i).toLowerCase() as keyof typeof counts
+    if (s in counts) counts[s] += 1
+  })
+  const rejected = appEvidence.filter((e, i) => stateOf(e, i) === 'REJECTED')
+  const rejections = rejected.slice(0, 12).map((e, i) => ({
+    evidenceId: e.evidenceId,
+    applicationSlug: e.applicationSlug,
+    framework: e.framework,
+    controlId: e.controlId,
+    reason: 'Evidence package incomplete: reviewer requires updated production artefact and signed attestation.',
+    rejectedBy: 'S. Nair (Auditor)',
+    rejectedAt: new Date(nowMs - (i + 1) * 3 * dayMs).toISOString(),
+    workflowState: 'Re-upload Requested',
+  }))
+  const totalReviewed = counts.approved + counts.rejected
+  const targetDays = 5
+  const withinTarget = Math.round(totalReviewed * (0.82 + (seed % 15) / 100))
+  return {
+    applicationSlug,
+    generatedAt: NOW,
+    counts,
+    rejections,
+    auditorSla: {
+      reviewedWithinTarget: Math.min(withinTarget, totalReviewed),
+      totalReviewed,
+      pct: totalReviewed === 0 ? null : round1((100 * Math.min(withinTarget, totalReviewed)) / totalReviewed),
+      targetDays,
+    },
+    pendingAging: {
+      count: counts.draft + counts.submitted,
+      avgDaysInQueue: counts.draft + counts.submitted === 0 ? null : round1(2 + (seed % 60) / 10),
+    },
   }
 }
 
@@ -1615,8 +1725,14 @@ export function mockCompliance(applicationSlug: string, framework?: string): Com
   }
 }
 
-export function mockLeadershipDashboard(): LeadershipDashboard {
-  const apps = mockApplications
+/** Case-insensitive business-unit scope test; no units = everything in scope. */
+function inUnits(businessUnit: string | undefined, units?: string[]): boolean {
+  const scope = (units ?? []).map((u) => u.trim().toLowerCase()).filter(Boolean)
+  return scope.length === 0 || scope.includes((businessUnit ?? '').trim().toLowerCase())
+}
+
+export function mockLeadershipDashboard(businessUnits?: string[]): LeadershipDashboard {
+  const apps = mockApplications.filter((a) => inUnits(a.businessUnit, businessUnits))
   let expected = 0
   let compliant = 0
   let covered = 0

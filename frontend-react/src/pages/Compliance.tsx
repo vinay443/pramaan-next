@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getCompliance, listApplications } from '../api/endpoints'
+import type { ControlPosture } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
 import { DataTable, Empty, ErrorNote, Loading, Section, StatCard, StatusPill } from '../components/ui'
 
@@ -18,11 +19,6 @@ export function Compliance() {
     // Keep the URL in step so the view stays shareable / reloadable.
     setSearchParams(next ? { applicationSlug: next } : {}, { replace: true })
   }
-
-  const report = useAsync(
-    () => (effectiveSlug ? getCompliance(effectiveSlug) : Promise.resolve(undefined)),
-    [effectiveSlug],
-  )
 
   return (
     <div className="page">
@@ -47,6 +43,34 @@ export function Compliance() {
         </div>
       </Section>
 
+      <ComplianceView slug={effectiveSlug} />
+    </div>
+  )
+}
+
+/** Where a control row should send the user to fix it, or null when nothing is actionable. */
+function controlAction(slug: string, c: ControlPosture): { to: string; label: string } | null {
+  const qs = (extra: Record<string, string> = {}) =>
+    new URLSearchParams({ applicationSlug: slug, framework: c.framework, ...extra }).toString()
+  if (c.status === 'MISSING_EVIDENCE') {
+    return { to: `/bulk-upload?${qs({ controlId: c.controlId })}`, label: 'Upload evidence' }
+  }
+  if (c.status === 'NON_COMPLIANT' || c.status === 'PARTIALLY_COMPLIANT') {
+    return { to: `/evidence/query?${qs()}`, label: 'Review evidence' }
+  }
+  return null
+}
+
+/** Compliance report for one application. Shared by the /compliance page (picker-driven)
+ *  and the App Owner dashboard tab (pre-scoped, `actionable` adds fix links per control). */
+export function ComplianceView({ slug, actionable = false }: { slug: string; actionable?: boolean }) {
+  const report = useAsync(
+    () => (slug ? getCompliance(slug) : Promise.resolve(undefined)),
+    [slug],
+  )
+
+  return (
+    <>
       {report.loading ? <Loading what="compliance" /> : null}
       {report.error ? <ErrorNote message={report.error} /> : null}
 
@@ -92,11 +116,22 @@ export function Compliance() {
                 { header: 'Framework', cell: (c) => c.framework },
                 { header: 'Control', cell: (c) => c.controlId },
                 { header: 'Detail', cell: (c) => c.detail },
+                ...(actionable
+                  ? [
+                      {
+                        header: 'Action',
+                        cell: (c: ControlPosture) => {
+                          const a = controlAction(slug, c)
+                          return a ? <Link to={a.to}>{a.label} →</Link> : '—'
+                        },
+                      },
+                    ]
+                  : []),
               ]}
             />
           </Section>
         </>
       ) : null}
-    </div>
+    </>
   )
 }

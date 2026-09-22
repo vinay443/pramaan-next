@@ -41,6 +41,7 @@ class PortfolioInsightTest {
     @Autowired EnterpriseDashboardService enterprise;
     @Autowired AuditPrepService auditPrep;
     @Autowired TrendService trend;
+    @Autowired com.pramaan.backend.application.ApplicationService applications;
     @Autowired ComplianceService compliance;
     @Autowired LeadershipService leadership;
 
@@ -104,6 +105,28 @@ class PortfolioInsightTest {
     }
 
     @Test
+    void mergedRollupCarriesEnterpriseCutsAndRespectsBusinessUnitScope() {
+        applications.upsert(new com.pramaan.backend.application.ApplicationDtos.UpsertRequest(
+                "net-banking", "Net Banking", "Retail Banking", "HIGH", null, null));
+        applications.upsert(new com.pramaan.backend.application.ApplicationDtos.UpsertRequest(
+                "payments", "Payments", "Payments", "CRITICAL", null, null));
+
+        var all = enterprise.nationalRollup();
+        assertThat(all.byBusinessUnit()).extracting(g -> g.key()).contains("Payments", "Retail Banking");
+        assertThat(all.byCriticality()).isNotEmpty();
+        assertThat(all.regions()).extracting(r -> r.rag()).allMatch(r -> List.of("GREEN", "AMBER", "RED").contains(r));
+        assertThat(all.topRisks().get(0).criticality()).isEqualTo("CRITICAL"); // critical apps lead the risk list
+        // the deprecated /enterprise view is exactly the merged data
+        EnterpriseDashboard ent = enterprise.enterprise();
+        assertThat(ent.byBusinessUnit()).isEqualTo(all.byBusinessUnit());
+        assertThat(ent.topRisks()).isEqualTo(all.topRisks());
+
+        var scoped = enterprise.nationalRollup(List.of("Payments"));
+        assertThat(scoped.byBusinessUnit()).extracting(g -> g.key()).containsExactly("Payments");
+        assertThat(scoped.portfolio().applications()).isEqualTo(1);
+    }
+
+    @Test
     void uc18_auditPrepChecklistIsDeterministicAndGrounded() {
         AuditPrepReport r = auditPrep.prepare("net-banking", null);
         assertThat(r.simulated()).isTrue();
@@ -137,6 +160,55 @@ class PortfolioInsightTest {
         assertThat(t.current()).isNotNull();
         assertThat(t.current().compliancePct()).isEqualTo(live.compliancePct());
         assertThat(t.current().expected()).isEqualTo(live.expected());
+    }
+
+    @Test
+    void uc19_trendScopedToBusinessUnit() {
+        applications.upsert(new com.pramaan.backend.application.ApplicationDtos.UpsertRequest(
+                "payments", "Payments", "Payments", "CRITICAL", null, null));
+        trend.snapshot();
+        TrendReport scoped = trend.trend("Payments");
+        int paymentsExpected = leadership.dashboard().byApplication().stream()
+                .filter(a -> a.applicationSlug().equals("payments")).mapToInt(a -> a.expected()).sum();
+        assertThat(paymentsExpected).isGreaterThan(0);
+        assertThat(scoped.current().expected()).isEqualTo(paymentsExpected);
+        assertThat(scoped.points()).isNotEmpty();
+        assertThat(scoped.points()).allMatch(p -> p.expected() <= trend.trend().current().expected());
+
+        TrendReport none = trend.trend("No Such Unit");
+        assertThat(none.points()).isEmpty();
+        assertThat(none.current().expected()).isZero();
+    }
+
+    @Test
+    void businessUnitScopeRestrictsLeadershipEnterpriseComparisonAndTrend() {
+        applications.upsert(new com.pramaan.backend.application.ApplicationDtos.UpsertRequest(
+                "net-banking", "Net Banking", "Retail Banking", "HIGH", null, null));
+        applications.upsert(new com.pramaan.backend.application.ApplicationDtos.UpsertRequest(
+                "payments", "Payments", "Payments", "CRITICAL", null, null));
+        trend.snapshot();
+
+        LeadershipDashboard all = leadership.dashboard();
+        LeadershipDashboard one = leadership.dashboard(List.of("payments")); // case-insensitive
+        assertThat(one.byApplication()).extracting(a -> a.applicationSlug()).containsExactly("payments");
+        assertThat(one.applications()).isEqualTo(1);
+        assertThat(one.expected()).isLessThan(all.expected());
+        assertThat(leadership.dashboard(List.of("No Such Unit")).byApplication()).isEmpty();
+        assertThat(leadership.dashboard(List.of()).byApplication()).hasSameSizeAs(all.byApplication());
+
+        EnterpriseDashboard ent = enterprise.enterprise(List.of("Payments", "Retail Banking"));
+        assertThat(ent.byBusinessUnit()).extracting(g -> g.key())
+                .containsExactlyInAnyOrder("Payments", "Retail Banking");
+        assertThat(enterprise.enterprise(List.of("Payments")).byBusinessUnit()).extracting(g -> g.key())
+                .containsExactly("Payments");
+
+        ComparisonReport cmp = comparison.compare(null, List.of("Payments", "Retail Banking"), null);
+        assertThat(cmp.applications()).containsExactlyInAnyOrder("payments", "net-banking");
+
+        TrendReport t = trend.trend(List.of("Payments", "Retail Banking"));
+        assertThat(t.current().expected()).isEqualTo(
+                leadership.dashboard(List.of("Payments", "Retail Banking")).expected());
+        assertThat(trend.trend(List.of("Payments")).current().expected()).isEqualTo(one.expected());
     }
 
     @Test

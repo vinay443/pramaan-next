@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { runEvidenceQuery } from '../api/endpoints'
 import type { DeterministicQueryResult } from '../api/types'
 import { DataTable, ErrorNote, JsonBlock, Section } from '../components/ui'
@@ -7,8 +8,10 @@ const QUERIES = ['source-breakdown', 'stale-evidence', 'latest-per-control', 'du
 
 export function EvidenceQuery() {
   const [name, setName] = useState<string>(QUERIES[0])
-  const [applicationSlug, setApp] = useState('')
-  const [framework, setFramework] = useState('')
+  // Compliance-tab "Review evidence" links prefill these via query params.
+  const [searchParams] = useSearchParams()
+  const [applicationSlug, setApp] = useState(searchParams.get('applicationSlug') ?? '')
+  const [framework, setFramework] = useState(searchParams.get('framework') ?? '')
   const [result, setResult] = useState<DeterministicQueryResult>()
   const [error, setError] = useState<string>()
   const [running, setRunning] = useState(false)

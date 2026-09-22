@@ -347,6 +347,12 @@ export interface NationalRollup {
   applications: number
   byRegionFramework: RegionFrameworkRow[]
   laggingRegions: RegionGap[]
+  // merged in from the former /enterprise dashboard
+  portfolio: LeadershipDashboard
+  regions: RegionPosture[]
+  byBusinessUnit: GroupPosture[]
+  byCriticality: GroupPosture[]
+  topRisks: AppPosture[]
 }
 
 // ---- UC18 AI-assisted audit preparation ------------------------------
@@ -398,8 +404,56 @@ export interface TrendReport {
     resubmissions: number
     avgDaysToApprove?: number | null
     approvalsByWeek: Record<string, number>
+    /** Month-over-month % change in rejection count; null with <2 months of data. */
+    rejectionTrendPct?: number | null
   }
   collection: Array<{ at: string; ingested: number; duplicates: number; failed: number }>
+}
+
+// ---- App Owner dashboard — evidence lifecycle summary (counts/rejections/SLA/aging) ---
+
+export interface LifecycleStateCounts {
+  draft: number
+  submitted: number
+  approved: number
+  rejected: number
+  expired: number
+  superseded: number
+}
+
+export interface RejectionAuditRow {
+  evidenceId: string
+  applicationSlug: string
+  framework: string
+  controlId: string
+  reason?: string | null
+  rejectedBy?: string | null
+  rejectedAt: string
+  /** "Draft" | "Submitted" | "Re-upload Requested" | "Closed" */
+  workflowState: string
+}
+
+/** Computed metric — no direct backend source; see EvidenceLifecycleSummaryService. */
+export interface AuditorSla {
+  reviewedWithinTarget: number
+  totalReviewed: number
+  pct?: number | null
+  targetDays: number
+}
+
+/** Computed metric — DRAFT/SUBMITTED evidence aging in the review queue. */
+export interface PendingAging {
+  count: number
+  avgDaysInQueue?: number | null
+}
+
+export interface EvidenceLifecycleSummary {
+  applicationSlug: string
+  generatedAt: string
+  counts: LifecycleStateCounts
+  rejections: RejectionAuditRow[]
+  auditorSla: AuditorSla
+  pendingAging: PendingAging
 }
 
 // ---- Predefined technical query catalogue --------------------------

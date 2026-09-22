@@ -11,6 +11,7 @@ import com.pramaan.backend.insight.InsightDtos.EnterpriseDashboard;
 import com.pramaan.backend.insight.InsightDtos.EvidenceCompletenessItem;
 import com.pramaan.backend.insight.InsightDtos.EvidenceCompletenessReport;
 import com.pramaan.backend.insight.InsightDtos.EvidenceContext;
+import com.pramaan.backend.insight.InsightDtos.EvidenceLifecycleSummary;
 import com.pramaan.backend.insight.InsightDtos.FrameworkCompletenessRow;
 import com.pramaan.backend.insight.InsightDtos.EvidenceSummary;
 import com.pramaan.backend.insight.InsightDtos.LeadershipDashboard;
@@ -21,6 +22,7 @@ import com.pramaan.backend.insight.InsightDtos.NlQueryResult;
 import com.pramaan.backend.insight.InsightDtos.ReuseResult;
 import com.pramaan.backend.insight.InsightDtos.TrendPoint;
 import com.pramaan.backend.insight.InsightDtos.TrendReport;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -50,6 +52,7 @@ public class InsightController {
     private final TrendService trend;
     private final EvidenceEmbeddingIndexer indexer;
     private final EvidenceContextService evidenceContext;
+    private final EvidenceLifecycleSummaryService lifecycleSummary;
 
     public InsightController(CompletenessService completeness, EvidenceCompletenessService evidenceCompleteness,
                              EvidenceReuseService reuse,
@@ -57,7 +60,8 @@ public class InsightController {
                              ComplianceService compliance, LeadershipService leadership,
                              ComparisonService comparison, EnterpriseDashboardService enterprise,
                              AuditPrepService auditPrep, TrendService trend,
-                             EvidenceEmbeddingIndexer indexer, EvidenceContextService evidenceContext) {
+                             EvidenceEmbeddingIndexer indexer, EvidenceContextService evidenceContext,
+                             EvidenceLifecycleSummaryService lifecycleSummary) {
         this.completeness = completeness;
         this.evidenceCompleteness = evidenceCompleteness;
         this.reuse = reuse;
@@ -71,6 +75,7 @@ public class InsightController {
         this.trend = trend;
         this.indexer = indexer;
         this.evidenceContext = evidenceContext;
+        this.lifecycleSummary = lifecycleSummary;
     }
 
     @GetMapping("/completeness")
@@ -117,33 +122,58 @@ public class InsightController {
 
     /** Leadership compliance dashboard — portfolio rollup of actual results across all applications. */
     @GetMapping("/leadership")
-    public LeadershipDashboard leadership() {
-        return leadership.dashboard();
+    public LeadershipDashboard leadership(@RequestParam(required = false) List<String> businessUnit) {
+        return leadership.dashboard(businessUnit);
     }
 
     /** UC14 — cross-application compliance comparison. */
     @GetMapping("/comparison")
     public ComparisonReport comparison(@RequestParam(required = false) List<String> applications,
+                                       @RequestParam(required = false) List<String> businessUnit,
                                        @RequestParam(required = false) String framework) {
-        return comparison.compare(applications, framework);
+        return comparison.compare(applications, businessUnit, framework);
     }
 
-    /** UC16 — enterprise compliance dashboard (portfolio + business-unit / criticality cuts). */
+    /**
+     * UC16 — enterprise compliance dashboard.
+     *
+     * @deprecated superseded by {@code GET /national/rollup}, which carries the same portfolio,
+     *             business-unit / criticality cuts and top risks (this is a thin view over it).
+     */
+    @Deprecated
     @GetMapping("/enterprise")
-    public EnterpriseDashboard enterprise() {
-        return enterprise.enterprise();
+    public EnterpriseDashboard enterprise(@RequestParam(required = false) List<String> businessUnit,
+                                          HttpServletResponse response) {
+        markDeprecated(response);
+        return enterprise.enterprise(businessUnit);
     }
 
-    /** UC20 — national / pan-India compliance dashboard. */
+    /**
+     * UC20 — national / pan-India compliance dashboard (flat per-region table).
+     *
+     * @deprecated superseded by {@code GET /national/rollup}, which has the same regions plus the
+     *             region x framework breakdown, gap-to-average ranking and enterprise cuts.
+     */
+    @Deprecated
     @GetMapping("/national")
-    public NationalDashboard national() {
+    public NationalDashboard national(HttpServletResponse response) {
+        markDeprecated(response);
         return enterprise.national();
     }
 
-    /** National rollup — region x framework breakdown + regions ranked by gap to the national average. */
+    /**
+     * The merged national + enterprise dashboard (source of truth): region x framework breakdown,
+     * regions ranked by gap to the national average with RAG, business-unit / criticality cuts and
+     * top risks. Optional repeatable {@code businessUnit} scopes every part.
+     */
     @GetMapping("/national/rollup")
-    public NationalRollup nationalRollup() {
-        return enterprise.nationalRollup();
+    public NationalRollup nationalRollup(@RequestParam(required = false) List<String> businessUnit) {
+        return enterprise.nationalRollup(businessUnit);
+    }
+
+    private static void markDeprecated(HttpServletResponse response) {
+        response.setHeader("Deprecation", "true");
+        response.setHeader("Link", "</api/v1/insight/national/rollup>; rel=\"successor-version\"");
     }
 
     /** UC18 — AI-assisted audit preparation checklist. */
@@ -153,15 +183,29 @@ public class InsightController {
         return auditPrep.prepare(applicationSlug, framework);
     }
 
-    /** UC19 — compliance trend & closure. */
+    /**
+     * UC19 — compliance trend & closure. {@code applicationSlug} scopes just the closure metrics
+     * (approvals/rejections/avg review time/rejection trend) to one application — see App Owner
+     * dashboard Overview; mutually exclusive with {@code businessUnit}.
+     */
     @GetMapping("/trend")
-    public TrendReport trend() {
-        return trend.trend();
+    public TrendReport trend(@RequestParam(required = false) List<String> businessUnit,
+                             @RequestParam(required = false) String applicationSlug) {
+        if (applicationSlug != null && !applicationSlug.isBlank()) {
+            return trend.trendForApplication(applicationSlug);
+        }
+        return trend.trend(businessUnit);
     }
 
     @PostMapping("/trend/snapshot")
     public TrendPoint trendSnapshot() {
         return trend.snapshot();
+    }
+
+    /** App Owner dashboard — evidence lifecycle counts, rejection audit trail, Auditor SLA, pending aging. */
+    @GetMapping("/evidence-lifecycle/summary")
+    public EvidenceLifecycleSummary evidenceLifecycleSummary(@RequestParam String applicationSlug) {
+        return lifecycleSummary.forApplication(applicationSlug);
     }
 
     @GetMapping("/evidence/{id}/summary")

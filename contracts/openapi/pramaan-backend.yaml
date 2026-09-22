@@ -52,6 +52,8 @@ paths:
     get:
       tags: [insight]
       summary: Leadership compliance dashboard — portfolio rollup of actual results across all applications
+      parameters:
+        - { name: businessUnit, in: query, required: false, description: "Repeatable. Restrict to applications in these business units (case-insensitive); omit for all.", schema: { type: array, items: { type: string } } }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/LeadershipDashboard" } } } }
 
@@ -61,6 +63,7 @@ paths:
       summary: "UC14 — cross-application compliance comparison (matrix + gap list)"
       parameters:
         - { name: applications, in: query, required: false, schema: { type: array, items: { type: string } } }
+        - { name: businessUnit, in: query, required: false, description: "Repeatable. Restrict to applications in these business units (case-insensitive); omit for all.", schema: { type: array, items: { type: string } } }
         - { name: framework, in: query, required: false, schema: { type: string } }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ComparisonReport" } } } }
@@ -69,16 +72,32 @@ paths:
   /api/v1/insight/enterprise:
     get:
       tags: [insight]
+      deprecated: true
       summary: "UC16 — enterprise compliance dashboard (portfolio + business-unit / criticality cuts + top risks)"
+      description: "Deprecated: thin view over GET /api/v1/insight/national/rollup (same data). Responds with `Deprecation: true` and a `Link: rel=successor-version` header."
+      parameters:
+        - { name: businessUnit, in: query, required: false, description: "Repeatable. Restrict to applications in these business units (case-insensitive); omit for all.", schema: { type: array, items: { type: string } } }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EnterpriseDashboard" } } } }
 
   /api/v1/insight/national:
     get:
       tags: [insight]
+      deprecated: true
       summary: "UC20 — national / pan-India compliance dashboard (mock region map)"
+      description: "Deprecated: use GET /api/v1/insight/national/rollup, which has the same regions plus the region x framework breakdown, gap ranking and enterprise cuts. Responds with `Deprecation: true` and a `Link: rel=successor-version` header."
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/NationalDashboard" } } } }
+
+  /api/v1/insight/national/rollup:
+    get:
+      tags: [insight]
+      summary: "Merged national + enterprise compliance dashboard (source of truth)"
+      description: "Regions with RAG, regions ranked by gap to the national average, region x framework breakdown, portfolio, business-unit / criticality cuts and top risks (critical apps first, then lowest compliance)."
+      parameters:
+        - { name: businessUnit, in: query, required: false, description: "Repeatable. Restrict every part to applications in these business units (case-insensitive); omit for all.", schema: { type: array, items: { type: string } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/NationalRollup" } } } }
 
   /api/v1/insight/audit-prep:
     get:
@@ -94,6 +113,17 @@ paths:
     get:
       tags: [insight]
       summary: "UC19 — compliance trend (snapshots) + closure metrics + collection throughput"
+      parameters:
+        - name: businessUnit
+          in: query
+          required: false
+          description: Repeatable. Scope points and `current` to one or more business units (a function or a vertical; points sum across them). Evidence/integrity metrics, closure and collection are not tracked per application and come back zeroed/empty when scoped. Mutually exclusive with `applicationSlug`.
+          schema: { type: array, items: { type: string } }
+        - name: applicationSlug
+          in: query
+          required: false
+          description: Scope just `closure` (approvals/rejections/avgDaysToApprove/rejectionTrendPct) to one application's evidence lifecycle events — App Owner dashboard Overview. `current`/`points` stay portfolio-wide. Mutually exclusive with `businessUnit`.
+          schema: { type: string }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TrendReport" } } } }
   /api/v1/insight/trend/snapshot:
@@ -102,6 +132,15 @@ paths:
       summary: Take a compliance-posture snapshot now (re-runs the portfolio rollup)
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TrendPoint" } } } }
+
+  /api/v1/insight/evidence-lifecycle/summary:
+    get:
+      tags: [insight]
+      summary: "App Owner dashboard — evidence lifecycle counts, rejection audit trail, Auditor SLA, pending aging, scoped to one application"
+      parameters:
+        - { name: applicationSlug, in: query, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceLifecycleSummary" } } } }
 
   /api/v1/reports:
     get:
@@ -1214,6 +1253,39 @@ components:
               completenessPct: { type: number }
               rag: { type: string, enum: [GREEN, AMBER, RED] }
 
+    NationalRollup:
+      type: object
+      properties:
+        generatedAt: { type: string, format: date-time }
+        nationalCompliancePct: { type: number }
+        nationalCompletenessPct: { type: number }
+        applications: { type: integer }
+        byRegionFramework:
+          type: array
+          items:
+            type: object
+            properties:
+              region: { type: string }
+              framework: { type: string }
+              expected: { type: integer }
+              compliant: { type: integer }
+              compliancePct: { type: number }
+        laggingRegions:
+          type: array
+          description: Regions ranked furthest-behind first; gapVsNationalPct is negative when the region trails the national average.
+          items:
+            type: object
+            properties:
+              region: { type: string }
+              compliancePct: { type: number }
+              gapVsNationalPct: { type: number }
+              rag: { type: string, enum: [GREEN, AMBER, RED] }
+        portfolio: { $ref: "#/components/schemas/LeadershipDashboard" }
+        regions: { $ref: "#/components/schemas/NationalDashboard/properties/regions" }
+        byBusinessUnit: { type: array, items: { $ref: "#/components/schemas/GroupPosture" } }
+        byCriticality: { type: array, items: { $ref: "#/components/schemas/GroupPosture" } }
+        topRisks: { type: array, items: { $ref: "#/components/schemas/AppPosture" } }
+
     AuditPrepReport:
       type: object
       properties:
@@ -1265,6 +1337,10 @@ components:
             resubmissions: { type: integer }
             avgDaysToApprove: { type: number, nullable: true }
             approvalsByWeek: { type: object, additionalProperties: { type: integer } }
+            rejectionTrendPct:
+              type: number
+              nullable: true
+              description: Month-over-month % change in rejection count; null with fewer than 2 months of data.
         collection:
           type: array
           items:
@@ -1274,6 +1350,49 @@ components:
               ingested: { type: integer }
               duplicates: { type: integer }
               failed: { type: integer }
+
+    EvidenceLifecycleSummary:
+      type: object
+      description: "App Owner dashboard — evidence lifecycle counts, rejection audit trail and computed Auditor SLA / pending-aging metrics, scoped to one application."
+      properties:
+        applicationSlug: { type: string }
+        generatedAt: { type: string, format: date-time }
+        counts:
+          type: object
+          properties:
+            draft: { type: integer }
+            submitted: { type: integer }
+            approved: { type: integer }
+            rejected: { type: integer }
+            expired: { type: integer }
+            superseded: { type: integer }
+        rejections:
+          type: array
+          items:
+            type: object
+            properties:
+              evidenceId: { type: string, format: uuid }
+              applicationSlug: { type: string }
+              framework: { type: string }
+              controlId: { type: string }
+              reason: { type: string, nullable: true }
+              rejectedBy: { type: string, nullable: true }
+              rejectedAt: { type: string, format: date-time }
+              workflowState: { type: string, description: "Draft | Submitted | Re-upload Requested | Closed" }
+        auditorSla:
+          type: object
+          description: Computed — no direct backend source. % of reviewed evidence (approved or rejected) reviewed within `targetDays` of submission.
+          properties:
+            reviewedWithinTarget: { type: integer }
+            totalReviewed: { type: integer }
+            pct: { type: number, nullable: true }
+            targetDays: { type: integer }
+        pendingAging:
+          type: object
+          description: Computed — DRAFT/SUBMITTED evidence aging in the review queue.
+          properties:
+            count: { type: integer }
+            avgDaysInQueue: { type: number, nullable: true }
 
     ReportInfo:
       type: object

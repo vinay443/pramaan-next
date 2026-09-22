@@ -64,6 +64,7 @@ const NAV: NavGroup[] = [
     items: [
       { to: '/evidence', label: 'Repository', end: true, icon: <Icon d={I.archive} /> },
       { to: '/evidence/query', label: 'Evidence Query', icon: <Icon d={I.search} /> },
+      { to: '/nl-query', label: 'NL Queries', icon: <Icon d={I.chat} /> },
       { to: '/predefined-queries', label: 'Predefined Queries', icon: <Icon d={I.list} /> },
       { to: '/bulk-upload', label: 'Bulk Upload', icon: <Icon d={I.upload} /> },
       { to: '/scheduler', label: 'Scheduler', icon: <Icon d={I.clock} /> },
@@ -79,17 +80,6 @@ const NAV: NavGroup[] = [
       { to: '/compliance', label: 'Compliance', icon: <Icon d={I.shield} /> },
       { to: '/audit-prep', label: 'Audit Prep', icon: <Icon d={I.clipboard} /> },
       { to: '/reports', label: 'Reports', icon: <Icon d={I.file} /> },
-    ],
-  },
-  {
-    heading: 'Insights',
-    items: [
-      { to: '/leadership', label: 'Leadership', icon: <Icon d={I.crown} /> },
-      { to: '/comparison', label: 'Comparison', icon: <Icon d={I.columns} /> },
-      { to: '/enterprise', label: 'Enterprise', icon: <Icon d={I.building} /> },
-      { to: '/national', label: 'National Rollup', icon: <Icon d={I.globe} /> },
-      { to: '/trend', label: 'Trend', icon: <Icon d={I.trend} /> },
-      { to: '/nl-query', label: 'NL Queries', icon: <Icon d={I.chat} /> },
     ],
   },
   {
