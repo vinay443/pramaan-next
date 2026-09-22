@@ -78,6 +78,13 @@
             <version>23.8.0.25.04</version>
             <scope>runtime</scope>
         </dependency>
+        <!-- Real execution target for the RHEL predefined-query controls (LIVE mode) —
+             minimal SSH exec-channel client for running the catalogue's shell commands. -->
+        <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jsch</artifactId>
+            <version>0.1.55</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

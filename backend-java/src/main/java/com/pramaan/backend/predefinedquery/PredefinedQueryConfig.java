@@ -17,7 +17,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * has a real target — currently PostgreSQL (reuses the app's own datasource),
  * Aerospike ({@code pramaan.aerospike.*}), NGINX ({@code pramaan.nginx.*}),
  * Aurora MySQL ({@code pramaan.aurora-mysql.*}), YugabyteDB
- * ({@code pramaan.yugabytedb.*}), and Oracle ({@code pramaan.oracle.*}). A
+ * ({@code pramaan.yugabytedb.*}), Oracle ({@code pramaan.oracle.*}), and RHEL
+ * ({@code pramaan.rhel.*}, over SSH). A
  * technology with no live executor registered simply falls back to
  * SIMULATED_FALLBACK per-control, it doesn't disable LIVE mode for the
  * technologies that do have one.
@@ -52,7 +53,12 @@ class PredefinedQueryConfig {
             @Value("${pramaan.oracle.port:1521}") int oraclePort,
             @Value("${pramaan.oracle.service-name:FREEPDB1}") String oracleServiceName,
             @Value("${pramaan.oracle.user:system}") String oracleUser,
-            @Value("${pramaan.oracle.password:pramaan}") String oraclePassword) {
+            @Value("${pramaan.oracle.password:pramaan}") String oraclePassword,
+            @Value("${pramaan.rhel.host:localhost}") String rhelHost,
+            @Value("${pramaan.rhel.port:2222}") int rhelPort,
+            @Value("${pramaan.rhel.user:root}") String rhelUser,
+            @Value("${pramaan.rhel.password:}") String rhelPassword,
+            @Value("${pramaan.rhel.private-key-path:}") String rhelPrivateKeyPath) {
         boolean live = "LIVE".equalsIgnoreCase(mode == null ? "" : mode.trim());
         if (!live) {
             log.info("predefined-query executor: SIMULATED");
@@ -74,10 +80,12 @@ class PredefinedQueryConfig {
                 yugabyteHost, yugabytePort, yugabyteDatabase, yugabyteUser, yugabytePassword));
         liveExecutors.add(new OracleLiveExecutor(
                 oracleHost, oraclePort, oracleServiceName, oracleUser, oraclePassword));
+        liveExecutors.add(new RhelLiveExecutor(
+                rhelHost, rhelPort, rhelUser, rhelPassword, rhelPrivateKeyPath));
 
         log.info("predefined-query executor: LIVE (PostgreSQL + Aerospike + NGINX + Aurora MySQL + YugabyteDB "
-                + "+ Oracle controls executed for real when their target is reachable; every other technology "
-                + "falls back to SIMULATED_FALLBACK)");
+                + "+ Oracle + RHEL controls executed for real when their target is reachable; every other "
+                + "technology falls back to SIMULATED_FALLBACK)");
         return new LivePredefinedQueryExecutor(liveExecutors);
     }
 }
