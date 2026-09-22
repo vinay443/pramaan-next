@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { listApplications, listPredefinedQueries, runAllPredefinedQueries, runPredefinedQuery } from '../api/endpoints'
 import type { PredefinedQueryItem, PredefinedQueryRunResult, PredefinedQueryRunSummary } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
@@ -106,20 +106,74 @@ const DEFAULT_FILTERS: FilterState = {
   order: 'asc',
 }
 
+const DEFAULT_PAGE_SIZE: (typeof PAGE_SIZE_OPTIONS)[number] = 25
+
+const SORT_FIELDS = Object.keys(SORT_LABELS) as SortField[]
+
+function isDefaultFilters(f: FilterState): boolean {
+  return (
+    f.technology === DEFAULT_FILTERS.technology &&
+    f.framework === DEFAULT_FILTERS.framework &&
+    f.search === DEFAULT_FILTERS.search &&
+    f.sortBy === DEFAULT_FILTERS.sortBy &&
+    f.order === DEFAULT_FILTERS.order
+  )
+}
+
+/** Reads filter state out of the URL, falling back to DEFAULT_FILTERS for any missing/invalid key. */
+function filtersFromParams(params: URLSearchParams): FilterState {
+  const sortBy = params.get('sortBy')
+  const order = params.get('order')
+  return {
+    technology: params.get('technology') ?? DEFAULT_FILTERS.technology,
+    framework: params.get('framework') ?? DEFAULT_FILTERS.framework,
+    search: params.get('search') ?? DEFAULT_FILTERS.search,
+    sortBy: sortBy && (SORT_FIELDS as string[]).includes(sortBy) ? (sortBy as SortField) : DEFAULT_FILTERS.sortBy,
+    order: order === 'asc' || order === 'desc' ? order : DEFAULT_FILTERS.order,
+  }
+}
+
+function pageFromParams(params: URLSearchParams): number {
+  const n = Number(params.get('page'))
+  return Number.isInteger(n) && n > 0 ? n : 0
+}
+
+function pageSizeFromParams(params: URLSearchParams): (typeof PAGE_SIZE_OPTIONS)[number] {
+  const n = Number(params.get('pageSize'))
+  return (PAGE_SIZE_OPTIONS as readonly number[]).includes(n) ? (n as (typeof PAGE_SIZE_OPTIONS)[number]) : DEFAULT_PAGE_SIZE
+}
+
 const TABS = ['Query Catalog', 'Execution History', 'Manual Controls'] as const
 type Tab = (typeof TABS)[number]
 
 export function PredefinedQueries() {
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('Query Catalog')
+  const [searchParams, setSearchParams] = useSearchParams()
 
   // Draft mirrors what's in the filter controls; applied is what's actually in
   // effect. Nothing here re-filters until Apply is clicked (or the form submitted).
-  const [draft, setDraft] = useState<FilterState>(DEFAULT_FILTERS)
-  const [applied, setApplied] = useState<FilterState>(DEFAULT_FILTERS)
+  // Both — plus page/pageSize — are seeded from the URL on mount so the list
+  // state survives navigating away (e.g. to a control's detail page) and back.
+  const [draft, setDraft] = useState<FilterState>(() => filtersFromParams(searchParams))
+  const [applied, setApplied] = useState<FilterState>(() => filtersFromParams(searchParams))
   const [applicationSlug, setApplicationSlug] = useState('')
-  const [page, setPage] = useState(0)
-  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(25)
+  const [page, setPage] = useState(() => pageFromParams(searchParams))
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(() => pageSizeFromParams(searchParams))
+
+  /** Writes the given list state into the URL (replacing, not pushing, history). Keys at their
+   *  default value are omitted so the URL — and Clear filters — stay clean. */
+  function writeParams(next: { filters: FilterState; page: number; pageSize: (typeof PAGE_SIZE_OPTIONS)[number] }) {
+    const params: Record<string, string> = {}
+    if (next.filters.technology) params.technology = next.filters.technology
+    if (next.filters.framework) params.framework = next.filters.framework
+    if (next.filters.search) params.search = next.filters.search
+    if (next.filters.sortBy !== DEFAULT_FILTERS.sortBy) params.sortBy = next.filters.sortBy
+    if (next.filters.order !== DEFAULT_FILTERS.order) params.order = next.filters.order
+    if (next.page > 0) params.page = String(next.page)
+    if (next.pageSize !== DEFAULT_PAGE_SIZE) params.pageSize = String(next.pageSize)
+    setSearchParams(params, { replace: true })
+  }
 
   const serverFilters = useMemo(
     () => ({
@@ -184,7 +238,28 @@ export function PredefinedQueries() {
     e?.preventDefault()
     setApplied(draft)
     setPage(0)
+    writeParams({ filters: draft, page: 0, pageSize })
   }
+
+  function clearFilters() {
+    setDraft(DEFAULT_FILTERS)
+    setApplied(DEFAULT_FILTERS)
+    setPage(0)
+    setSearchParams({}, { replace: true })
+  }
+
+  function goToPage(next: number) {
+    setPage(next)
+    writeParams({ filters: applied, page: next, pageSize })
+  }
+
+  function changePageSize(next: (typeof PAGE_SIZE_OPTIONS)[number]) {
+    setPageSize(next)
+    setPage(0)
+    writeParams({ filters: applied, page: 0, pageSize: next })
+  }
+
+  const canClearFilters = !isDefaultFilters(draft) || !isDefaultFilters(applied) || page !== 0
 
   async function runOne(controlId: string) {
     setBusy(true)
@@ -323,6 +398,11 @@ export function PredefinedQueries() {
             <button type="submit" className="primary">
               Apply
             </button>
+            {canClearFilters ? (
+              <button type="button" className="ghost" onClick={clearFilters}>
+                Clear filters
+              </button>
+            ) : null}
           </div>
         </form>
 
@@ -390,10 +470,7 @@ export function PredefinedQueries() {
                   <select
                     aria-label="Rows per page"
                     value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])
-                      setPage(0)
-                    }}
+                    onChange={(e) => changePageSize(Number(e.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])}
                   >
                     {PAGE_SIZE_OPTIONS.map((n) => (
                       <option key={n} value={n}>
@@ -402,13 +479,13 @@ export function PredefinedQueries() {
                     ))}
                   </select>
                 </label>
-                <button disabled={clampedPage === 0} onClick={() => setPage((p) => p - 1)}>
+                <button disabled={clampedPage === 0} onClick={() => goToPage(clampedPage - 1)}>
                   Prev
                 </button>
                 <span>
                   Page {clampedPage + 1} / {totalPages}
                 </span>
-                <button disabled={clampedPage + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>
+                <button disabled={clampedPage + 1 >= totalPages} onClick={() => goToPage(clampedPage + 1)}>
                   Next
                 </button>
               </div>

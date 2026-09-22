@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   getEvidenceLifecycle,
   listApplications,
@@ -17,6 +17,7 @@ type Tab = (typeof TABS)[number]
 
 export function PredefinedQueryDetail() {
   const { controlId = '' } = useParams()
+  const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('Summary')
   const [applicationSlug, setApplicationSlug] = useState('')
 
@@ -68,7 +69,9 @@ export function PredefinedQueryDetail() {
   return (
     <div className="page">
       <p>
-        <Link to="/predefined-queries">← Predefined Queries</Link>
+        <button type="button" className="ghost" onClick={() => navigate(-1)}>
+          ← Predefined Queries
+        </button>
       </p>
       <h1>
         {item.controlName} <span className="muted">/ {item.controlId}</span>
