@@ -456,6 +456,25 @@ export interface EvidenceLifecycleSummary {
   pendingAging: PendingAging
 }
 
+// ---- upcoming audit schedule ----------------------------------------------
+
+export interface AuditScheduleRow {
+  id: string
+  framework: string
+  auditName: string
+  scheduledDate: string
+  applicationSlugs: string[]
+  readyCount: number
+  totalCount: number
+  readinessThresholdPct: number
+}
+
+export interface AuditScheduleReport {
+  generatedAt: string
+  readinessThresholdPct: number
+  audits: AuditScheduleRow[]
+}
+
 // ---- Predefined technical query catalogue --------------------------
 
 export interface PredefinedQueryItem {

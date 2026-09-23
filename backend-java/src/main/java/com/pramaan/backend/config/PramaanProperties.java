@@ -12,6 +12,7 @@ public record PramaanProperties(
         Seed seed,
         Admin admin,
         Evidence evidence,
+        AuditSchedule auditSchedule,
         /** Dev/demo only. Gates throwaway helpers like the demo-evidence seeder. Never true in prod. */
         boolean demoMode) {
 
@@ -32,6 +33,17 @@ public record PramaanProperties(
 
     public Evidence evidenceOrDefault() {
         return evidence != null ? evidence : new Evidence(365, 5);
+    }
+
+    /** Upcoming audit schedule — readiness threshold used to compute readyCount/totalCount. */
+    public record AuditSchedule(Integer readinessThresholdPct) {
+        public int readinessThresholdPctOrDefault() {
+            return readinessThresholdPct != null && readinessThresholdPct > 0 ? readinessThresholdPct : 80;
+        }
+    }
+
+    public AuditSchedule auditScheduleOrDefault() {
+        return auditSchedule != null ? auditSchedule : new AuditSchedule(80);
     }
 
     public record ObjectStore(String driver, Filesystem filesystem, Minio minio) {

@@ -67,7 +67,7 @@ describe('Dashboard — Auditor', () => {
 describe('Dashboard — App Owner', () => {
   afterEach(() => localStorage.removeItem(PERSONA_STORAGE_KEY))
 
-  it('renders the six App Owner tabs with the POC-matched header (mock)', async () => {
+  it('renders the four App Owner tabs with the POC-matched header (mock)', async () => {
     localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
     renderOffline(<Dashboard />)
 
@@ -76,19 +76,18 @@ describe('Dashboard — App Owner', () => {
 
     const tablist = await screen.findByRole('tablist', { name: 'Dashboard sections' })
     expect(within(tablist).getAllByRole('tab').map((t) => t.textContent)).toEqual([
-      'Overview',
-      'Controls',
       'Evidence',
-      'Findings',
-      'Remediation',
-      'Compliance',
+      'Frameworks',
+      'Applications',
+      'Audit Readiness',
     ])
   })
 
-  it('Overview tab shows the POC-matched KPI numbers (mock)', async () => {
+  it('Evidence tab shows the POC-matched KPIs, highlight cards, rejections table and Needs Resubmission cards (mock)', async () => {
     localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
     renderOffline(<Dashboard />)
 
+    // Evidence is the default tab
     expect(await screen.findByText('Draft')).toBeInTheDocument()
     expect(screen.getAllByText('78').length).toBeGreaterThanOrEqual(2) // Draft + Submitted KPI cards
     expect(screen.getByText('51.6%')).toBeInTheDocument() // Closure rate
@@ -96,40 +95,20 @@ describe('Dashboard — App Owner', () => {
     expect(screen.getByText('↓ 12%')).toBeInTheDocument() // Rejection trend
     expect(screen.getByText('94.5%')).toBeInTheDocument() // Auditor SLA
     expect(screen.getByText('Within 5-day target')).toBeInTheDocument()
-    expect(screen.getByText('80')).toBeInTheDocument() // Pending Actions highlight
     expect(screen.getByText('12')).toBeInTheDocument() // Rejected Evidence highlight
     expect(screen.getByText('36')).toBeInTheDocument() // Expiring / Stale highlight
+    expect(screen.queryByText('Pending Actions')).not.toBeInTheDocument() // dropped from the highlight row
     expect(screen.getByText('83')).toBeInTheDocument() // Closed chip
-  })
 
-  it('Controls tab shows the Pending Actions Work Queue with POC rows (mock)', async () => {
-    localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
-    renderOffline(<Dashboard />)
+    // rejections table (moved from the old standalone Evidence tab)
+    expect(screen.getByText('Evidence Rejections (12)')).toBeInTheDocument()
+    expect(screen.getByText('Biometric Data Minimization')).toBeInTheDocument()
+    expect(screen.getAllByText('S. Nair (Auditor)').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Owner Review').length).toBeGreaterThan(0)
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Controls' }))
-    expect(await screen.findByText('80 open')).toBeInTheDocument()
-    expect(screen.getByText('DPS-C11')).toBeInTheDocument()
-    expect(screen.getByText('DPSC_MANUAL_OVERRIDE_AP_Q1.xlsx')).toBeInTheDocument()
-    expect(screen.getAllByText('2026-11-30').length).toBeGreaterThan(0)
-  })
-
-  it('Findings tab shows 8 Critical prioritized-action cards (mock)', async () => {
-    localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
-    renderOffline(<Dashboard />)
-
-    fireEvent.click(await screen.findByRole('tab', { name: 'Findings' }))
-    expect(await screen.findByText('Prioritized Actions')).toBeInTheDocument()
-    expect(screen.getAllByText('Critical').length).toBe(8)
-    expect(screen.getByText(/Manual override approval log/)).toBeInTheDocument()
-    expect(screen.getByText(/Post-implementation review samples/)).toBeInTheDocument()
-  })
-
-  it('Remediation tab shows 5 resubmission cards wired to Bulk Upload (mock)', async () => {
-    localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
-    renderOffline(<Dashboard />)
-
-    fireEvent.click(await screen.findByRole('tab', { name: 'Remediation' }))
-    const resubmitLinks = await screen.findAllByRole('link', { name: 'Resubmit Evidence' })
+    // Needs Resubmission (moved from the old standalone Remediation tab)
+    expect(screen.getByText('Needs Resubmission')).toBeInTheDocument()
+    const resubmitLinks = screen.getAllByRole('link', { name: 'Resubmit Evidence' })
     expect(resubmitLinks).toHaveLength(5)
     expect(resubmitLinks[0]).toHaveAttribute(
       'href',
@@ -137,25 +116,69 @@ describe('Dashboard — App Owner', () => {
     )
   })
 
-  it('Evidence tab shows the Evidence Rejections audit trail with the POC-matched rows (mock)', async () => {
+  it('Frameworks tab shows Framework Compliance, the Pending Actions Work Queue and Critical Findings (mock)', async () => {
     localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
     renderOffline(<Dashboard />)
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Evidence' }))
-    expect(await screen.findByText('Evidence Rejections (12)')).toBeInTheDocument()
-    expect(screen.getByText('Biometric Data Minimization')).toBeInTheDocument()
-    expect(screen.getAllByText('S. Nair (Auditor)').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Owner Review').length).toBeGreaterThan(0)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Frameworks' }))
+
+    // Compliance tab's KPI row + By framework table (via ComplianceView, reused as-is)
+    expect(await screen.findByText('Framework Compliance')).toBeInTheDocument()
+    expect(screen.getByText('By framework')).toBeInTheDocument()
+
+    // Controls tab's Pending Actions Work Queue (moved)
+    expect(screen.getByText('80 open')).toBeInTheDocument()
+    expect(screen.getByText('DPS-C11')).toBeInTheDocument()
+    expect(screen.getByText('DPSC_MANUAL_OVERRIDE_AP_Q1.xlsx')).toBeInTheDocument()
+    expect(screen.getAllByText('2026-11-30').length).toBeGreaterThan(0)
+
+    // Findings tab's card grid, renamed "Critical Findings" (moved) — scope the Critical
+    // count to this section since the Work Queue table's Priority column also reads "Critical".
+    const findingsHeading = screen.getByText('Critical Findings')
+    const findingsSection = findingsHeading.closest('.card') as HTMLElement
+    expect(within(findingsSection).getAllByText('Critical').length).toBe(8)
+    expect(screen.getByText(/Manual override approval log/)).toBeInTheDocument()
+    expect(screen.getByText(/Post-implementation review samples/)).toBeInTheDocument()
   })
 
-  it('Compliance tab merges Framework Compliance and vs. Portfolio Average (mock)', async () => {
+  it('Applications tab shows the profile card and Upcoming Audits for this app (mock)', async () => {
     localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
     renderOffline(<Dashboard />)
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Compliance' }))
-    expect(await screen.findByText('Framework Compliance')).toBeInTheDocument()
-    expect(await screen.findByText(/vs\. portfolio average/)).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'vs. Portfolio' })).not.toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('tab', { name: 'Applications' }))
+
+    expect(await screen.findByText('Application Profile')).toBeInTheDocument()
+    expect(screen.getByText('Region')).toBeInTheDocument()
+    expect(screen.getByText('India — West')).toBeInTheDocument()
+
+    expect(await screen.findByText('Upcoming Audits')).toBeInTheDocument()
+  })
+
+  it('Audit Readiness tab shows the composite score, Ready/At Risk band and Coverage by Framework table (mock)', async () => {
+    localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    renderOffline(<Dashboard />)
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Audit Readiness' }))
+
+    expect(await screen.findByText('Audit Readiness Score')).toBeInTheDocument()
+    expect(screen.getByText('Composite score')).toBeInTheDocument()
+    expect(screen.getByText('Control coverage')).toBeInTheDocument()
+    expect(screen.getByText('Approved evidence')).toBeInTheDocument()
+    expect(screen.getByText('Freshness')).toBeInTheDocument()
+    expect(screen.getByText('88%')).toBeInTheDocument() // mock freshness input
+    expect(screen.getByText(/^(Ready|At Risk)$/)).toBeInTheDocument()
+
+    expect(await screen.findByText('Coverage by Framework')).toBeInTheDocument()
+  })
+
+  it('no longer offers the old Overview/Controls/Findings/Remediation/Compliance tabs', async () => {
+    localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    renderOffline(<Dashboard />)
+
+    await screen.findByRole('tablist', { name: 'Dashboard sections' })
+    for (const name of ['Overview', 'Controls', 'Findings', 'Remediation', 'Compliance']) {
+      expect(screen.queryByRole('tab', { name })).not.toBeInTheDocument()
+    }
   })
 })
 

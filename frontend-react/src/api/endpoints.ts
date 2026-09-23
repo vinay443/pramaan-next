@@ -39,6 +39,7 @@ import type {
   EvidenceLifecycleView,
   EvidenceLifecycleSummary,
   EvidenceView,
+  AuditScheduleReport,
   GrcSyncStatus,
   IntegrityReport,
   LeadershipDashboard,
@@ -656,6 +657,15 @@ export function getEvidenceLifecycleSummary(applicationSlug: string): Promise<Ev
         `/api/v1/insight/evidence-lifecycle/summary?applicationSlug=${encodeURIComponent(applicationSlug)}`,
       ),
     () => mock.mockEvidenceLifecycleSummary(applicationSlug),
+    true,
+  )
+}
+
+/** Upcoming audit schedule — every scheduled audit plus a computed readyCount/totalCount. */
+export function getAuditSchedule(): Promise<AuditScheduleReport> {
+  return withFallback(
+    () => apiFetch<AuditScheduleReport>('/api/v1/insight/audit-schedule'),
+    () => mock.mockAuditSchedule(),
     true,
   )
 }

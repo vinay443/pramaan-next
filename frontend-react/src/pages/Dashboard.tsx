@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  getCompleteness,
+  getAuditSchedule,
   getCompliance,
   getComparison,
   getEnterpriseDashboard,
@@ -24,8 +24,12 @@ import { DataTable, ErrorNote, LineChart, Loading, Section, StatCard, StatusPill
 import { PERSONA_STORAGE_KEY } from './PersonaLogin'
 import type { EvidenceDashboard, EvidenceView, LifecycleStateCounts } from '../api/types'
 import {
+  AUDIT_READINESS_BAND_THRESHOLD_PCT,
+  AUDIT_READINESS_WEIGHTS,
   MOCK_APP_OWNER_COUNTS,
   MOCK_APP_OWNER_OVERVIEW,
+  MOCK_APPLICATION_PROFILE,
+  MOCK_AUDIT_READINESS,
   MOCK_FINDINGS,
   MOCK_REJECTIONS,
   MOCK_REMEDIATION,
@@ -265,7 +269,7 @@ export function Dashboard() {
 type AsyncBoard = ReturnType<typeof useAsync<Awaited<ReturnType<typeof getEvidenceDashboard>>>>
 type AsyncTrend = ReturnType<typeof useAsync<Awaited<ReturnType<typeof getTrend>>>>
 
-const APP_OWNER_TABS = ['Overview', 'Controls', 'Evidence', 'Findings', 'Remediation', 'Compliance'] as const
+const APP_OWNER_TABS = ['Evidence', 'Frameworks', 'Applications', 'Audit Readiness'] as const
 type AppOwnerTab = (typeof APP_OWNER_TABS)[number]
 
 /** "Draft" | "Submitted" | "Re-upload Requested" | "Closed" — same mapping as the
@@ -347,10 +351,12 @@ function LifecycleChipRow({ counts }: { counts: LifecycleStateCounts | undefined
 }
 
 /** App Owner (role 'APP') dashboard — visually matched to the ECS POC's Application Owner
- *  Dashboard (dark card KPI layout, six-tab bar), wired to PRAMAAN's real evidence lifecycle,
- *  trend (closure) and compliance endpoints — see useAppOwnerData for the shared fetch. */
+ *  Dashboard (dark card KPI layout), wired to PRAMAAN's real evidence lifecycle, trend
+ *  (closure) and compliance endpoints — see useAppOwnerData for the shared fetch. Regrouped
+ *  into four tabs (Evidence, Frameworks, Applications, Audit Readiness); each reuses the same
+ *  sub-components/JSX the original six-tab layout used, just moved and regrouped. */
 function AppOwnerDashboard({ staleAfterDays }: { staleAfterDays: number }) {
-  const [tab, setTab] = useState<AppOwnerTab>('Overview')
+  const [tab, setTab] = useState<AppOwnerTab>('Evidence')
   const { app, loading: appLoading, error: appError } = useOwnedApplication()
   const owner = useAppOwnerData(app?.slug)
 
@@ -370,11 +376,6 @@ function AppOwnerDashboard({ staleAfterDays }: { staleAfterDays: number }) {
   const rejectionReasonByEvidenceId = new Map(
     (owner.lifecycle.data?.rejections ?? []).map((r) => [r.evidenceId, r]),
   )
-  const pendingActionsCount = USE_MOCK_APP_OWNER_DATA
-    ? MOCK_APP_OWNER_OVERVIEW.highlights.pendingActions
-    : counts
-      ? counts.draft + counts.submitted
-      : undefined
   const rejectedEvidenceCount = USE_MOCK_APP_OWNER_DATA ? MOCK_APP_OWNER_OVERVIEW.highlights.rejectedEvidence : counts?.rejected
   const expiringCount = USE_MOCK_APP_OWNER_DATA
     ? MOCK_APP_OWNER_OVERVIEW.highlights.expiringStale
@@ -425,7 +426,7 @@ function AppOwnerDashboard({ staleAfterDays }: { staleAfterDays: number }) {
       {owner.trend.error ? <ErrorNote message={owner.trend.error} /> : null}
       {owner.evidence.error ? <ErrorNote message={owner.evidence.error} /> : null}
 
-      {tab === 'Overview' ? (
+      {tab === 'Evidence' ? (
         <div className="dash-tab-panel">
           {owner.lifecycle.loading ? <Loading what="evidence lifecycle summary" /> : null}
           <LifecycleKpiRow counts={counts} />
@@ -452,12 +453,6 @@ function AppOwnerDashboard({ staleAfterDays }: { staleAfterDays: number }) {
 
           <div className="dash-urgency-row">
             <UrgencyCard
-              tone="amber"
-              value={pendingActionsCount ?? '—'}
-              label="Pending Actions"
-              context="Requires your review."
-            />
-            <UrgencyCard
               tone="red"
               value={rejectedEvidenceCount ?? '—'}
               label="Rejected Evidence"
@@ -478,13 +473,63 @@ function AppOwnerDashboard({ staleAfterDays }: { staleAfterDays: number }) {
               either.
             </p>
           )}
+
+          <EvidenceRejectionsSection
+            rejections={USE_MOCK_APP_OWNER_DATA ? MOCK_REJECTIONS : owner.lifecycle.data?.rejections}
+            loading={USE_MOCK_APP_OWNER_DATA ? false : owner.lifecycle.loading}
+          />
+
+          <Section title="Needs Resubmission">
+            <div className="own-remediation-list">
+              {USE_MOCK_APP_OWNER_DATA ? null : owner.evidence.loading ? <Loading what="remediation items" /> : null}
+              {USE_MOCK_APP_OWNER_DATA
+                ? MOCK_REMEDIATION.map((r) => (
+                    <div key={r.id} className="card own-remediation-card">
+                      <div>
+                        <strong>{r.framework} · {r.controlCode}</strong>
+                        <p className="muted small">{r.application} — resubmission required</p>
+                      </div>
+                      <Link
+                        className="primary-link-btn"
+                        to={`/bulk-upload?${new URLSearchParams({ applicationSlug: r.applicationSlugForDeepLink, framework: r.framework, controlId: r.controlCode }).toString()}`}
+                      >
+                        Resubmit Evidence
+                      </Link>
+                    </div>
+                  ))
+                : items
+                    .filter((e) => e.lifecycleState === 'REJECTED')
+                    .map((e) => (
+                      <div key={e.evidenceId} className="card own-remediation-card">
+                        <div>
+                          <strong>{e.framework} · {e.controlId}</strong>
+                          <p className="muted small">{app?.name ?? '—'} — resubmission required</p>
+                        </div>
+                        <Link
+                          className="primary-link-btn"
+                          to={`/bulk-upload?${new URLSearchParams({ applicationSlug: app?.slug ?? '', framework: e.framework, controlId: e.controlId }).toString()}`}
+                        >
+                          Resubmit Evidence
+                        </Link>
+                      </div>
+                    ))}
+              {!USE_MOCK_APP_OWNER_DATA && !owner.evidence.loading && items.filter((e) => e.lifecycleState === 'REJECTED').length === 0 ? (
+                <p className="muted">Nothing needs resubmission right now.</p>
+              ) : null}
+            </div>
+          </Section>
         </div>
       ) : null}
 
-      {tab === 'Controls' ? (
+      {tab === 'Frameworks' ? (
         <div className="dash-tab-panel">
-          <LifecycleKpiRow counts={counts} />
-          <LifecycleChipRow counts={counts} />
+          <OwnedAppScope>
+            {(a) => (
+              <Section title="Framework Compliance">
+                <ComplianceView slug={a.slug} actionable />
+              </Section>
+            )}
+          </OwnedAppScope>
 
           <Section
             title="Pending Actions Work Queue"
@@ -575,21 +620,8 @@ function AppOwnerDashboard({ staleAfterDays }: { staleAfterDays: number }) {
               />
             )}
           </Section>
-        </div>
-      ) : null}
 
-      {tab === 'Evidence' ? (
-        <div className="dash-tab-panel">
-          <EvidenceRejectionsSection
-            rejections={USE_MOCK_APP_OWNER_DATA ? MOCK_REJECTIONS : owner.lifecycle.data?.rejections}
-            loading={USE_MOCK_APP_OWNER_DATA ? false : owner.lifecycle.loading}
-          />
-        </div>
-      ) : null}
-
-      {tab === 'Findings' ? (
-        <div className="dash-tab-panel">
-          <Section title="Prioritized Actions">
+          <Section title="Critical Findings">
             {USE_MOCK_APP_OWNER_DATA ? null : owner.evidence.loading ? <Loading what="findings" /> : null}
             <div className="dash-tile-grid own-findings-grid">
               {USE_MOCK_APP_OWNER_DATA
@@ -635,61 +667,125 @@ function AppOwnerDashboard({ staleAfterDays }: { staleAfterDays: number }) {
         </div>
       ) : null}
 
-      {tab === 'Remediation' ? (
-        <div className="dash-tab-panel own-remediation-list">
-          {USE_MOCK_APP_OWNER_DATA ? null : owner.evidence.loading ? <Loading what="remediation items" /> : null}
-          {USE_MOCK_APP_OWNER_DATA
-            ? MOCK_REMEDIATION.map((r) => (
-                <div key={r.id} className="card own-remediation-card">
-                  <div>
-                    <strong>{r.framework} · {r.controlCode}</strong>
-                    <p className="muted small">{r.application} — resubmission required</p>
-                  </div>
-                  <Link
-                    className="primary-link-btn"
-                    to={`/bulk-upload?${new URLSearchParams({ applicationSlug: r.applicationSlugForDeepLink, framework: r.framework, controlId: r.controlCode }).toString()}`}
-                  >
-                    Resubmit Evidence
-                  </Link>
+      {tab === 'Applications' ? (
+        <div className="dash-tab-panel">
+          {app ? (
+            <>
+              <Section title="Application Profile">
+                <div className="stat-grid">
+                  <StatCard label="Application" value={app.name} />
+                  <StatCard label="Criticality" value={app.criticality ?? '—'} />
+                  <StatCard label="Business Unit" value={app.businessUnit ?? '—'} />
+                  <StatCard label="Region" value={MOCK_APPLICATION_PROFILE.region} />
                 </div>
-              ))
-            : items
-                .filter((e) => e.lifecycleState === 'REJECTED')
-                .map((e) => (
-                  <div key={e.evidenceId} className="card own-remediation-card">
-                    <div>
-                      <strong>{e.framework} · {e.controlId}</strong>
-                      <p className="muted small">{app?.name ?? '—'} — resubmission required</p>
-                    </div>
-                    <Link
-                      className="primary-link-btn"
-                      to={`/bulk-upload?${new URLSearchParams({ applicationSlug: app?.slug ?? '', framework: e.framework, controlId: e.controlId }).toString()}`}
-                    >
-                      Resubmit Evidence
-                    </Link>
-                  </div>
-                ))}
-          {!USE_MOCK_APP_OWNER_DATA && !owner.evidence.loading && items.filter((e) => e.lifecycleState === 'REJECTED').length === 0 ? (
-            <p className="muted">Nothing needs resubmission right now.</p>
+              </Section>
+              <UpcomingAuditsSection slug={app.slug} />
+            </>
           ) : null}
         </div>
       ) : null}
 
-      {tab === 'Compliance' ? (
-        <div className="dash-tab-panel">
-          <OwnedAppScope>
-            {(a) => (
-              <>
-                <Section title="Framework Compliance">
-                  <ComplianceView slug={a.slug} actionable />
-                </Section>
-                <PortfolioComparison slug={a.slug} name={a.name} />
-              </>
-            )}
-          </OwnedAppScope>
-        </div>
+      {tab === 'Audit Readiness' ? (
+        <div className="dash-tab-panel">{app ? <AuditReadinessTab slug={app.slug} counts={counts} /> : null}</div>
       ) : null}
     </div>
+  )
+}
+
+/** Applications tab — audits from GET /api/v1/insight/audit-schedule scoped to one application. */
+function UpcomingAuditsSection({ slug }: { slug: string }) {
+  const schedule = useAsync(() => getAuditSchedule(), [])
+  const audits = (schedule.data?.audits ?? []).filter((a) => a.applicationSlugs.includes(slug))
+
+  return (
+    <Section title="Upcoming Audits">
+      {schedule.loading ? <Loading what="audit schedule" /> : null}
+      {schedule.error ? <ErrorNote message={schedule.error} /> : null}
+      {schedule.data ? (
+        audits.length === 0 ? (
+          <p className="muted">No upcoming audits scheduled for this application.</p>
+        ) : (
+          <DataTable
+            rows={audits}
+            rowKey={(a) => a.id}
+            columns={[
+              { header: 'Framework', cell: (a) => a.framework },
+              { header: 'Audit', cell: (a) => a.auditName },
+              { header: 'Scheduled date', cell: (a) => fmtDate(a.scheduledDate) },
+              { header: 'Readiness', cell: (a) => `${a.readyCount}/${a.totalCount} ready`, align: 'right' },
+            ]}
+          />
+        )
+      ) : null}
+      <p className="muted small">
+        <code>GET /api/v1/insight/audit-schedule</code>, filtered to this application.
+      </p>
+    </Section>
+  )
+}
+
+/** Audit Readiness tab — a composite score (Control Coverage 50% + Approved Evidence 30% +
+ *  Freshness 20%) scoped to one application. Control Coverage reuses GET /insight/compliance;
+ *  Approved Evidence reuses the evidence-lifecycle counts already fetched for the Evidence tab;
+ *  Freshness has no per-application backend source yet, so it's a mock placeholder — see
+ *  mockAppOwnerDashboard.ts. */
+function AuditReadinessTab({ slug, counts }: { slug: string; counts: LifecycleStateCounts | undefined }) {
+  const compliance = useAsync(() => getCompliance(slug), [slug])
+  const controlCoveragePct = compliance.data?.compliancePct ?? 0
+  const totalEvidence = counts
+    ? counts.draft + counts.submitted + counts.approved + counts.rejected + counts.expired + counts.superseded
+    : 0
+  const approvedEvidencePct =
+    counts && totalEvidence > 0 ? Math.round((counts.approved / totalEvidence) * 1000) / 10 : 0
+  const freshnessPct = MOCK_AUDIT_READINESS.freshnessPct
+  const composite =
+    Math.round(
+      (controlCoveragePct * AUDIT_READINESS_WEIGHTS.controlCoverage +
+        approvedEvidencePct * AUDIT_READINESS_WEIGHTS.approvedEvidence +
+        freshnessPct * AUDIT_READINESS_WEIGHTS.freshness) *
+        10,
+    ) / 10
+  const band = composite >= AUDIT_READINESS_BAND_THRESHOLD_PCT ? 'Ready' : 'At Risk'
+
+  return (
+    <>
+      {compliance.loading ? <Loading what="compliance" /> : null}
+      {compliance.error ? <ErrorNote message={compliance.error} /> : null}
+
+      <Section title="Audit Readiness Score">
+        <div className="stat-grid">
+          <StatCard size="lg" label="Composite score" value={`${composite}%`} hint="Coverage 50% · Approved evidence 30% · Freshness 20%" />
+          <StatCard label="Control coverage" value={`${controlCoveragePct}%`} hint="GET /api/v1/insight/compliance" />
+          <StatCard label="Approved evidence" value={`${approvedEvidencePct}%`} hint="Evidence lifecycle summary" />
+          <StatCard label="Freshness" value={`${freshnessPct}%`} hint="Demo placeholder" />
+        </div>
+        <p>
+          <StatusPill status={band} tone={band === 'Ready' ? 'ok' : 'bad'} />{' '}
+          {band === 'Ready'
+            ? 'This application clears the readiness bar for its next audit.'
+            : 'This application is below the readiness bar — prioritize open items before the next audit.'}
+        </p>
+      </Section>
+
+      <Section title="Coverage by Framework">
+        {compliance.data ? (
+          compliance.data.byFramework.length === 0 ? (
+            <p className="muted">No frameworks in scope.</p>
+          ) : (
+            <DataTable
+              rows={compliance.data.byFramework}
+              rowKey={(f) => f.framework}
+              columns={[
+                { header: 'Framework', cell: (f) => f.framework },
+                { header: 'Expected', cell: (f) => f.expected, align: 'right' },
+                { header: 'Compliant', cell: (f) => f.compliant, align: 'right' },
+                { header: 'Coverage %', cell: (f) => `${f.compliancePct}%`, align: 'right' },
+              ]}
+            />
+          )
+        ) : null}
+      </Section>
+    </>
   )
 }
 
@@ -763,56 +859,6 @@ function OwnedAppScope({ children }: { children: (app: { slug: string; name: str
   )
 }
 
-/** One comparison line: this app's compliance % and completeness % vs the portfolio
- *  figures from GET /api/v1/insight/leadership. Deliberately no per-app table. */
-function PortfolioComparison({ slug, name }: { slug: string; name: string }) {
-  const compliance = useAsync(() => getCompliance(slug), [slug])
-  const completeness = useAsync(() => getCompleteness(slug), [slug])
-  const leadership = useAsync(() => getLeadershipDashboard(), [])
-
-  const loading = compliance.loading || completeness.loading || leadership.loading
-  const error = compliance.error || completeness.error || leadership.error
-  const cPct = compliance.data?.compliancePct
-  const kPct = completeness.data?.completenessPct
-  const pc = leadership.data?.compliancePct
-  const pk = leadership.data?.completenessPct
-  const delta = (mine: number | undefined, port: number | undefined) => {
-    if (mine == null || port == null) return '—'
-    const v = Math.round((mine - port) * 10) / 10
-    return `${v > 0 ? '+' : ''}${v} pts`
-  }
-
-  return (
-    <>
-      {loading ? <Loading what="comparison" /> : null}
-      {error ? <ErrorNote message={error} /> : null}
-      {!loading && !error ? (
-        <Section
-          title={`${name} vs. portfolio average`}
-          actions={<Link to="/leadership">See portfolio leadership rollup →</Link>}
-        >
-          <DataTable
-            rows={[
-              { metric: 'Compliance', mine: cPct, port: pc },
-              { metric: 'Completeness', mine: kPct, port: pk },
-            ]}
-            rowKey={(r) => r.metric}
-            columns={[
-              { header: 'Metric', cell: (r) => r.metric },
-              { header: 'This app', cell: (r) => (r.mine == null ? '—' : `${r.mine}%`), align: 'right' },
-              { header: 'Portfolio average', cell: (r) => (r.port == null ? '—' : `${r.port}%`), align: 'right' },
-              { header: 'Difference', cell: (r) => delta(r.mine, r.port), align: 'right' },
-            ]}
-          />
-          <p className="muted">
-            Portfolio figures cover {leadership.data?.applications ?? '—'} applications
-            (<code>GET /api/v1/insight/leadership</code>).
-          </p>
-        </Section>
-      ) : null}
-    </>
-  )
-}
 
 const AUDITOR_TABS = ['Overview', 'Control & Compliance', 'Audit Readiness', 'Closure & Trend'] as const
 type AuditorTab = (typeof AUDITOR_TABS)[number]

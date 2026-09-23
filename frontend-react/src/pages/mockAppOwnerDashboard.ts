@@ -1,6 +1,7 @@
-// Temporary demo data for the App Owner dashboard (Overview/Controls/Evidence/Findings/
-// Remediation tabs) — visual parity with the ECS POC screenshots pending a richer backend
-// demo dataset; flip USE_MOCK_APP_OWNER_DATA to false to revert to the live API hooks.
+// Temporary demo data for the App Owner dashboard (Evidence/Frameworks tabs, plus a couple
+// of Applications/Audit Readiness fields with no real backend source yet) — visual parity
+// with the ECS POC screenshots pending a richer backend demo dataset; flip
+// USE_MOCK_APP_OWNER_DATA to false to revert to the live API hooks.
 
 import type { LifecycleStateCounts, RejectionAuditRow } from '../api/types'
 
@@ -125,3 +126,26 @@ export const MOCK_REMEDIATION: MockRemediationCard[] = [
   { id: 'r-aps-c19', framework: 'AppSec', controlCode: 'APS-C19', application: 'Payments', applicationSlugForDeepLink: 'payments' },
   { id: 'r-vap-c19', framework: 'VAPT', controlCode: 'VAP-C19', application: 'Mobile Banking', applicationSlugForDeepLink: 'mobile-banking' },
 ]
+
+// ---- Applications tab — profile card ---------------------------------------
+
+/** "Region" doesn't exist on the Application entity/DTO — everything else on the profile
+ *  card (name/criticality/businessUnit) comes from the real, already-fetched ApplicationView. */
+export const MOCK_APPLICATION_PROFILE = {
+  region: 'India — West',
+}
+
+// ---- Audit Readiness tab — composite score ---------------------------------
+
+/** Freshness has no per-application backend source (GET /evidence/dashboard's freshness
+ *  breakdown is org-wide only) — Control Coverage and Approved Evidence in the composite
+ *  score reuse real data (getCompliance() and the evidence-lifecycle counts); only this
+ *  input is a placeholder. */
+export const MOCK_AUDIT_READINESS = {
+  freshnessPct: 88,
+}
+
+/** Composite-score weighting and the Ready/At Risk banding cutoff — a display rule, not
+ *  fetched data, so it lives here as a named constant rather than a magic number in JSX. */
+export const AUDIT_READINESS_WEIGHTS = { controlCoverage: 0.5, approvedEvidence: 0.3, freshness: 0.2 }
+export const AUDIT_READINESS_BAND_THRESHOLD_PCT = 75

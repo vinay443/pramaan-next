@@ -48,6 +48,7 @@ import type {
   EnterpriseDashboard,
   EvidenceLifecycleView,
   EvidenceLifecycleSummary,
+  AuditScheduleReport,
   GrcSyncStatus,
   IngestRequest,
   IntegrityReport,
@@ -945,6 +946,34 @@ export function mockEvidenceLifecycleSummary(applicationSlug: string): EvidenceL
       avgDaysInQueue: counts.draft + counts.submitted === 0 ? null : round1(2 + (seed % 60) / 10),
     },
   }
+}
+
+/** Offline stand-in for GET /insight/audit-schedule. Mirrors the backend's seed shape
+ *  (4 framework audits spread over the next ~90 days, scoped to the offline application set). */
+export function mockAuditSchedule(): AuditScheduleReport {
+  const slugs = mockApplications.map((a) => a.slug)
+  const scopeFor = (i: number) => (slugs.length <= 2 ? slugs : [0, 1, 2].map((k) => slugs[(i + k) % slugs.length]))
+  const seeds: Array<{ framework: string; auditName: string; daysOut: number }> = [
+    { framework: 'PCI_DSS', auditName: 'PCI DSS Q1 Recertification Audit', daysOut: 18 },
+    { framework: 'C-SITE', auditName: 'Cyber Security Baseline (C-SITE) Audit', daysOut: 34 },
+    { framework: 'ITPP', auditName: 'IT Policy & Procedures Compliance Review', daysOut: 52 },
+    { framework: 'VAPT', auditName: 'Annual VAPT Re-assessment', daysOut: 76 },
+  ]
+  const threshold = 80
+  const audits = seeds.map((s, i) => {
+    const scope = scopeFor(i)
+    return {
+      id: `mock-audit-${i}`,
+      framework: s.framework,
+      auditName: s.auditName,
+      scheduledDate: new Date(nowMs + s.daysOut * dayMs).toISOString().slice(0, 10),
+      applicationSlugs: scope,
+      readyCount: Math.max(0, scope.length - 1 - (i % 2)),
+      totalCount: scope.length,
+      readinessThresholdPct: threshold,
+    }
+  })
+  return { generatedAt: NOW, readinessThresholdPct: threshold, audits }
 }
 
 // ---- Predefined technical query catalogue (compact offline sample) -----

@@ -2,6 +2,7 @@ package com.pramaan.backend.insight;
 
 import com.pramaan.backend.evidence.EvidenceDtos.IntegrityStatus;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -342,4 +343,15 @@ public final class InsightDtos {
     public record EvidenceLifecycleSummary(String applicationSlug, Instant generatedAt,
                                            LifecycleStateCounts counts, List<RejectionAuditRow> rejections,
                                            AuditorSla auditorSla, PendingAging pendingAging) {}
+
+    // ---- upcoming audit schedule ---------------------------------------
+
+    /** One scheduled audit. {@code readyCount}/{@code totalCount} are computed from each
+     *  in-scope application's current compliance % for {@code framework} (via
+     *  ComplianceService) against {@code readinessThresholdPct} — no new scoring. */
+    public record AuditScheduleRow(String id, String framework, String auditName, LocalDate scheduledDate,
+                                   List<String> applicationSlugs, int readyCount, int totalCount,
+                                   int readinessThresholdPct) {}
+
+    public record AuditScheduleReport(Instant generatedAt, int readinessThresholdPct, List<AuditScheduleRow> audits) {}
 }

@@ -2,6 +2,7 @@ package com.pramaan.backend.insight;
 
 import com.pramaan.backend.evidence.ControlFrameworkCatalog;
 import com.pramaan.backend.insight.InsightDtos.AuditPrepReport;
+import com.pramaan.backend.insight.InsightDtos.AuditScheduleReport;
 import com.pramaan.backend.insight.InsightDtos.ComparisonReport;
 import com.pramaan.backend.insight.InsightDtos.ControlReuseResult;
 import com.pramaan.backend.insight.InsightDtos.ComplianceReport;
@@ -53,6 +54,7 @@ public class InsightController {
     private final EvidenceEmbeddingIndexer indexer;
     private final EvidenceContextService evidenceContext;
     private final EvidenceLifecycleSummaryService lifecycleSummary;
+    private final AuditScheduleService auditSchedule;
 
     public InsightController(CompletenessService completeness, EvidenceCompletenessService evidenceCompleteness,
                              EvidenceReuseService reuse,
@@ -61,7 +63,7 @@ public class InsightController {
                              ComparisonService comparison, EnterpriseDashboardService enterprise,
                              AuditPrepService auditPrep, TrendService trend,
                              EvidenceEmbeddingIndexer indexer, EvidenceContextService evidenceContext,
-                             EvidenceLifecycleSummaryService lifecycleSummary) {
+                             EvidenceLifecycleSummaryService lifecycleSummary, AuditScheduleService auditSchedule) {
         this.completeness = completeness;
         this.evidenceCompleteness = evidenceCompleteness;
         this.reuse = reuse;
@@ -76,6 +78,7 @@ public class InsightController {
         this.indexer = indexer;
         this.evidenceContext = evidenceContext;
         this.lifecycleSummary = lifecycleSummary;
+        this.auditSchedule = auditSchedule;
     }
 
     @GetMapping("/completeness")
@@ -206,6 +209,12 @@ public class InsightController {
     @GetMapping("/evidence-lifecycle/summary")
     public EvidenceLifecycleSummary evidenceLifecycleSummary(@RequestParam String applicationSlug) {
         return lifecycleSummary.forApplication(applicationSlug);
+    }
+
+    /** Upcoming audit schedule — each scheduled audit plus a computed readyCount/totalCount. */
+    @GetMapping("/audit-schedule")
+    public AuditScheduleReport auditSchedule() {
+        return auditSchedule.upcoming();
     }
 
     @GetMapping("/evidence/{id}/summary")
