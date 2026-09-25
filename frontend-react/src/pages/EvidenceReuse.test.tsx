@@ -1,245 +1,84 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EvidenceReuse } from './EvidenceReuse'
 import { renderOffline } from '../test/render'
-import { isDataSourceBannerSuppressed } from '../api/dataSource'
-import { getEvidenceReuse, searchEvidenceReuse } from '../api/endpoints'
 
-afterEach(() => vi.unstubAllGlobals())
+// The page is a static, client-only workbench mock-up now: no backend calls, no
+// "Find similar evidence" / "Browse by control" tabs. These tests check the
+// static content renders and the cosmetic filter/action controls behave.
 
-const matchCount = () => {
-  const el = screen.getByText('Matches', { selector: '.stat-label' })
-  return Number(el.parentElement?.querySelector('.stat-value')?.textContent)
-}
-
-describe('EvidenceReuse - Find similar evidence (self-contained demo data)', () => {
-  it('by-evidence-type mode starts empty and searches on selection', async () => {
+describe('EvidenceReuse', () => {
+  it('renders the page title and workbench stat cards', () => {
     renderOffline(<EvidenceReuse />)
-
-    const type = screen.getByLabelText('Evidence type')
-    expect(type).toHaveValue('')
-    expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument()
-    expect(screen.getByText('Select an evidence type to find similar evidence')).toBeInTheDocument()
-    expect(Array.from((type as HTMLSelectElement).options).map((o) => o.value)).toEqual([
-      '',
-      'HOST-CONFIG',
-      'DB-CONFIG',
-      'MIDDLEWARE-CONFIG',
-      'TLS-SCAN',
-      'CHANGE-TICKET',
-      'CODE-REVIEW',
-      'AGENT-SCAN',
-      'GENERAL',
-    ])
-
-    await userEvent.selectOptions(type, 'TLS-SCAN')
-
-    await screen.findByText('Indexed', { selector: '.stat-label' })
-    expect(screen.getByText('mock-embed:v1(dim=256)')).toBeInTheDocument()
-    expect(matchCount()).toBeGreaterThan(0)
-
-    // clearing the type returns to the empty state
-    await userEvent.selectOptions(type, '')
-    expect(screen.getByText('Select an evidence type to find similar evidence')).toBeInTheDocument()
-  })
-
-  it('never calls the backend and shows no mock-fallback badge', async () => {
-    renderOffline(<EvidenceReuse />)
-    await userEvent.selectOptions(screen.getByLabelText('Evidence type'), 'HOST-CONFIG')
-    await screen.findByText('Indexed', { selector: '.stat-label' })
-
-    await userEvent.selectOptions(screen.getByLabelText('Mode'), 'evidence')
-    await userEvent.selectOptions(screen.getByLabelText('Application'), 'payments')
-    const evidence = screen.getByLabelText('Evidence') as HTMLSelectElement
-    await waitFor(() => expect(evidence.options.length).toBeGreaterThan(1))
-    await userEvent.selectOptions(evidence, evidence.options[1].value)
-    await screen.findByText('Indexed', { selector: '.stat-label' })
-
+    expect(screen.getByRole('heading', { name: 'Evidence Reuse', level: 1 })).toBeInTheDocument()
     expect(fetch).not.toHaveBeenCalled()
-    expect(screen.queryByText('Sample data (mock fallback)')).not.toBeInTheDocument()
+
+    expect(screen.getByText('Evidence Records', { selector: '.stat-label' })).toBeInTheDocument()
+    expect(screen.getByText('606')).toBeInTheDocument()
+    expect(screen.getByText('1.0x')).toBeInTheDocument()
   })
 
-  it('hides the shell "Backend unavailable" banner only while this tab is mounted', async () => {
+  it('renders all six workbench actions and re-runs on click', async () => {
     renderOffline(<EvidenceReuse />)
-    expect(isDataSourceBannerSuppressed()).toBe(true)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Browse by control' }))
-    expect(isDataSourceBannerSuppressed()).toBe(false)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Find similar evidence' }))
-    expect(isDataSourceBannerSuppressed()).toBe(true)
-  })
-
-  // Every preset returns rows at Broad strictness (the default), led by a record of that type.
-  it.each([
-    ['HOST-CONFIG', /OS-SSH-ROOT-LOGIN|OS-SSH-PASSWORD-AUTH/],
-    ['DB-CONFIG', /DB-TLS-IN-TRANSIT|DB-AUDIT-LOGGING/],
-    ['MIDDLEWARE-CONFIG', /MW-TLS-VERSION|MW-HSTS/],
-    ['TLS-SCAN', /TLS-CERT-EXPIRY|TLS-CERT-TRUST|TLS-PROTOCOL-VERSION/],
-    ['CHANGE-TICKET', /ITPP-CHG-02/],
-    ['CODE-REVIEW', /DPSC-SDLC-04|PCI-DSS-6\.2/],
-    ['AGENT-SCAN', /NET-FIREWALL-RULES/],
-    ['GENERAL', /POLICY-ACCESS-REVIEW/],
-  ])('preset %s returns matches at Broad strictness', async (type, expectedTop) => {
-    renderOffline(<EvidenceReuse />)
-    expect(screen.getByLabelText('Match strictness')).toHaveValue('broad')
-
-    await userEvent.selectOptions(screen.getByLabelText('Evidence type'), type)
-
-    await screen.findByText('Indexed', { selector: '.stat-label' })
-    expect(matchCount()).toBeGreaterThan(0)
-    expect(screen.queryByText(/No evidence above the similarity threshold/)).not.toBeInTheDocument()
-    expect(screen.getAllByRole('row')[1]).toHaveTextContent(expectedTop)
-  })
-
-  it('has a believable corpus: 12+ rows possible, varied scores', async () => {
-    renderOffline(<EvidenceReuse />)
-    await userEvent.selectOptions(screen.getByLabelText('Number of results'), '20')
-    await userEvent.selectOptions(screen.getByLabelText('Evidence type'), 'HOST-CONFIG')
-    await screen.findByText('Indexed', { selector: '.stat-label' })
-
-    expect(matchCount()).toBeGreaterThanOrEqual(10)
-    const scores = screen
-      .getAllByRole('row')
-      .slice(1)
-      .map((r) => within(r).getAllByRole('cell')[0].textContent)
-    expect(new Set(scores).size).toBeGreaterThanOrEqual(6)
-    // several applications and frameworks appear, not one repeated
-    const apps = new Set(screen.getAllByRole('row').slice(1).map((r) => within(r).getAllByRole('cell')[1].textContent))
-    expect(apps.size).toBe(3)
-  })
-
-  it('re-runs the type search when result count or match strictness changes, and strict never widens it', async () => {
-    renderOffline(<EvidenceReuse />)
-    await userEvent.selectOptions(screen.getByLabelText('Evidence type'), 'HOST-CONFIG')
-    await userEvent.selectOptions(screen.getByLabelText('Number of results'), '20')
-    await userEvent.selectOptions(screen.getByLabelText('Match strictness'), 'broad')
-
-    await screen.findByText('Indexed', { selector: '.stat-label' })
-    const broadCount = matchCount()
-
-    await userEvent.selectOptions(screen.getByLabelText('Match strictness'), 'strict')
-    await waitFor(() => expect(matchCount()).toBeLessThan(broadCount))
-    expect(matchCount()).toBeGreaterThan(0)
-  })
-
-  it('by-evidence mode: application -> evidence cascade runs on selection, with exact-duplicate and flag badges', async () => {
-    renderOffline(<EvidenceReuse />)
-    await userEvent.selectOptions(screen.getByLabelText('Mode'), 'evidence')
-
-    expect(screen.queryByLabelText('Evidence type')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Evidence')).toBeDisabled()
-
-    await userEvent.selectOptions(screen.getByLabelText('Application'), 'net-banking')
-    const evidence = screen.getByLabelText('Evidence') as HTMLSelectElement
-    await waitFor(() => expect(evidence.options.length).toBeGreaterThan(1))
-    const tls = Array.from(evidence.options).find((o) => o.text.includes('DB-TLS-IN-TRANSIT'))!
-    await userEvent.selectOptions(evidence, tls.value)
-
-    // ev-104 shares a SHA-256 with a payments record -> shown as an exact duplicate
-    expect(await screen.findByText('Exact duplicates — 1')).toBeInTheDocument()
-    expect(screen.getAllByText('Exact duplicate').length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/Cross-application|Same control/).length).toBeGreaterThan(0)
-
-    // changing application clears the evidence choice and the result
-    await userEvent.selectOptions(screen.getByLabelText('Application'), 'payments')
-    expect(screen.getByLabelText('Evidence')).toHaveValue('')
-    expect(screen.queryByText('Indexed', { selector: '.stat-label' })).not.toBeInTheDocument()
-  })
-
-  it('clicking a result row opens a detail modal with evidence fields, and Close dismisses it', async () => {
-    renderOffline(<EvidenceReuse />)
-    await userEvent.selectOptions(screen.getByLabelText('Evidence type'), 'TLS-SCAN')
-    await screen.findByText('Indexed', { selector: '.stat-label' })
-
-    await userEvent.click(screen.getAllByRole('row')[1])
-
-    const dialog = await screen.findByRole('dialog', { name: 'Evidence detail' })
     for (const label of [
-      'Evidence ID',
-      'Application',
-      'Framework',
-      'Control',
-      'Similarity score',
-      'File name',
-      'File type',
-      'Uploaded',
-      'SHA-256',
+      'Refresh evidence',
+      'Run reuse analysis',
+      'Validate completeness',
+      'Refresh audit readiness',
+      'Generate observations',
+      'Check closure eligibility',
     ]) {
-      expect(within(dialog).getByText(label, { selector: 'dt' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
     }
-    expect(within(dialog).getByText(/^ev-1\d\d$/)).toBeInTheDocument()
-    expect(within(dialog).getByText(/\.json$/)).toBeInTheDocument()
-    expect(within(dialog).getByText(/^[0-9a-f]{64}$/)).toBeInTheDocument()
-    expect(within(dialog).getByText('Content preview')).toBeInTheDocument()
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Generate observations' }))
+    expect(screen.getByText(/Ran "Generate observations"/)).toBeInTheDocument()
   })
-})
 
-describe('EvidenceReuse - API helpers keep their extended timeout', () => {
-  // The Find-similar tab no longer calls these, but they remain exported and reindex-prone, so
-  // the earlier 30s patience allowance must still be in place for any other caller.
-  it('getEvidenceReuse / searchEvidenceReuse pass 30s to apiFetch; setTimeout delays are checked, not elapsed time', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline in test')))
-    const spy = vi.spyOn(globalThis, 'setTimeout')
-    try {
-      await getEvidenceReuse('ev-001')
-      expect(spy.mock.calls.map((c) => c[1])).toContain(30000)
-      spy.mockClear()
-      await searchEvidenceReuse('ssh root login')
-      expect(spy.mock.calls.map((c) => c[1])).toContain(30000)
-    } finally {
-      spy.mockRestore()
-    }
-  })
-})
-
-describe('EvidenceReuse - Browse by control (still API-backed with mock fallback)', () => {
-  it('starts empty, then shows frameworks + held evidence per selection', async () => {
+  it('filters the Action Result table by application', async () => {
     renderOffline(<EvidenceReuse />)
-    await userEvent.click(screen.getByRole('button', { name: 'Browse by control' }))
+    expect(screen.getByText('UPI::ASST-14 — Container & Cloud Coverage v1')).toBeInTheDocument()
+    expect(screen.getByText('Treasury::ASST-16 — Privileged Tool Usage v1')).toBeInTheDocument()
 
-    expect(await screen.findByText('Select a control to see reusable evidence')).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Application'), 'Treasury')
 
-    // a control with no evidence held in the fixtures
-    const select = await screen.findByLabelText('Control')
-    await waitFor(() => expect(screen.getByRole('option', { name: /^MW-HSTS/ })).toBeInTheDocument())
-    await userEvent.selectOptions(select, 'MW-HSTS')
-    expect(await screen.findByText(/No evidence held for this control yet/)).toBeInTheDocument()
-
-    await userEvent.selectOptions(select, 'OS-SSH-ROOT-LOGIN')
-    expect(await screen.findByText('Existing evidence — 1')).toBeInTheDocument()
-    expect(screen.getByText('Frameworks requiring OS-SSH-ROOT-LOGIN', { selector: 'h2' })).toBeInTheDocument()
-    expect(screen.getByText('Evidence matched', { selector: '.stat-label' })).toBeInTheDocument()
-    expect(screen.getByText('Frameworks unmapped', { selector: '.stat-label' })).toBeInTheDocument()
-    // this tab still goes through the API (which is mocked offline here)
-    expect(fetch).toHaveBeenCalled()
+    expect(screen.queryByText('UPI::ASST-14 — Container & Cloud Coverage v1')).not.toBeInTheDocument()
+    expect(screen.getByText('Treasury::ASST-16 — Privileged Tool Usage v1')).toBeInTheDocument()
   })
 
-  it('flags results that came from the mock fallback', async () => {
+  it('renders section 1 - Evidence Generated with violation and satisfied rows', () => {
     renderOffline(<EvidenceReuse />)
-    await userEvent.click(screen.getByRole('button', { name: 'Browse by control' }))
-    expect(await screen.findByText('Sample data (mock fallback)')).toBeInTheDocument()
+    expect(screen.getByText('1 · Evidence Generated', { selector: 'h2' })).toBeInTheDocument()
+    expect(screen.getAllByText('PQ-EVD-DEMO-DB-001').length).toBeGreaterThan(0)
+    expect(screen.getByText('ssl · --- · off')).toBeInTheDocument()
+    expect(screen.getAllByText('Violation').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Satisfied').length).toBeGreaterThan(0)
   })
 
-  it('"Reuse for [framework]" tags an existing record and refreshes the row', async () => {
+  it('renders section 2 - Evidence Reuse stats and 9 rows', () => {
     renderOffline(<EvidenceReuse />)
-    await userEvent.click(screen.getByRole('button', { name: 'Browse by control' }))
+    expect(screen.getByText('2 · Evidence Reuse', { selector: 'h2' })).toBeInTheDocument()
+    const reuseCountLabel = screen.getByText('Reuse Count', { selector: '.stat-label' })
+    expect(reuseCountLabel.parentElement?.querySelector('.stat-value')?.textContent).toBe('9')
+    expect(screen.getByText('Showing 1–9 of 9 records')).toBeInTheDocument()
+  })
 
-    // ev-002 is seeded tagged to only its primary framework (PCI_DSS)
-    const select = await screen.findByLabelText('Control')
-    await waitFor(() => expect(screen.getByRole('option', { name: /^DB-TLS-IN-TRANSIT/ })).toBeInTheDocument())
-    await userEvent.selectOptions(select, 'DB-TLS-IN-TRANSIT')
+  it('renders section 3 - Audit Readiness with a meter per framework', () => {
+    renderOffline(<EvidenceReuse />)
+    expect(screen.getByText('3 · Audit Readiness', { selector: 'h2' })).toBeInTheDocument()
+    expect(screen.getByText('66.7%')).toBeInTheDocument()
+    expect(screen.getAllByText('DB Baseline').length).toBeGreaterThan(0)
+    expect(screen.getByText('0/1 (0.0%)', { selector: '.meter-label' })).toBeInTheDocument()
+    expect(screen.getAllByText('1/2 (50.0%)', { selector: '.meter-label' }).length).toBe(2)
+  })
 
-    const reuse = await screen.findByRole('button', { name: 'Reuse for DPSC' })
-    await userEvent.click(reuse)
-
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Reuse for DPSC' })).not.toBeInTheDocument(),
-    )
+  it('renders section 4 - Observations, open and ready-for-closure', () => {
+    renderOffline(<EvidenceReuse />)
+    expect(screen.getByText('4 · Observations', { selector: 'h2' })).toBeInTheDocument()
+    expect(screen.getByText('OBS-DB-001-0001')).toBeInTheDocument()
+    expect(screen.getByText(/Database SSL\/TLS is OFF/)).toBeInTheDocument()
+    expect(screen.getByText('OBS-OS-0007')).toBeInTheDocument()
+    expect(screen.getByText('READY FOR CLOSURE')).toBeInTheDocument()
   })
 })
