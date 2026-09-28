@@ -1,0 +1,14 @@
+{
+  "jobId": "demo-job-db-001",
+  "applicationId": "payments",
+  "environment": "dev",
+  "sourceId": "demo-db-pg-1",
+  "collectorId": "database-hardening",
+  "collectorVersion": "v1",
+  "correlationId": "demo-correlation-db-001",
+  "timeoutSeconds": 10,
+  "parameters": {
+    "technology": "postgresql",
+    "snapshotPath": "examples/job/fixtures/pg-snapshot-hardened.json"
+  }
+}

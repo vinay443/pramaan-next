@@ -1,0 +1,11 @@
+{
+  "ssl": "on",
+  "log_connections": "on",
+  "log_disconnections": "on",
+  "password_encryption": "scram-sha-256",
+  "log_statement": "ddl",
+  "shared_preload_libraries": "pgaudit",
+  "pg_hba": [
+    { "type": "host", "method": "scram-sha-256" }
+  ]
+}

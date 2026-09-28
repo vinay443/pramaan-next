@@ -1,0 +1,30 @@
+[
+  {
+    "sourceId": "demo-os-host-1",
+    "environment": "dev",
+    "technology": "linux",
+    "address": "demo-os-host-1",
+    "available": true
+  },
+  {
+    "sourceId": "demo-db-pg-1",
+    "environment": "dev",
+    "technology": "postgresql",
+    "address": "demo-db-pg-1:5432",
+    "available": true
+  },
+  {
+    "sourceId": "demo-db-pg-down",
+    "environment": "dev",
+    "technology": "postgresql",
+    "address": "demo-db-pg-down:5432",
+    "available": false
+  },
+  {
+    "sourceId": "demo-tls-endpoint-1",
+    "environment": "dev",
+    "technology": "tls",
+    "address": "demo-tls-endpoint-1:443",
+    "available": true
+  }
+]

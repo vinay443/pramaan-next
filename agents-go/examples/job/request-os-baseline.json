@@ -1,0 +1,11 @@
+{
+  "jobId": "demo-job-os-001",
+  "applicationId": "payments",
+  "environment": "dev",
+  "sourceId": "demo-os-host-1",
+  "collectorId": "os-baseline",
+  "collectorVersion": "v1",
+  "correlationId": "demo-correlation-os-001",
+  "timeoutSeconds": 10,
+  "parameters": {}
+}

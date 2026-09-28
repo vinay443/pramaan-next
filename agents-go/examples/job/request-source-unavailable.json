@@ -1,0 +1,14 @@
+{
+  "jobId": "demo-job-db-down-001",
+  "applicationId": "payments",
+  "environment": "dev",
+  "sourceId": "demo-db-pg-down",
+  "collectorId": "database-hardening",
+  "collectorVersion": "v1",
+  "correlationId": "demo-correlation-db-down-001",
+  "timeoutSeconds": 10,
+  "parameters": {
+    "technology": "postgresql",
+    "snapshotPath": "examples/job/fixtures/pg-snapshot-hardened.json"
+  }
+}
