@@ -6,6 +6,8 @@ import {
   getCompliance,
   getComparison,
   getEnterpriseDashboard,
+  getDashboardKpis,
+  getEvidenceCompletenessFrameworks,
   getEvidenceDashboard,
   getLeadershipDashboard,
   getTrend,
@@ -18,21 +20,19 @@ import { LeadershipView } from './Leadership'
 import { NationalEnterpriseView } from './NationalDashboard'
 import { useAsync } from '../hooks/useAsync'
 import { useAppOwnerData } from '../hooks/useAppOwnerData'
+import { useDataSource } from '../hooks/useDataSource'
+import { AutomatedCollectionSection, DashboardFilterBar, repositoryQuery } from '../components/DashboardKpiPanel'
 import { useControlResultsSummary } from '../hooks/useControlResultsSummary'
 import { useCompletenessSummary } from '../hooks/useCompletenessSummary'
 import { DataTable, ErrorNote, LineChart, Loading, Section, StatCard, StatusPill } from '../components/ui'
-import { PERSONA_STORAGE_KEY } from './PersonaLogin'
-import type { EvidenceDashboard, EvidenceView, LifecycleStateCounts } from '../api/types'
+import { getPersonaCode } from './PersonaLogin'
+import type { DashboardFilterParams, EvidenceDashboard, EvidenceView, LifecycleStateCounts } from '../api/types'
 import {
   AUDIT_READINESS_BAND_THRESHOLD_PCT,
   AUDIT_READINESS_WEIGHTS,
-  MOCK_APP_OWNER_COUNTS,
-  MOCK_APP_OWNER_OVERVIEW,
   MOCK_APPLICATION_PROFILE,
   MOCK_AUDIT_READINESS,
   MOCK_FINDINGS,
-  MOCK_REJECTIONS,
-  MOCK_REMEDIATION,
   MOCK_WORK_QUEUE,
   MOCK_WORK_QUEUE_OPEN_COUNT,
   USE_MOCK_APP_OWNER_DATA,
@@ -114,7 +114,7 @@ export function Dashboard() {
   const integrityTone =
     integrity && integrity.mismatch === 0 && integrity.missingObject === 0 ? 'PASS' : 'FAIL'
 
-  const personaCode = localStorage.getItem(PERSONA_STORAGE_KEY)
+  const personaCode = getPersonaCode()
   const isAppOwner = personaCode === 'APP'
   const isAuditor = personaCode === 'AUDITOR'
   const isFunctionalHead = personaCode === 'FH'
@@ -331,7 +331,7 @@ function LifecycleKpiRow({ counts }: { counts: LifecycleStateCounts | undefined 
 /** Overview's status chip row (Draft/Submitted/Re-upload Requested/Closed) — also reused at
  *  the top of the Controls tab. */
 function LifecycleChipRow({ counts }: { counts: LifecycleStateCounts | undefined }) {
-  const closed = counts ? counts.approved + counts.expired + counts.superseded : undefined
+  const closed = counts ? counts.approved + counts.expired + counts.superseded + (counts.archived ?? 0) : undefined
   return (
     <div className="dash-chip-row">
       <span className="dash-chip dash-chip-muted">
@@ -346,6 +346,9 @@ function LifecycleChipRow({ counts }: { counts: LifecycleStateCounts | undefined
       <span className="dash-chip dash-chip-ok">
         Closed <strong>{closed ?? '—'}</strong>
       </span>
+      <span className="dash-chip dash-chip-muted">
+        Archived <strong>{counts?.archived ?? 0}</strong>
+      </span>
     </div>
   )
 }
@@ -358,31 +361,24 @@ function LifecycleChipRow({ counts }: { counts: LifecycleStateCounts | undefined
 function AppOwnerDashboard({ staleAfterDays }: { staleAfterDays: number }) {
   const [tab, setTab] = useState<AppOwnerTab>('Evidence')
   const { app, loading: appLoading, error: appError } = useOwnedApplication()
-  const owner = useAppOwnerData(app?.slug)
+  // Dashboard filters; every Evidence-tab tile and the Automated collection section come from one
+  // GET /api/v1/dashboard/kpis call so they always describe the same filtered set.
+  const [filters, setFilters] = useState<DashboardFilterParams>({})
+  const filtersKey = JSON.stringify(filters)
+  const kpis = useAsync(() => getDashboardKpis(filters), [filtersKey], { pollWhile: () => true, pollMs: 30_000 })
+  const frameworkOptions = useAsync(() => getEvidenceCompletenessFrameworks(filters.application), [filters.application])
+  const dataSource = useDataSource()
+  const scopeSlug = filters.application || app?.slug
+  const owner = useAppOwnerData(scopeSlug)
 
-  const counts = USE_MOCK_APP_OWNER_DATA ? MOCK_APP_OWNER_COUNTS : owner.lifecycle.data?.counts
-  const closure = owner.trend.data?.closure
-  const pendingAging = USE_MOCK_APP_OWNER_DATA ? MOCK_APP_OWNER_OVERVIEW.pendingAging : owner.lifecycle.data?.pendingAging
-  const auditorSla = USE_MOCK_APP_OWNER_DATA ? MOCK_APP_OWNER_OVERVIEW.auditorSla : owner.lifecycle.data?.auditorSla
-  const closureRatePct = USE_MOCK_APP_OWNER_DATA
-    ? MOCK_APP_OWNER_OVERVIEW.closureRatePct
-    : closure && closure.approvals + closure.rejections > 0
-      ? Math.round((closure.approvals / (closure.approvals + closure.rejections)) * 1000) / 10
-      : null
-  const avgReviewTimeDays = USE_MOCK_APP_OWNER_DATA ? MOCK_APP_OWNER_OVERVIEW.avgReviewTimeDays : closure?.avgDaysToApprove
-  const rejectionTrendPct = USE_MOCK_APP_OWNER_DATA ? MOCK_APP_OWNER_OVERVIEW.rejectionTrendPct : closure?.rejectionTrendPct
-
+  // Never show a previous filter's numbers while the new ones load.
+  const ev = kpis.loading ? undefined : kpis.data?.evidence
+  const auto = kpis.loading ? undefined : kpis.data?.automated
+  const counts = ev?.counts
   const items = owner.evidence.data?.items ?? []
   const rejectionReasonByEvidenceId = new Map(
     (owner.lifecycle.data?.rejections ?? []).map((r) => [r.evidenceId, r]),
   )
-  const rejectedEvidenceCount = USE_MOCK_APP_OWNER_DATA ? MOCK_APP_OWNER_OVERVIEW.highlights.rejectedEvidence : counts?.rejected
-  const expiringCount = USE_MOCK_APP_OWNER_DATA
-    ? MOCK_APP_OWNER_OVERVIEW.highlights.expiringStale
-    : items.filter((e) => {
-        const age = ageDaysOf(e.latest?.collectedAt ?? e.updatedAt)
-        return age !== null && age > staleAfterDays
-      }).length
 
   async function doTransition(evidenceId: string, action: 'SUBMIT' | 'RESET') {
     await transitionEvidenceLifecycle(evidenceId, action)
@@ -407,6 +403,18 @@ function AppOwnerDashboard({ staleAfterDays }: { staleAfterDays: number }) {
       {appError ? <ErrorNote message={appError} /> : null}
       {!appLoading && !appError && !app ? <p className="muted">No application is assigned to you.</p> : null}
 
+      {dataSource === 'mock' ? (
+        <p className="banner banner-warn" role="status">Offline sample data: the backend is not reachable, these numbers are not real.</p>
+      ) : null}
+
+      <DashboardFilterBar
+        filters={filters}
+        onChange={setFilters}
+        frameworks={(frameworkOptions.data ?? []).map((f) => f.framework)}
+      />
+
+      {auto ? <AutomatedCollectionSection kpis={auto} filters={filters} /> : null}
+
       <div className="dash-tabs" role="tablist" aria-label="Dashboard sections">
         {APP_OWNER_TABS.map((t) => (
           <button
@@ -429,91 +437,79 @@ function AppOwnerDashboard({ staleAfterDays }: { staleAfterDays: number }) {
       {tab === 'Evidence' ? (
         <div className="dash-tab-panel">
           {owner.lifecycle.loading ? <Loading what="evidence lifecycle summary" /> : null}
-          <LifecycleKpiRow counts={counts} />
+          {kpis.loading ? <Loading what="dashboard KPIs" /> : null}
+          {kpis.error ? <ErrorNote message={kpis.error} /> : null}
+          {ev ? (
+            <>
+              <p className="muted small" aria-label="Evidence in scope">
+                {ev.total} evidence record{ev.total === 1 ? '' : 's'} in scope
+                {' · '}
+                <Link to={`/evidence?${repositoryQuery(filters)}`}>view in Repository →</Link>
+              </p>
+              <LifecycleKpiRow counts={counts} />
 
-          <div className="stat-grid dash-rate-row">
-            <StatCard label="Closure rate" value={closureRatePct === null ? '—' : `${closureRatePct}%`} hint="In-scope evidence" />
-            <StatCard label="Avg review time" value={avgReviewTimeDays == null ? '—' : `${avgReviewTimeDays}d`} hint="Auditor turnaround" />
-            <StatCard
-              label="Rejection trend"
-              value={rejectionTrendPct == null ? '—' : `${rejectionTrendPct > 0 ? '↑' : '↓'} ${Math.abs(rejectionTrendPct)}%`}
-              hint="Month over month"
-            />
-            <StatCard
-              label="Pending aging"
-              value={pendingAging?.count ?? '—'}
-              hint={pendingAging?.avgDaysInQueue == null ? 'items' : `Avg ${pendingAging.avgDaysInQueue} days in queue`}
-            />
-            <StatCard
-              label="Auditor SLA"
-              value={auditorSla?.pct == null ? '—' : `${auditorSla.pct}%`}
-              hint={auditorSla ? `Within ${auditorSla.targetDays}-day target` : undefined}
-            />
-          </div>
+              <div className="stat-grid dash-rate-row">
+                <StatCard label="Total evidence" value={ev.total} />
+                <StatCard label="Archived" value={ev.counts.archived ?? 0} hint="Past retention, kept read-only" />
+                {ev.closureRatePct !== null ? (
+                  <StatCard label="Closure rate" value={`${ev.closureRatePct}%`} hint={`${ev.closed} closed of ${ev.total}`} />
+                ) : null}
+                {ev.avgReviewTimeDays !== null ? (
+                  <StatCard label="Avg review time" value={`${ev.avgReviewTimeDays}d`} hint="Submitted to reviewed" />
+                ) : null}
+                {ev.pendingAging ? (
+                  <StatCard
+                    label="Pending aging"
+                    value={ev.pendingAging.count}
+                    hint={ev.pendingAging.avgDaysInQueue == null ? 'items' : `Avg ${ev.pendingAging.avgDaysInQueue} days in queue`}
+                  />
+                ) : null}
+                {ev.auditorSla && ev.auditorSla.pct != null ? (
+                  <StatCard label="Auditor SLA" value={`${ev.auditorSla.pct}%`} hint={`Within ${ev.auditorSla.targetDays}-day target`} />
+                ) : null}
+              </div>
 
-          <div className="dash-urgency-row">
-            <UrgencyCard
-              tone="red"
-              value={rejectedEvidenceCount ?? '—'}
-              label="Rejected Evidence"
-              context="Resubmission needed."
-            />
-            <UrgencyCard tone="blue" value={expiringCount ?? '—'} label="Expiring / Stale" context="Renew before audit." />
-          </div>
+              <div className="dash-urgency-row">
+                <UrgencyCard tone="red" value={ev.rejected} label="Rejected Evidence" context="Resubmission needed." />
+                <UrgencyCard
+                  tone="blue"
+                  value={ev.expiringSoon + ev.expired}
+                  label="Expiring / Expired"
+                  context={`${ev.expiringSoon} within 30 days · ${ev.expired} past the ${ev.retentionDays}-day retention.`}
+                />
+              </div>
 
-          <LifecycleChipRow counts={counts} />
+              <LifecycleChipRow counts={counts} />
+            </>
+          ) : null}
 
-          {USE_MOCK_APP_OWNER_DATA ? (
-            <p className="muted small">Demo data — see mockAppOwnerDashboard.ts.</p>
-          ) : (
-            <p className="muted small">
-              Closure metrics scoped to this application (<code>GET /api/v1/insight/trend?applicationSlug=</code>).
-              Auditor SLA and Pending Aging are computed from evidence lifecycle timestamps (
-              <code>GET /api/v1/insight/evidence-lifecycle/summary</code>) — there is no direct backend field for
-              either.
-            </p>
-          )}
+          <p className="muted small">
+            Computed from stored evidence and lifecycle events (<code>GET /api/v1/dashboard/kpis</code>). Metrics the
+            data cannot support (for example, no reviewed evidence yet) are not shown.
+          </p>
 
-          <EvidenceRejectionsSection
-            rejections={USE_MOCK_APP_OWNER_DATA ? MOCK_REJECTIONS : owner.lifecycle.data?.rejections}
-            loading={USE_MOCK_APP_OWNER_DATA ? false : owner.lifecycle.loading}
-          />
+          <EvidenceRejectionsSection rejections={owner.lifecycle.data?.rejections} loading={owner.lifecycle.loading} />
 
           <Section title="Needs Resubmission">
             <div className="own-remediation-list">
-              {USE_MOCK_APP_OWNER_DATA ? null : owner.evidence.loading ? <Loading what="remediation items" /> : null}
-              {USE_MOCK_APP_OWNER_DATA
-                ? MOCK_REMEDIATION.map((r) => (
-                    <div key={r.id} className="card own-remediation-card">
-                      <div>
-                        <strong>{r.framework} · {r.controlCode}</strong>
-                        <p className="muted small">{r.application} — resubmission required</p>
-                      </div>
-                      <Link
-                        className="primary-link-btn"
-                        to={`/bulk-upload?${new URLSearchParams({ applicationSlug: r.applicationSlugForDeepLink, framework: r.framework, controlId: r.controlCode }).toString()}`}
-                      >
-                        Resubmit Evidence
-                      </Link>
+              {owner.evidence.loading ? <Loading what="remediation items" /> : null}
+              {items
+                .filter((e) => e.lifecycleState === 'REJECTED')
+                .map((e) => (
+                  <div key={e.evidenceId} className="card own-remediation-card">
+                    <div>
+                      <strong>{e.framework} · {e.controlId}</strong>
+                      <p className="muted small">{e.applicationSlug} — resubmission required</p>
                     </div>
-                  ))
-                : items
-                    .filter((e) => e.lifecycleState === 'REJECTED')
-                    .map((e) => (
-                      <div key={e.evidenceId} className="card own-remediation-card">
-                        <div>
-                          <strong>{e.framework} · {e.controlId}</strong>
-                          <p className="muted small">{app?.name ?? '—'} — resubmission required</p>
-                        </div>
-                        <Link
-                          className="primary-link-btn"
-                          to={`/bulk-upload?${new URLSearchParams({ applicationSlug: app?.slug ?? '', framework: e.framework, controlId: e.controlId }).toString()}`}
-                        >
-                          Resubmit Evidence
-                        </Link>
-                      </div>
-                    ))}
-              {!USE_MOCK_APP_OWNER_DATA && !owner.evidence.loading && items.filter((e) => e.lifecycleState === 'REJECTED').length === 0 ? (
+                    <Link
+                      className="primary-link-btn"
+                      to={`/bulk-upload?${new URLSearchParams({ applicationSlug: e.applicationSlug, framework: e.framework, controlId: e.controlId }).toString()}`}
+                    >
+                      Resubmit Evidence
+                    </Link>
+                  </div>
+                ))}
+              {!owner.evidence.loading && items.filter((e) => e.lifecycleState === 'REJECTED').length === 0 ? (
                 <p className="muted">Nothing needs resubmission right now.</p>
               ) : null}
             </div>
@@ -686,7 +682,7 @@ function AppOwnerDashboard({ staleAfterDays }: { staleAfterDays: number }) {
       ) : null}
 
       {tab === 'Audit Readiness' ? (
-        <div className="dash-tab-panel">{app ? <AuditReadinessTab slug={app.slug} counts={counts} /> : null}</div>
+        <div className="dash-tab-panel">{scopeSlug ? <AuditReadinessTab slug={scopeSlug} counts={owner.lifecycle.data?.counts} /> : null}</div>
       ) : null}
     </div>
   )

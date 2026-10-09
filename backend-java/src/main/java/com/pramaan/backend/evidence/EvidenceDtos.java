@@ -173,7 +173,8 @@ public final class EvidenceDtos {
             Integer ageDays,
             Instant expiresAt,
             int currentVersion,
-            List<LifecycleEventView> history) {}
+            List<LifecycleEventView> history,
+            Instant archivedAt) {}
 
     public record DeterministicQueryResult(
             String name,

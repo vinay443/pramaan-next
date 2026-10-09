@@ -95,12 +95,34 @@ class InsightControllerWebTest {
 
         mvc.perform(get("/api/v1/insight/evidence/{id}/summary", r.evidenceId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.simulated").value(true))
-                // UC-P2-3: the mock is a prompt digest, and the payload must say so,
-                // and must name the record it summarised.
+                // deterministic, rule-based: no model anywhere, and the record is named
+                .andExpect(jsonPath("$.method").value("DETERMINISTIC_RULES"))
+                .andExpect(jsonPath("$.model").value("deterministic-rules/v1"))
                 .andExpect(jsonPath("$.modelGenerated").value(false))
+                .andExpect(jsonPath("$.simulated").value(false))
                 .andExpect(jsonPath("$.evidenceId").value(r.evidenceId()))
-                .andExpect(jsonPath("$.controlId").value("TLS-CERT-EXPIRY"));
+                .andExpect(jsonPath("$.controlId").value("TLS-CERT-EXPIRY"))
+                .andExpect(jsonPath("$.version").value(1))
+                .andExpect(jsonPath("$.sha256").value(r.sha256()))
+                .andExpect(jsonPath("$.contentKind").value("STRUCTURED_DATA"))
+                .andExpect(jsonPath("$.verdict").value("PASS"))
+                .andExpect(jsonPath("$.headline").value(
+                        org.hamcrest.Matchers.startsWith("Leaf certificate has > 30 days remaining (TLS-CERT-EXPIRY, C-SITE) — meets the automated checks.")))
+                .andExpect(jsonPath("$.control.source").value("LEGACY"))
+                .andExpect(jsonPath("$.checks[0].checkId").value("RULE-EVIDENCE-COLLECTED"))
+                .andExpect(jsonPath("$.facts[0].pointer").value("record"))
+                .andExpect(jsonPath("$.health.integrity").value("INTACT"))
+                .andExpect(jsonPath("$.health.freshness").value("CURRENT"))
+                .andExpect(jsonPath("$.health.missingTags").isEmpty())
+                .andExpect(jsonPath("$.limits").isArray());
+
+        mvc.perform(get("/api/v1/insight/evidence/{id}/summary", r.evidenceId()).param("version", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value(1));
+        mvc.perform(get("/api/v1/insight/evidence/{id}/summary", r.evidenceId()).param("version", "9"))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/insight/evidence/{id}/summary", java.util.UUID.randomUUID()))
+                .andExpect(status().isNotFound());
 
         mvc.perform(get("/api/v1/insight/reuse/{id}", r.evidenceId()))
                 .andExpect(status().isOk())

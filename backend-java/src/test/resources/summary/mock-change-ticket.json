@@ -1,0 +1,10 @@
+{
+  "sourceSystem": "MOCK_JIRA",
+  "application": "payments",
+  "framework": "PCI_DSS",
+  "control": "PCI-C6",
+  "objectType": "change_ticket",
+  "asOf": "2026-09-01",
+  "status": "COLLECTED",
+  "reference": "mock_jira-pci-c6"
+}

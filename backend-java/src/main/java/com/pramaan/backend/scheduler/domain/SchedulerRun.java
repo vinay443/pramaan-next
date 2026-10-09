@@ -23,7 +23,7 @@ public class SchedulerRun {
 
     public enum Trigger { MANUAL, SCHEDULED, BULK }
 
-    public enum Status { PENDING, RUNNING, COMPLETED, FAILED }
+    public enum Status { PENDING, RUNNING, COMPLETED, PARTIAL, FAILED }
 
     @Id
     private UUID id;
@@ -50,6 +50,28 @@ public class SchedulerRun {
 
     @Column(length = 2000)
     private String message;
+
+    @Column(name = "schedule_id")
+    private UUID scheduleId;
+
+    @Column(name = "triggered_by", length = 160)
+    private String triggeredBy;
+
+    @Column(name = "schedule_frequency", length = 20)
+    private String scheduleFrequency;
+
+    @Column(name = "schedule_created_by", length = 160)
+    private String scheduleCreatedBy;
+
+    @Column(name = "retry_of_run_id")
+    private UUID retryOfRunId;
+
+    @Column(name = "schedule_name", length = 200)
+    private String scheduleName;
+
+    /** Set by a schedule job; overrides the evidenceType tag on everything this run ingests. */
+    @Column(name = "evidence_type", length = 120)
+    private String evidenceType;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -79,19 +101,41 @@ public class SchedulerRun {
         this.createdAt = now;
     }
 
+    public void attachSchedule(UUID scheduleId, String scheduleName, String evidenceType,
+                               String frequency, String createdBy) {
+        this.scheduleId = scheduleId;
+        this.scheduleName = scheduleName;
+        this.evidenceType = evidenceType;
+        this.scheduleFrequency = frequency;
+        this.scheduleCreatedBy = createdBy;
+    }
+
+    public void setTriggeredBy(String triggeredBy) {
+        this.triggeredBy = triggeredBy;
+    }
+
+    public void markRetryOf(UUID previousRunId) {
+        this.retryOfRunId = previousRunId;
+    }
+
     public void markRunning(Instant now) {
         this.status = Status.RUNNING;
         this.startedAt = now;
     }
 
     public void complete(Instant now, int received, int ingested, int duplicates, int failed,
-                         Map<String, String> perSource) {
+                         Map<String, String> perSource, int sourcesFailed, int sourcesTotal) {
         this.received = received;
         this.ingested = ingested;
         this.duplicates = duplicates;
         this.failed = failed;
         this.sourceSummary = new LinkedHashMap<>(perSource);
-        this.status = failed > 0 && ingested == 0 && duplicates == 0 ? Status.FAILED : Status.COMPLETED;
+        // Never COMPLETED when a source failed: all sources failed -> FAILED, some -> PARTIAL.
+        if (sourcesFailed > 0) {
+            this.status = sourcesFailed >= sourcesTotal ? Status.FAILED : Status.PARTIAL;
+        } else {
+            this.status = failed > 0 && ingested == 0 && duplicates == 0 ? Status.FAILED : Status.COMPLETED;
+        }
         this.finishedAt = now;
         this.message = "%d received, %d ingested, %d duplicates, %d failed"
                 .formatted(received, ingested, duplicates, failed);
@@ -119,6 +163,13 @@ public class SchedulerRun {
     public int getDuplicates() { return duplicates; }
     public int getFailed() { return failed; }
     public String getMessage() { return message; }
+    public String getTriggeredBy() { return triggeredBy; }
+    public String getScheduleFrequency() { return scheduleFrequency; }
+    public String getScheduleCreatedBy() { return scheduleCreatedBy; }
+    public UUID getRetryOfRunId() { return retryOfRunId; }
+    public UUID getScheduleId() { return scheduleId; }
+    public String getScheduleName() { return scheduleName; }
+    public String getEvidenceType() { return evidenceType; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getStartedAt() { return startedAt; }
     public Instant getFinishedAt() { return finishedAt; }

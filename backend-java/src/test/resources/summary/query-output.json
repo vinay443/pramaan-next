@@ -1,0 +1,13 @@
+{
+  "collector": "predefined-query",
+  "technology": "rhel",
+  "application": "payments",
+  "controlId": "RH9-04",
+  "controlName": "SELinux Status",
+  "controlFamily": "OS",
+  "asOf": "2026-09-01",
+  "simulated": true,
+  "status": "pass",
+  "command": "getenforce",
+  "output": "Enforcing\nSELinux status: enabled\ncompliant=false (audit mode)"
+}

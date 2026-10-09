@@ -21,9 +21,10 @@ tags:
   - name: scheduler
   - name: insight
     description: >
-      Phase 2 — evidence completeness, reuse/similarity, AI evidence summaries,
-      natural-language queries, compliance aggregation. AI features run in a
-      deterministic mock mode unless pramaan.ai.mode=live.
+      Phase 2 — evidence completeness, reuse/similarity, deterministic rule-based evidence
+      summaries (no AI model), natural-language queries, compliance aggregation. The AI
+      features (NL query, audit-prep narrative, similarity) run in a deterministic mock mode
+      unless pramaan.ai.mode=live.
 
 paths:
   /api/v1/insight/completeness:
@@ -145,7 +146,7 @@ paths:
   /api/v1/reports:
     get:
       tags: [reports]
-      summary: "UC17 — regulatory report catalogue"
+      summary: "UC17 — regulatory report catalogue (compliance-summary, evidence-register, gap-report, audit-readiness, pan-india, regulatory-filing, evidence-summary)"
       responses:
         "200":
           description: OK
@@ -157,6 +158,11 @@ paths:
     get:
       tags: [reports]
       summary: "Render a report as JSON (default) or CSV — a view over existing insight/evidence data"
+      description: >-
+        Report `evidence-summary` ("Evidence summary — audit documentation", filters applicationSlug and framework) is the
+        per-control roll-up of the deterministic evidence summaries: see the EvidenceSummaryReport schema. Its CSV has one row
+        per evidence item and one row per control with no evidence (blank evidence columns); cells starting with = + - @ are
+        prefixed with a single quote. It renders at most 2,000 evidence records and sets truncated=true beyond that.
       parameters:
         - { name: format, in: query, required: false, schema: { type: string, enum: [json, csv], default: json } }
         - { name: applicationSlug, in: query, required: false, schema: { type: string } }
@@ -165,15 +171,29 @@ paths:
         "200":
           description: OK
           content:
-            application/json: { schema: { type: object } }
+            application/json:
+              schema:
+                oneOf:
+                  - { type: object }
+                  - { type: array, items: { type: object } }
+                  - { $ref: "#/components/schemas/EvidenceSummaryReport" }
             text/csv: { schema: { type: string } }
         "404": { $ref: "#/components/responses/Error" }
 
   /api/v1/insight/evidence/{id}/summary:
-    parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - name: version
+        in: query
+        required: false
+        description: Evidence version number to summarise; defaults to the current version. An unknown version is a 404.
+        schema: { type: integer, minimum: 1 }
     get:
       tags: [insight]
-      summary: AI summary of one evidence record, grounded in stored content + check verdicts
+      summary: >-
+        Deterministic, rule-based summary of one evidence version — facts extracted from the stored bytes,
+        the persisted check verdicts, the evidence metadata and the control library, rendered through fixed
+        templates. No AI model is involved; a GET never writes.
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceSummary" } } } }
         "404": { $ref: "#/components/responses/Error" }
@@ -593,13 +613,16 @@ paths:
         "400": { $ref: "#/components/responses/Error" }
 
   /api/v1/scheduler/sources:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
     get:
       tags: [scheduler]
       summary: List registered integration source systems
       responses:
+        "403": { $ref: "#/components/responses/Forbidden" }
         "200": { description: OK, content: { application/json: { schema: { type: array, items: { type: string } } } } }
 
   /api/v1/scheduler/runs:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
     post:
       tags: [scheduler]
       summary: Start a collection run (async). Empty body = all apps + default sources.
@@ -607,6 +630,7 @@ paths:
         required: false
         content: { application/json: { schema: { $ref: "#/components/schemas/RunRequest" } } }
       responses:
+        "403": { $ref: "#/components/responses/Forbidden" }
         "202": { description: Accepted, content: { application/json: { schema: { $ref: "#/components/schemas/RunView" } } } }
     get:
       tags: [scheduler]
@@ -615,6 +639,7 @@ paths:
         - { name: page, in: query, schema: { type: integer, default: 0 } }
         - { name: size, in: query, schema: { type: integer, default: 20 } }
       responses:
+        "403": { $ref: "#/components/responses/Forbidden" }
         "200":
           description: OK
           content:
@@ -627,22 +652,331 @@ paths:
                       items: { type: array, items: { $ref: "#/components/schemas/RunView" } }
 
   /api/v1/scheduler/runs/{runId}:
-    parameters: [ { name: runId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" }, { name: runId, in: path, required: true, schema: { type: string, format: uuid } } ]
     get:
       tags: [scheduler]
       summary: Run status / progress
       responses:
+        "403": { $ref: "#/components/responses/Forbidden" }
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/RunView" } } } }
         "404": { $ref: "#/components/responses/Error" }
 
   /api/v1/scheduler/runs/{runId}/retry:
-    parameters: [ { name: runId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" }, { name: runId, in: path, required: true, schema: { type: string, format: uuid } } ]
     post:
       tags: [scheduler]
       summary: Re-run a finished run with the same parameters
       responses:
+        "403": { $ref: "#/components/responses/Forbidden" }
         "202": { description: Accepted, content: { application/json: { schema: { $ref: "#/components/schemas/RunView" } } } }
         "409": { $ref: "#/components/responses/Error" }
+
+  /api/v1/schedules/options:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    get:
+      tags: [scheduler]
+      summary: Choices for the Create-schedule form (sources, onboarded applications, evidence types, frequencies)
+      responses:
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ScheduleOptions" } } } }
+
+  /api/v1/schedules:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    post:
+      tags: [scheduler]
+      summary: Create a scheduled collection job (created ACTIVE; nextRunAt computed from frequency)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateScheduleRequest" } } }
+      responses:
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/ScheduleView" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+    get:
+      tags: [scheduler]
+      summary: List scheduled collection jobs (newest first)
+      responses:
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ScheduleView" } } } } }
+
+  /api/v1/schedules/{id}:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    patch:
+      tags: [scheduler]
+      summary: >-
+        Activate / deactivate a job (activating recomputes nextRunAt; deactivating clears it). Optional version = the
+        ScheduleView.version the caller saw: if it is stale the answer is 409 CONFLICT. Without it a concurrent write is
+        retried, and setting the value already in place is a no-op.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [active], properties: { active: { type: boolean }, version: { type: integer, format: int64 } } } } }
+      responses:
+        "409": { $ref: "#/components/responses/Conflict" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ScheduleView" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/schedules/{id}/run-now:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [scheduler]
+      summary: >-
+        Run a schedule's collection now (trigger=SCHEDULED, limited to its source/application; sets lastRunAt, leaves nextRunAt).
+        If the schedule already has a PENDING/RUNNING run (also against a simultaneous request or the tick) nothing is started:
+        409 RUN_IN_PROGRESS with the active runId.
+      responses:
+        "409":
+          description: Schedule already has a run in progress
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string, enum: [RUN_IN_PROGRESS] }
+                  message: { type: string }
+                  runId: { type: string, format: uuid }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "202": { description: Accepted, content: { application/json: { schema: { $ref: "#/components/schemas/RunView" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/sources/connections:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    get:
+      tags: [scheduler]
+      summary: Simulated credential state of every source (absent = VALID)
+      responses:
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/SourceConnectionView" } } } } }
+
+  /api/v1/sources/{sourceSystem}/connection:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" }, { name: sourceSystem, in: path, required: true, schema: { type: string } } ]
+    put:
+      tags: [scheduler]
+      summary: Set a source's simulated credential state. INVALID -> runs fail AUTH_FAILED; DISABLED -> CONNECTION_DISABLED; the source is not polled.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [VALID, INVALID, DISABLED] }, updatedBy: { type: string } } } } }
+      responses:
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/SourceConnectionView" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/v1/system/status:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    get:
+      tags: [scheduler]
+      summary: Backend instance status for restart checks (start time of this process, active schedule count)
+      responses:
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  serverStartedAt: { type: string, format: date-time }
+                  now: { type: string, format: date-time }
+                  activeSchedules: { type: integer, format: int64 }
+                  slaSeconds: { type: integer, description: "Configured run SLA in seconds" }
+
+  # ---- Retention policy & archival (UC01-FT017) — archival only changes lifecycle state; objects, hashes and versions are untouched ----
+  /api/v1/retention/policy:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    get:
+      tags: [evidence]
+      summary: Current retention policy (the configured default, 365 days, until one is saved). All roles.
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/RetentionPolicy" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [evidence]
+      summary: >-
+        Set retentionDays (integer 0-3650; anything else is 400 + INPUT_REJECTED). Evidence expiry everywhere is
+        collectedAt + retentionDays. Optional version = the one last read; a stale value is 409 CONFLICT. ADMIN only.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [retentionDays], properties: { retentionDays: { type: integer, minimum: 0, maximum: 3650 }, version: { type: integer, format: int64 } } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/RetentionPolicy" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/v1/retention/archive:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    post:
+      tags: [evidence]
+      summary: >-
+        Archival workflow. Eligible = collectedAt + retentionDays <= now and not already ARCHIVED (optionally for one
+        application). PREVIEW changes nothing and lists them. EXECUTE moves each to the terminal ARCHIVED state with an
+        ARCHIVED audit event (actor X-Pramaan-User, note 'retention <n>d elapsed (policy)') and sets archivedAt; nothing is
+        deleted or modified in storage, and repeating EXECUTE archives 0. ADMIN only. Every call is recorded as a retention run.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [mode], properties: { mode: { type: string, enum: [PREVIEW, EXECUTE] }, application: { type: string } } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ArchiveResult" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/retention/runs:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    get:
+      tags: [evidence]
+      summary: Retention runs (PREVIEW and EXECUTE calls), newest first. All roles.
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/RetentionRun" } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ---- Dashboard KPIs (UC01-FT016) — computed from stored data only; metrics that cannot be computed are null ----
+  /api/v1/dashboard/kpis:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    get:
+      tags: [insight]
+      summary: >-
+        Filterable KPI snapshot for the App Owner dashboard. evidence.total is exactly the repository search total for the
+        same application / framework / collectionMethod / from-to (by evidence collection time), and the per-state counts
+        sum to it. automated.* aggregates scheduler runs (filtered by covered application / framework, trigger for
+        collectionMethod scheduled|manual|bulk, and run creation time), active schedules, open observations and the
+        caller role's unread notifications. on-demand / predefined-query evidence never comes from a scheduler run, so
+        those methods report zero runs.
+      parameters:
+        - { name: application, in: query, schema: { type: string } }
+        - { name: framework, in: query, schema: { type: string } }
+        - { name: collectionMethod, in: query, schema: { type: string, enum: [scheduled, manual, bulk, on-demand, predefined-query] } }
+        - { name: from, in: query, description: "yyyy-MM-dd (start of day) or ISO instant", schema: { type: string } }
+        - { name: to, in: query, description: "yyyy-MM-dd (inclusive, through end of day) or ISO instant", schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/DashboardKpis" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ---- Audit observations (UC01-FT014 follow-up) — linked to evidence + control; AUDITOR/ADMIN write, all roles read ----
+  /api/v1/evidence/{evidenceId}/observations:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" }, { name: evidenceId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [evidence]
+      summary: >-
+        Raise an observation on an evidence record. controlId / framework / application are copied from the evidence.
+        AUDITOR and ADMIN only (403 + ACCESS_DENIED event otherwise). text 1-1000 chars without < > " ' ` & ; or control
+        characters (400 + INPUT_REJECTED). Non-UUID id -> 400 INVALID_IDENTIFIER; unknown id -> 404.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [text], properties: { text: { type: string, minLength: 1, maxLength: 1000 } } } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/ObservationView" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/Error" }
+    get:
+      tags: [evidence]
+      summary: Observations on one evidence record, newest first. All six roles.
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ObservationView" } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/observations/{id}/close:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [evidence]
+      summary: Close an observation (sets closedAt; idempotent). AUDITOR and ADMIN only.
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ObservationView" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/observations:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    get:
+      tags: [evidence]
+      summary: Search observations, newest first. All six roles.
+      parameters:
+        - { name: application, in: query, schema: { type: string } }
+        - { name: framework, in: query, schema: { type: string } }
+        - { name: control, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [OPEN, CLOSED] } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ObservationView" } } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ---- Security events (UC01-FT012) — every blocked request is recorded; no bodies or credentials are stored ----
+  /api/v1/security/events:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    get:
+      tags: [scheduler]
+      summary: >-
+        Blocked-request audit trail, newest first. ADMIN and AUDITOR only; any other role gets 403 and that denial
+        is itself recorded (ACCESS_DENIED). Recorded events: ACCESS_DENIED (known role not permitted), UNKNOWN_ROLE
+        (missing/unknown X-Pramaan-Role), INPUT_REJECTED (name/source/application/evidenceType and run-request
+        fields must be 1-100 chars without < > " ' ` & ; or control characters; X-Pramaan-User only [A-Za-z0-9 ._@-],
+        max 64), INVALID_IDENTIFIER (id path variable that is not a UUID -> 400; an unknown but well-formed id is a
+        plain 404 and not recorded). Stored values are control-character-stripped and truncated to 300 chars.
+      parameters:
+        - { name: type, in: query, schema: { type: string, enum: [ACCESS_DENIED, UNKNOWN_ROLE, INPUT_REJECTED, INVALID_IDENTIFIER] } }
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 500 } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/SecurityEventView" } } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ---- Run notifications (UC01-FT011) — email delivery is simulated, no SMTP/broker ----
+  /api/v1/notifications:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    get:
+      tags: [scheduler]
+      summary: Notifications addressed to the caller's role (X-Pramaan-Role), newest first, with unreadCount (in-app unread)
+      parameters:
+        - { name: unreadOnly, in: query, schema: { type: boolean, default: false } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/NotificationList" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/notifications/{id}/read:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [scheduler]
+      summary: Mark one of the caller role's notifications read (404 if it belongs to another role). Allowed for all roles.
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/NotificationView" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/v1/notifications/read-all:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    post:
+      tags: [scheduler]
+      summary: Mark all of the caller role's notifications read. Allowed for all roles.
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/NotificationList" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/notifications/settings:
+    parameters: [ { $ref: "#/components/parameters/PramaanRole" } ]
+    get:
+      tags: [scheduler]
+      summary: Notification settings (defaults apply until saved). Readable by all roles.
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/NotificationSettings" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [scheduler]
+      summary: >-
+        Save notification settings. APP and ADMIN only. Optional version = the one last read; a stale value is a 409
+        CONFLICT, without it concurrent saves are applied one after the other.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/NotificationSettings" } } }
+      responses:
+        "409": { $ref: "#/components/responses/Conflict" }
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/NotificationSettings" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   # ---- Use Case 1 — evidence detail context -----------------------------
   /api/v1/insight/evidence/{id}/context:
@@ -711,7 +1045,36 @@ paths:
         "404": { $ref: "#/components/responses/Error" }
 
 components:
+  parameters:
+    PramaanRole:
+      name: X-Pramaan-Role
+      in: header
+      required: true
+      description: >-
+        Persona code picked at login (APP, AUDITOR, FH, VH, CIO, ADMIN). Demo-mode authorization only, not authentication.
+        Scheduler endpoints (schedules, scheduler runs, source connections, system status): GET needs any known role;
+        every other method needs APP or ADMIN. A missing or unknown role gets 403 everywhere. Optional X-Pramaan-User
+        records the acting user on runs.
+      schema: { type: string, enum: [APP, AUDITOR, FH, VH, CIO, ADMIN] }
   responses:
+    Conflict:
+      description: 'Changed by another user. Body: { error: CONFLICT, message: "Changed by another user, reload and retry" }'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, enum: [CONFLICT] }
+              message: { type: string }
+    Forbidden:
+      description: 'Role not permitted, or unknown/missing X-Pramaan-Role. Body: { error: FORBIDDEN, message }'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, enum: [FORBIDDEN] }
+              message: { type: string }
     Error:
       description: Error
       content:
@@ -858,7 +1221,7 @@ components:
         sourceObjectId: { type: string, nullable: true }
         title: { type: string, nullable: true }
         currentVersion: { type: integer }
-        lifecycleState: { type: string, enum: [DRAFT, SUBMITTED, APPROVED, REJECTED, EXPIRED, SUPERSEDED] }
+        lifecycleState: { type: string, enum: [DRAFT, SUBMITTED, APPROVED, REJECTED, EXPIRED, SUPERSEDED, ARCHIVED] }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         tags: { type: object, additionalProperties: { type: string } }
@@ -870,7 +1233,7 @@ components:
         evidenceId: { type: string, format: uuid }
         applicationSlug: { type: string }
         controlId: { type: string }
-        state: { type: string, enum: [DRAFT, SUBMITTED, APPROVED, REJECTED, EXPIRED, SUPERSEDED] }
+        state: { type: string, enum: [DRAFT, SUBMITTED, APPROVED, REJECTED, EXPIRED, SUPERSEDED, ARCHIVED] }
         effectiveState: { type: string, description: "state, except APPROVED past retention reads as EXPIRED" }
         expired: { type: boolean }
         reviewedBy: { type: string, nullable: true }
@@ -880,6 +1243,7 @@ components:
         ageDays: { type: integer, nullable: true }
         expiresAt: { type: string, format: date-time, nullable: true }
         currentVersion: { type: integer }
+        archivedAt: { type: string, format: date-time, nullable: true, description: "Set only while the state is ARCHIVED" }
         history:
           type: array
           items:
@@ -1088,16 +1452,174 @@ components:
 
     EvidenceSummary:
       type: object
+      description: >-
+        Deterministic summary of one evidence version. Every sentence is a fixed template filled with facts
+        from the stored content, its persisted check verdicts, its metadata or the control library.
+        model, modelGenerated, summary and groundedOn are kept for backward compatibility.
+      required: [evidenceId, method, version, sha256, contentKind, verdict, headline, control, checks, facts, findings, health, limits]
       properties:
         evidenceId: { type: string, format: uuid }
         applicationSlug: { type: string }
         framework: { type: string }
         controlId: { type: string }
-        model: { type: string }
-        simulated: { type: boolean }
-        summary: { type: string }
-        groundedOn: { type: array, items: { type: string } }
+        model: { type: string, enum: ["deterministic-rules/v1"], description: "Always deterministic-rules/v1." }
+        simulated: { type: boolean, description: "True iff the evidence version's metadata says simulated=true." }
+        modelGenerated: { type: boolean, enum: [false], description: "Always false; kept for backward compatibility." }
+        summary:
+          type: string
+          description: "headline + up to 3 finding sentences + ' Collected {yyyy-MM-dd} from {sourceSystem} for {application} (v{n}); integrity {intact | NOT intact | unverifiable}; {current | stale}.'"
+        groundedOn:
+          type: array
+          items: { type: string }
+          description: 'One line per fact: "{label}: {value} [{pointer}]".'
         generatedAt: { type: string, format: date-time }
+        method: { type: string, enum: [DETERMINISTIC_RULES] }
+        version: { type: integer, description: "The evidence version summarised (the current one unless ?version= was given)." }
+        sha256: { type: string, description: "SHA-256 recorded for that version." }
+        contentKind:
+          type: string
+          description: Detected from the stored bytes, not from the declared type or file name.
+          enum: [CHECK_BUNDLE, INTEGRATION_OBJECT, QUERY_RESULT, STRUCTURED_DATA, TEXT, DOCUMENT, IMAGE, BINARY, UNAVAILABLE]
+        verdict:
+          type: string
+          description: Worst-of over the persisted check results (FAIL > WARNING > PASS > NOT_APPLICABLE); NOT_ASSESSED when there are none.
+          enum: [PASS, WARNING, FAIL, NOT_APPLICABLE, NOT_ASSESSED]
+        headline:
+          type: string
+          description: '"{controlName} ({controlId}, {frameworkLabel}) — {verdictWord}. {contentSentence}"'
+        control: { $ref: "#/components/schemas/EvidenceSummaryControl" }
+        checks:
+          type: array
+          description: Persisted check results, sorted by checkId. Never evaluated by this call.
+          items: { $ref: "#/components/schemas/EvidenceSummaryCheck" }
+        facts:
+          type: array
+          description: At most 60. Each has a pointer, or "record" for record-level facts.
+          items: { $ref: "#/components/schemas/EvidenceSummaryFact" }
+        findings:
+          type: array
+          description: Most severe first.
+          items: { $ref: "#/components/schemas/EvidenceSummaryFinding" }
+        health: { $ref: "#/components/schemas/EvidenceSummaryHealth" }
+        limits:
+          type: array
+          items: { type: string }
+          description: What the summary could not do (truncated read, unreadable content, stale check results, fact cap, ...).
+
+    EvidenceSummaryReport:
+      type: object
+      description: Body of GET /api/v1/reports/evidence-summary (JSON).
+      properties:
+        generatedAt: { type: string, format: date-time }
+        scope:
+          type: object
+          properties:
+            applicationSlug: { type: string, nullable: true }
+            framework: { type: string, nullable: true }
+        totals:
+          type: object
+          properties:
+            controlsExpected: { type: integer }
+            controlsWithEvidence: { type: integer, description: Expected controls that are COVERED or STALE. }
+            controlsMissing: { type: integer }
+            evidenceRecords: { type: integer, description: Evidence items listed in this report. }
+            byVerdict:
+              type: object
+              description: Evidence items per verdict; all five keys are always present.
+              properties:
+                PASS: { type: integer }
+                WARNING: { type: integer }
+                FAIL: { type: integer }
+                NOT_APPLICABLE: { type: integer }
+                NOT_ASSESSED: { type: integer }
+            stale: { type: integer, description: Evidence items whose freshness is STALE. }
+            integrityMismatch: { type: integer }
+        truncated: { type: boolean, description: True when the evidence cap was reached. }
+        limits: { type: array, items: { type: string } }
+        controls:
+          type: array
+          description: Ordered by application, framework, controlId. Expected controls with no evidence are listed as MISSING.
+          items:
+            type: object
+            properties:
+              application: { type: string }
+              framework: { type: string }
+              controlId: { type: string }
+              controlName: { type: string }
+              description: { type: string, nullable: true }
+              status: { type: string, enum: [COVERED, STALE, MISSING], description: From the expected-control completeness. }
+              verdict:
+                type: string
+                nullable: true
+                enum: [PASS, WARNING, FAIL, NOT_APPLICABLE, NOT_ASSESSED]
+                description: Worst-of over the control's evidence; null for MISSING controls.
+              evidenceCount: { type: integer }
+              latestCollectedAt: { type: string, format: date-time, nullable: true }
+              evidence:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    evidenceId: { type: string, format: uuid }
+                    version: { type: integer }
+                    headline: { type: string }
+                    verdict: { type: string, enum: [PASS, WARNING, FAIL, NOT_APPLICABLE, NOT_ASSESSED] }
+                    collectedAt: { type: string, format: date-time, nullable: true }
+                    integrity: { type: string, enum: [INTACT, MISMATCH, UNVERIFIABLE] }
+                    freshness: { type: string, enum: [CURRENT, STALE] }
+
+    EvidenceSummaryControl:
+      type: object
+      properties:
+        controlId: { type: string }
+        name: { type: string, description: "Control title from the control catalog; the control id when unknown." }
+        description: { type: string, nullable: true, description: "Verbatim ECS Control Library description; a legacy control falls back to its title; null when unknown." }
+        framework: { type: string }
+        source: { type: string, enum: [LEGACY, LIBRARY, UNKNOWN] }
+        alsoSatisfies:
+          type: array
+          description: Other frameworks this evidence is mapped to (same control code), from the existing framework mapping.
+          items:
+            type: object
+            properties:
+              framework: { type: string }
+              controlId: { type: string }
+              name: { type: string }
+
+    EvidenceSummaryCheck:
+      type: object
+      properties:
+        checkId: { type: string }
+        status: { $ref: "#/components/schemas/CheckStatus" }
+        observed: { type: string, nullable: true }
+        expected: { type: string, nullable: true }
+        detail: { type: string, nullable: true }
+
+    EvidenceSummaryFact:
+      type: object
+      properties:
+        label: { type: string }
+        value: { type: string, maxLength: 200, description: "Truncated at 200 characters with an ellipsis; secrets are shown as [REDACTED]." }
+        pointer: { type: string, description: "'JSON Pointer (e.g. /findings/0/observed), \"line N\", \"row N\", \"page N\", or \"record\".'" }
+
+    EvidenceSummaryFinding:
+      type: object
+      properties:
+        severity: { type: string, enum: [INFO, WARNING, FAIL] }
+        message: { type: string }
+        pointer: { type: string }
+
+    EvidenceSummaryHealth:
+      type: object
+      description: Recomputed on every call (never cached).
+      properties:
+        integrity: { type: string, enum: [INTACT, MISMATCH, UNVERIFIABLE], description: "Same check as GET /evidence/{id}/verify." }
+        collectedAt: { type: string, format: date-time, nullable: true }
+        ageDays: { type: integer, nullable: true }
+        freshness: { type: string, enum: [CURRENT, STALE], description: "Same definition as evidence completeness (age <= stale-after-days is CURRENT)." }
+        lifecycleState: { type: string }
+        versionCount: { type: integer }
+        missingTags: { type: array, items: { type: string }, description: "Expected canonical tags (EvidenceNaming) that are absent." }
 
     NlQueryResult:
       type: object
@@ -1132,6 +1654,7 @@ components:
           type: string
           enum: [COMPLIANT, PARTIALLY_COMPLIANT, NON_COMPLIANT, NOT_ASSESSED, MISSING_EVIDENCE]
         detail: { type: string }
+        openObservations: { type: integer, default: 0, description: "Open audit observations on this control for the application" }
 
     ComplianceReport:
       type: object
@@ -1366,6 +1889,7 @@ components:
             rejected: { type: integer }
             expired: { type: integer }
             superseded: { type: integer }
+            archived: { type: integer, description: "ARCHIVED (retention); the seven values sum to total" }
         rejections:
           type: array
           items:
@@ -1402,6 +1926,226 @@ components:
         formats: { type: array, items: { type: string } }
         params: { type: array, items: { type: string } }
 
+    CreateScheduleRequest:
+      type: object
+      required: [name, sourceSystem, application, evidenceType, frequency]
+      properties:
+        name: { type: string }
+        sourceSystem: { type: string, description: "A source from GET /scheduler/sources" }
+        application: { type: string, description: "Onboarded application slug" }
+        evidenceType: { type: string }
+        frequency: { type: string, enum: [HOURLY, DAILY, WEEKLY, MINUTELY], description: "MINUTELY = every minute (testing)" }
+        createdBy: { type: string }
+
+    ScheduleOptions:
+      type: object
+      properties:
+        sources: { type: array, items: { type: string } }
+        applications: { type: array, items: { type: string } }
+        evidenceTypes: { type: array, items: { type: string } }
+        frequencies: { type: array, items: { type: string } }
+
+    ScheduleView:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        sourceSystem: { type: string }
+        application: { type: string }
+        evidenceType: { type: string }
+        frequency: { type: string, enum: [HOURLY, DAILY, WEEKLY, MINUTELY], description: "MINUTELY = every minute (testing)" }
+        active: { type: boolean }
+        createdBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        nextRunAt: { type: string, format: date-time, nullable: true }
+        lastRunAt: { type: string, format: date-time, nullable: true }
+        version: { type: integer, format: int64, description: "Optimistic-lock version; send it back on PATCH to detect a concurrent change" }
+
+    RetentionPolicy:
+      type: object
+      properties:
+        retentionDays: { type: integer }
+        updatedBy: { type: string, nullable: true }
+        updatedAt: { type: string, format: date-time, nullable: true }
+        version: { type: integer, format: int64, nullable: true, description: "null until a policy has been saved" }
+
+    RetentionRun:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        mode: { type: string, enum: [PREVIEW, EXECUTE] }
+        triggeredBy: { type: string }
+        startedAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time }
+        retentionDays: { type: integer }
+        application: { type: string, nullable: true }
+        scanned: { type: integer }
+        archived: { type: integer }
+        skipped: { type: integer, description: "in scope but not eligible (already archived or still within retention)" }
+
+    ArchiveResult:
+      type: object
+      properties:
+        runId: { type: string, format: uuid }
+        mode: { type: string }
+        retentionDays: { type: integer }
+        application: { type: string, nullable: true }
+        scanned: { type: integer }
+        eligible: { type: integer }
+        archived: { type: integer }
+        skipped: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              evidenceId: { type: string, format: uuid }
+              applicationSlug: { type: string }
+              controlId: { type: string }
+              framework: { type: string }
+              collectedAt: { type: string, format: date-time }
+              expiresAt: { type: string, format: date-time }
+
+    DashboardKpis:
+      type: object
+      properties:
+        generatedAt: { type: string, format: date-time }
+        filters:
+          type: object
+          properties:
+            application: { type: string, nullable: true }
+            framework: { type: string, nullable: true }
+            collectionMethod: { type: string, nullable: true }
+            from: { type: string, format: date-time, nullable: true }
+            to: { type: string, format: date-time, nullable: true }
+        evidence:
+          type: object
+          properties:
+            total: { type: integer }
+            counts:
+              type: object
+              description: Per persisted lifecycle state; the six values sum to total
+              properties:
+                draft: { type: integer }
+                submitted: { type: integer }
+                approved: { type: integer }
+                rejected: { type: integer }
+                expired: { type: integer }
+                superseded: { type: integer }
+            archived: { type: integer, description: "ARCHIVED (retention); the seven values sum to total" }
+            closed: { type: integer, description: "approved + expired + superseded" }
+            closureRatePct: { type: number, nullable: true, description: "closed / total; null when total = 0" }
+            rejected: { type: integer, description: "re-upload requested" }
+            expiringSoon: { type: integer, description: "retention expires within 30 days (not yet expired)" }
+            expired: { type: integer, description: "past the retention window" }
+            retentionDays: { type: integer }
+            avgReviewTimeDays: { type: number, nullable: true, description: "submitted -> reviewed, from lifecycle events; null if none reviewed" }
+            auditorSla:
+              type: object
+              nullable: true
+              description: Reviewed evidence within the configured auditor target; pct is null when nothing was reviewed
+              properties: { reviewedWithinTarget: { type: integer }, totalReviewed: { type: integer }, pct: { type: number, nullable: true }, targetDays: { type: integer } }
+            pendingAging:
+              type: object
+              properties: { count: { type: integer }, avgDaysInQueue: { type: number, nullable: true } }
+        automated:
+          type: object
+          properties:
+            totalRuns: { type: integer }
+            scheduledRuns: { type: integer }
+            manualRuns: { type: integer }
+            bulkRuns: { type: integer }
+            completed: { type: integer }
+            partial: { type: integer }
+            failed: { type: integer }
+            inProgress: { type: integer }
+            successRatePct: { type: number, nullable: true, description: "completed / (completed + partial + failed)" }
+            evidenceIngested: { type: integer, format: int64 }
+            duplicatesSkipped: { type: integer, format: int64 }
+            lastRun:
+              type: object
+              nullable: true
+              properties:
+                runId: { type: string, format: uuid }
+                status: { type: string }
+                at: { type: string, format: date-time }
+                scheduleName: { type: string, nullable: true }
+            activeSchedules: { type: integer }
+            nextDueAt: { type: string, format: date-time, nullable: true }
+            runsWithinSla: { type: integer }
+            runsBreached: { type: integer }
+            slaSeconds: { type: integer }
+            openObservations: { type: integer, format: int64 }
+            unreadNotifications: { type: integer, format: int64, description: "for the caller's X-Pramaan-Role" }
+
+    ObservationView:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        evidenceId: { type: string, format: uuid }
+        controlId: { type: string }
+        framework: { type: string }
+        application: { type: string }
+        text: { type: string, maxLength: 1000 }
+        status: { type: string, enum: [OPEN, CLOSED] }
+        raisedByRole: { type: string }
+        raisedBy: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        closedAt: { type: string, format: date-time, nullable: true }
+
+    SecurityEventView:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        occurredAt: { type: string, format: date-time }
+        eventType: { type: string, enum: [ACCESS_DENIED, UNKNOWN_ROLE, INPUT_REJECTED, INVALID_IDENTIFIER] }
+        outcome: { type: string, enum: [BLOCKED] }
+        role: { type: string, nullable: true }
+        actor: { type: string, nullable: true, description: "X-Pramaan-User, sanitized" }
+        method: { type: string }
+        path: { type: string }
+        detail: { type: string, maxLength: 300 }
+        remoteAddr: { type: string, nullable: true }
+
+    NotificationView:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        type: { type: string, enum: [RUN_COMPLETED, RUN_PARTIAL, RUN_FAILED] }
+        severity: { type: string, enum: [INFO, WARNING, ERROR] }
+        title: { type: string }
+        message: { type: string, description: "Run id, trigger, schedule, counts and (failures) per-source errorCode - message" }
+        runId: { type: string, format: uuid, nullable: true }
+        scheduleName: { type: string, nullable: true }
+        recipientRole: { type: string }
+        channel: { type: string, enum: [IN_APP, EMAIL_SIMULATED], description: "EMAIL_SIMULATED rows are delivery records only (created read)" }
+        readAt: { type: string, format: date-time, nullable: true }
+
+    NotificationList:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/NotificationView" } }
+        unreadCount: { type: integer, format: int64 }
+
+    NotificationSettings:
+      type: object
+      properties:
+        enabled: { type: boolean, default: true }
+        notifyOnSuccess: { type: boolean, default: true }
+        notifyOnFailure: { type: boolean, default: true }
+        recipientRoles: { type: array, items: { type: string, enum: [APP, AUDITOR, FH, VH, CIO, ADMIN] }, default: [APP, ADMIN] }
+        emailSimulated: { type: boolean, default: true }
+        version: { type: integer, format: int64, nullable: true, description: "Optimistic-lock version (read-only unless sent back on PUT)" }
+
+    SourceConnectionView:
+      type: object
+      properties:
+        sourceSystem: { type: string }
+        status: { type: string, enum: [VALID, INVALID, DISABLED] }
+        updatedAt: { type: string, format: date-time, nullable: true }
+        updatedBy: { type: string, nullable: true }
+
     RunRequest:
       type: object
       properties:
@@ -1415,7 +2159,7 @@ components:
       properties:
         runId: { type: string, format: uuid }
         trigger: { type: string, enum: [MANUAL, SCHEDULED, BULK] }
-        status: { type: string, enum: [PENDING, RUNNING, COMPLETED, FAILED] }
+        status: { type: string, enum: [PENDING, RUNNING, COMPLETED, PARTIAL, FAILED], description: "PARTIAL = some sources failed; FAILED = all failed (or nothing ingested)" }
         requestedBy: { type: string }
         applications: { type: array, items: { type: string } }
         frameworks: { type: array, items: { type: string } }
@@ -1426,6 +2170,34 @@ components:
         failed: { type: integer }
         message: { type: string }
         perSource: { type: object, additionalProperties: { type: string } }
+        sourceStatus: { type: object, additionalProperties: { type: string, enum: [CONNECTED, FAILED] }, description: "Per-source connectivity (source polled without error)" }
+        scheduleId: { type: string, format: uuid, nullable: true, description: "Schedule that started this run; null for manual runs" }
+        scheduleName: { type: string, nullable: true }
+        retryOfRunId: { type: string, format: uuid, nullable: true, description: "Original run when started via Retry" }
+        triggeredBy: { type: string, description: "X-Pramaan-User of the actor (attribution only), 'anonymous' if absent, 'system:scheduler' for tick runs; null on rows from before V17" }
+        scheduleFrequency: { type: string, nullable: true }
+        scheduleCreatedBy: { type: string, nullable: true }
+        durationMs: { type: integer, format: int64, nullable: true, description: "finishedAt - startedAt" }
+        slaSeconds: { type: integer, description: "Configured SLA (pramaan.scheduler.sla-seconds, default 60) for request-to-finish time" }
+        queuedMs: { type: integer, format: int64, nullable: true, description: "Queue wait: startedAt - createdAt; null until the run starts" }
+        slaStatus: { type: string, enum: [WITHIN_SLA, BREACHED, RUNNING], description: "Computed from createdAt -> finishedAt (queue wait + execution); RUNNING until finished" }
+        sourceResults:
+          type: array
+          description: Per-source audit rows
+          items:
+            type: object
+            properties:
+              source: { type: string }
+              status: { type: string, enum: [CONNECTED, FAILED] }
+              evidenceCount: { type: integer, description: ingested }
+              errorCode: { type: string, nullable: true }
+              errorMessage: { type: string, nullable: true }
+        sourceErrors:
+          type: object
+          description: Failed sources only (AUTH_FAILED, CONNECTION_DISABLED, UNKNOWN_SOURCE, COLLECT_FAILED)
+          additionalProperties:
+            type: object
+            properties: { errorCode: { type: string }, errorMessage: { type: string } }
         createdAt: { type: string, format: date-time }
         startedAt: { type: string, format: date-time, nullable: true }
         finishedAt: { type: string, format: date-time, nullable: true }

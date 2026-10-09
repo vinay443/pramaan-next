@@ -85,6 +85,12 @@
             <artifactId>jsch</artifactId>
             <version>0.1.55</version>
         </dependency>
+        <!-- Evidence summaries: read text + metadata from PDF evidence (Apache-2.0). DOCX/XLSX use the JDK only. -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.5</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

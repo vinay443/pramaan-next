@@ -10,6 +10,8 @@ public interface EvidenceLifecycleEventRepository extends JpaRepository<Evidence
 
     List<EvidenceLifecycleEvent> findByEvidenceRecordIdOrderByOccurredAtAsc(UUID evidenceRecordId);
 
+    boolean existsByEvidenceRecordIdAndActionAndNoteContaining(UUID evidenceRecordId, String action, String note);
+
     /** App Owner dashboard — closure/rejection metrics scoped to one application's evidence. */
     List<EvidenceLifecycleEvent> findByEvidenceRecordIdIn(Collection<UUID> evidenceRecordIds);
 }

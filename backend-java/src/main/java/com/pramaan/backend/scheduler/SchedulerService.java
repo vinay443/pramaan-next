@@ -6,6 +6,7 @@ import com.pramaan.backend.common.PageResponse;
 import com.pramaan.backend.config.PramaanProperties;
 import com.pramaan.backend.scheduler.SchedulerDtos.RunRequest;
 import com.pramaan.backend.scheduler.SchedulerDtos.RunView;
+import com.pramaan.backend.scheduler.domain.ScheduleJob;
 import com.pramaan.backend.scheduler.domain.SchedulerRun;
 import com.pramaan.backend.scheduler.domain.SchedulerRun.Status;
 import com.pramaan.backend.scheduler.domain.SchedulerRun.Trigger;
@@ -25,6 +26,7 @@ public class SchedulerService {
     private final Clock clock;
     private final List<String> defaultSources;
     private final boolean dispatch;
+    private final int slaSeconds;
 
     public SchedulerService(SchedulerRunRepository runs, SchedulerRunExecutor executor,
                             ApplicationRepository applications, Clock clock, PramaanProperties props) {
@@ -36,10 +38,28 @@ public class SchedulerService {
                 ? props.scheduler().defaultSources()
                 : List.of();
         this.dispatch = props.scheduler() == null || props.scheduler().dispatch();
+        this.slaSeconds = props.scheduler() == null ? 60 : props.scheduler().slaSecondsOrDefault();
     }
 
     /** Create a run and hand it to the async executor. Returns immediately with status PENDING. */
     public RunView trigger(RunRequest req, Trigger trigger) {
+        return trigger(req, trigger, null, null, null);
+    }
+
+    /** As above, with the acting user (X-Pramaan-User; attribution only). */
+    public RunView trigger(RunRequest req, Trigger trigger, String actor) {
+        return trigger(req, trigger, null, null, actor);
+    }
+
+    /**
+     * As above, optionally on behalf of a schedule job (links the run and applies its evidence type).
+     * A null {@code actor} means the system: "system:scheduler" for SCHEDULED, otherwise "anonymous".
+     */
+    public RunView trigger(RunRequest req, Trigger trigger, ScheduleJob job, String actor) {
+        return trigger(req, trigger, job, null, actor);
+    }
+
+    private RunView trigger(RunRequest req, Trigger trigger, ScheduleJob job, SchedulerRun retryOf, String actor) {
         if (!applications.existsByActiveTrue()) {
             throw ApiException.badRequest(
                     "No applications onboarded — onboard at least one application before running the scheduler.");
@@ -60,14 +80,32 @@ public class SchedulerService {
         }
         SchedulerRun run = new SchedulerRun(UUID.randomUUID(), trigger, req.requestedBy(),
                 req.applications(), req.frameworks(), sources, clock.instant());
+        run.setTriggeredBy(actor != null && !actor.isBlank() ? actor.trim()
+                : trigger == Trigger.SCHEDULED ? "system:scheduler" : "anonymous");
+        if (job != null) {
+            run.attachSchedule(job.getId(), job.getName(), job.getEvidenceType(),
+                    job.getFrequency().name(), job.getCreatedBy());
+        }
+        if (retryOf != null) {
+            // A retry keeps the original's schedule link and evidence type.
+            if (retryOf.getScheduleId() != null) {
+                run.attachSchedule(retryOf.getScheduleId(), retryOf.getScheduleName(), retryOf.getEvidenceType(),
+                        retryOf.getScheduleFrequency(), retryOf.getScheduleCreatedBy());
+            }
+            run.markRetryOf(retryOf.getId());
+        }
         runs.save(run);
         if (dispatch) {
             executor.executeAsync(run.getId());
         }
-        return RunView.from(run);
+        return view(run);
     }
 
     public RunView retry(UUID runId) {
+        return retry(runId, null);
+    }
+
+    public RunView retry(UUID runId, String actor) {
         SchedulerRun previous = runs.findById(runId)
                 .orElseThrow(() -> ApiException.notFound("unknown run: " + runId));
         if (previous.getStatus() == Status.RUNNING || previous.getStatus() == Status.PENDING) {
@@ -77,12 +115,12 @@ public class SchedulerService {
                 splitList(previous.getApplications()),
                 splitList(previous.getFrameworks()),
                 splitList(previous.getSources()),
-                previous.getRequestedBy()), Trigger.MANUAL);
+                previous.getRequestedBy()), Trigger.MANUAL, null, previous, actor);
     }
 
     @Transactional(readOnly = true)
     public RunView get(UUID runId) {
-        return runs.findById(runId).map(RunView::from)
+        return runs.findById(runId).map(this::view)
                 .orElseThrow(() -> ApiException.notFound("unknown run: " + runId));
     }
 
@@ -90,7 +128,11 @@ public class SchedulerService {
     public PageResponse<RunView> list(int page, int size) {
         return PageResponse.of(runs.findAllByOrderByCreatedAtDesc(
                 PageRequest.of(Math.max(page, 0), size <= 0 ? 20 : Math.min(size, 200)))
-                .map(RunView::from));
+                .map(this::view));
+    }
+
+    private RunView view(SchedulerRun r) {
+        return RunView.from(r, slaSeconds);
     }
 
     private static List<String> splitList(String csv) {

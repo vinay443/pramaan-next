@@ -31,3 +31,6 @@ node_modules/
 # Logs
 *.log
 backend-java/data/
+
+# Persistent dev H2 files (profile dev-persist)
+backend-java/data/

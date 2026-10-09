@@ -232,7 +232,7 @@ consistently classified, before trying to reason about it.
 
 The **analytical layer** built on top of that foundation adds the interpretive
 capabilities: detecting where evidence is missing or incomplete, finding and reusing
-evidence across frameworks, generating plain-language summaries and answering
+evidence across frameworks, producing rule-based summaries of what the stored evidence contains (no AI model) and answering
 natural-language questions about the evidence, and giving leadership a rolled-up view
 of posture. This layer is where the system starts telling you something about your
 compliance state, rather than just holding evidence for you.

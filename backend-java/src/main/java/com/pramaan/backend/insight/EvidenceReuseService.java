@@ -81,12 +81,17 @@ public class EvidenceReuseService {
         return new ControlReuseResult(cid.toUpperCase(Locale.ROOT), frameworks, held);
     }
 
-    private ControlReuseEvidence toControlReuseEvidence(EvidenceRecord r) {
+    /** The frameworks a record is tagged to (the canonical {@code frameworks} tag, else its own framework). */
+    public List<String> mappedFrameworks(EvidenceRecord r) {
         String frameworksTag = tagValue(r, EvidenceNaming.TAG_FRAMEWORKS);
-        List<String> mapped = frameworksTag == null || frameworksTag.isBlank()
+        return frameworksTag == null || frameworksTag.isBlank()
                 ? (r.getFramework() == null ? List.of() : List.of(r.getFramework()))
                 : Arrays.stream(frameworksTag.split(",")).map(String::trim).filter(s -> !s.isBlank())
                         .map(s -> s.toUpperCase(Locale.ROOT)).distinct().toList();
+    }
+
+    private ControlReuseEvidence toControlReuseEvidence(EvidenceRecord r) {
+        List<String> mapped = mappedFrameworks(r);
         return new ControlReuseEvidence(r.getId().toString(), r.getApplicationSlug(), r.getControlId(),
                 r.getSourceSystem(), tagValue(r, EvidenceNaming.TAG_COLLECTION_METHOD),
                 r.getLatestCollectedAt(), r.getLatestSha256(), mapped);

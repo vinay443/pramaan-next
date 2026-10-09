@@ -1,0 +1,9 @@
+{
+  "name": "Quarterly access review",
+  "owner": "iam-team",
+  "reviewedAt": "2026-08-15",
+  "approved": true,
+  "count": 42,
+  "items": [{"user": "a", "status": "ok"}, {"user": "b", "status": "failed"}],
+  "nested": {"level": {"status": "pass"}}
+}

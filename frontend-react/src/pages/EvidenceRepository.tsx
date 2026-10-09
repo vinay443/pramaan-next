@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { listEvidence } from '../api/endpoints'
 import { onDataEvent } from '../api/events'
 import type { EvidenceQueryParams, EvidenceView } from '../api/types'
@@ -10,7 +10,16 @@ const PAGE_SIZE = 20
 
 export function EvidenceRepository() {
   const navigate = useNavigate()
-  const [filters, setFilters] = useState<EvidenceQueryParams>({})
+  // Deep links (e.g. from the dashboard) seed the filters so both pages describe the same set.
+  const [searchParams] = useSearchParams()
+  const [filters, setFilters] = useState<EvidenceQueryParams>(() => {
+    const seed: EvidenceQueryParams = {}
+    for (const k of ['applicationSlug', 'framework', 'collectionMethod', 'collectedAfter', 'collectedBefore'] as const) {
+      const v = searchParams.get(k)
+      if (v) seed[k] = v
+    }
+    return seed
+  })
   const [page, setPage] = useState(0)
   const [expanded, setExpanded] = useState<string | null>(null)
 

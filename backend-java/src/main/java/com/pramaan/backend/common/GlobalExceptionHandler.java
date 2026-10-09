@@ -43,7 +43,7 @@ public class GlobalExceptionHandler {
     ResponseEntity<AiErrorBody> handleAiUnavailable(AiUnavailableException ex) {
         String msg = "The configured AI/embedding service is unreachable right now. "
                 + "The backend and evidence data are working normally — this only disables "
-                + "AI-generated features (summaries, NL query, audit-prep narrative, similarity search). "
+                + "AI-generated features (NL query, audit-prep narrative, similarity search). "
                 + "Check that the service is running and reachable, then retry.";
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new AiErrorBody(Instant.now(), HttpStatus.SERVICE_UNAVAILABLE.value(),
@@ -53,6 +53,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
     ResponseEntity<ErrorBody> handleValidation(Exception ex) {
         return ResponseEntity.badRequest().body(ErrorBody.of(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
+    /** A schedule already has a queued / running run. */
+    @ExceptionHandler(com.pramaan.backend.scheduler.RunInProgressException.class)
+    ResponseEntity<Map<String, Object>> handleRunInProgress(com.pramaan.backend.scheduler.RunInProgressException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("timestamp", Instant.now().toString(),
+                "status", 409, "error", "RUN_IN_PROGRESS", "message", ex.getMessage(), "runId", ex.runId()));
+    }
+
+    /** Optimistic lock lost: another user changed the same row first. */
+    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+    ResponseEntity<Map<String, Object>> handleConflict(org.springframework.dao.OptimisticLockingFailureException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("timestamp", Instant.now().toString(),
+                "status", 409, "error", "CONFLICT", "message", "Changed by another user, reload and retry"));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

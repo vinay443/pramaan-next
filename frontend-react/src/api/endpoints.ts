@@ -3,6 +3,17 @@
 // and flips the global data source to 'mock'.
 
 import { ApiError, apiBaseUrl, apiFetch, apiFetchMultipart, buildQuery } from './client'
+import { currentPersona } from '../pages/PersonaLogin'
+
+/** Logged-in persona name, sent as X-Pramaan-User for run attribution (not authentication). */
+export function actingUser(): string | undefined {
+  return currentPersona()?.name
+}
+
+const userHeader = (): Record<string, string> => {
+  const u = actingUser()
+  return u ? { 'X-Pramaan-User': u } : {}
+}
 import { mocksForced, setDataSource } from './dataSource'
 import type * as MockModule from './mocks'
 import type {
@@ -17,6 +28,7 @@ import type {
   EnterpriseDashboard,
   NationalRollup,
   ReportInfo,
+  EvidenceSummaryReport,
   TrendReport,
   BulkIngestResponse,
   CheckDefView,
@@ -55,8 +67,23 @@ import type {
   PredefinedQueryRunSummary,
   RegulatoryFiling,
   ReuseResult,
+  CreateScheduleRequest,
   RunRequest,
   RunView,
+  ScheduleOptions,
+  ScheduleView,
+  ArchiveResult,
+  DashboardFilterParams,
+  RetentionPolicy,
+  RetentionRun,
+  DashboardKpis,
+  NotificationList,
+  NotificationSettings,
+  NotificationView,
+  ObservationView,
+  SecurityEventView,
+  SourceConnectionView,
+  SystemStatus,
 } from './types'
 
 // Mock data is a large module (it eagerly pulls in every contracts/mock-data/*.json
@@ -442,15 +469,15 @@ export function getRun(runId: string): Promise<RunView> {
 
 export function startRun(req: RunRequest): Promise<RunView> {
   return withFallback(
-    () => apiFetch<RunView>('/api/v1/scheduler/runs', { method: 'POST', body: req }),
+    () => apiFetch<RunView>('/api/v1/scheduler/runs', { method: 'POST', body: req, headers: userHeader() }),
     () => mock.mockStartRun(req),
   )
 }
 
 export function retryRun(runId: string): Promise<RunView> {
   return withFallback(
-    () => apiFetch<RunView>(`/api/v1/scheduler/runs/${runId}/retry`, { method: 'POST' }),
-    () => mock.mockStartRun(mock.mockRunById(runId)),
+    () => apiFetch<RunView>(`/api/v1/scheduler/runs/${runId}/retry`, { method: 'POST', headers: userHeader() }),
+    () => Object.assign(mock.mockStartRun(mock.mockRunById(runId)), { retryOfRunId: runId }),
   )
 }
 
@@ -458,6 +485,180 @@ export function listSources(): Promise<string[]> {
   return withFallback(
     () => apiFetch<string[]>('/api/v1/scheduler/sources'),
     () => mock.mockSources,
+  )
+}
+
+export function listScheduleOptions(): Promise<ScheduleOptions> {
+  return withFallback(
+    () => apiFetch<ScheduleOptions>('/api/v1/schedules/options'),
+    () => mock.mockScheduleOptions(),
+  )
+}
+
+export function listSchedules(): Promise<ScheduleView[]> {
+  return withFallback(
+    () => apiFetch<ScheduleView[]>('/api/v1/schedules'),
+    () => mock.mockSchedules,
+  )
+}
+
+export function createSchedule(req: CreateScheduleRequest): Promise<ScheduleView> {
+  return withFallback(
+    () => apiFetch<ScheduleView>('/api/v1/schedules', { method: 'POST', body: req }),
+    () => mock.mockCreateSchedule(req),
+  )
+}
+
+export function setScheduleActive(id: string, active: boolean, version?: number): Promise<ScheduleView> {
+  return withFallback(
+    () => apiFetch<ScheduleView>(`/api/v1/schedules/${id}`, { method: 'PATCH', body: { active, version } }),
+    () => mock.mockSetScheduleActive(id, active),
+  )
+}
+
+export function listSourceConnections(): Promise<SourceConnectionView[]> {
+  return withFallback(
+    () => apiFetch<SourceConnectionView[]>('/api/v1/sources/connections'),
+    () => mock.mockSourceConnections(),
+  )
+}
+
+export function setSourceConnection(source: string, status: string): Promise<SourceConnectionView> {
+  return withFallback(
+    () => apiFetch<SourceConnectionView>(`/api/v1/sources/${encodeURIComponent(source)}/connection`, { method: 'PUT', body: { status, updatedBy: 'ui' } }),
+    () => mock.mockSetSourceConnection(source, status),
+  )
+}
+
+export function listNotifications(): Promise<NotificationList> {
+  return withFallback(
+    () => apiFetch<NotificationList>('/api/v1/notifications'),
+    () => mock.mockNotifications(),
+  )
+}
+
+export function markNotificationRead(id: string): Promise<NotificationView> {
+  return withFallback(
+    () => apiFetch<NotificationView>(`/api/v1/notifications/${id}/read`, { method: 'POST' }),
+    () => mock.mockMarkNotificationRead(id),
+  )
+}
+
+export function markAllNotificationsRead(): Promise<NotificationList> {
+  return withFallback(
+    () => apiFetch<NotificationList>('/api/v1/notifications/read-all', { method: 'POST' }),
+    () => mock.mockMarkAllNotificationsRead(),
+  )
+}
+
+export function getNotificationSettings(): Promise<NotificationSettings> {
+  return withFallback(
+    () => apiFetch<NotificationSettings>('/api/v1/notifications/settings'),
+    () => mock.mockNotificationSettings(),
+  )
+}
+
+export function saveNotificationSettings(s: NotificationSettings): Promise<NotificationSettings> {
+  return withFallback(
+    () => apiFetch<NotificationSettings>('/api/v1/notifications/settings', { method: 'PUT', body: s }),
+    () => mock.mockSaveNotificationSettings(s),
+  )
+}
+
+export function listSecurityEvents(type?: string, limit = 100): Promise<SecurityEventView[]> {
+  return withFallback(
+    () => apiFetch<SecurityEventView[]>(`/api/v1/security/events${buildQuery({ type, limit })}`),
+    () => [],
+  )
+}
+
+export function listEvidenceObservations(evidenceId: string): Promise<ObservationView[]> {
+  return withFallback(
+    () => apiFetch<ObservationView[]>(`/api/v1/evidence/${evidenceId}/observations`),
+    () => mock.mockObservationsFor(evidenceId),
+  )
+}
+
+export function createObservation(evidenceId: string, text: string): Promise<ObservationView> {
+  return withFallback(
+    () => apiFetch<ObservationView>(`/api/v1/evidence/${evidenceId}/observations`, { method: 'POST', body: { text } }),
+    () => mock.mockCreateObservation(evidenceId, text),
+  )
+}
+
+export function closeObservation(id: string): Promise<ObservationView> {
+  return withFallback(
+    () => apiFetch<ObservationView>(`/api/v1/observations/${id}/close`, { method: 'POST' }),
+    () => mock.mockCloseObservation(id),
+  )
+}
+
+export function searchObservations(q: {
+  application?: string
+  framework?: string
+  control?: string
+  status?: string
+}): Promise<ObservationView[]> {
+  return withFallback(
+    () => apiFetch<ObservationView[]>(`/api/v1/observations${buildQuery(q)}`),
+    () => mock.mockSearchObservations(q),
+  )
+}
+
+export function getDashboardKpis(filters: DashboardFilterParams): Promise<DashboardKpis> {
+  return withFallback(
+    () => apiFetch<DashboardKpis>(`/api/v1/dashboard/kpis${buildQuery(filters as Record<string, unknown>)}`),
+    () => mock.mockDashboardKpis(filters),
+  )
+}
+
+export function getRetentionPolicy(): Promise<RetentionPolicy> {
+  return withFallback(
+    () => apiFetch<RetentionPolicy>('/api/v1/retention/policy'),
+    () => mock.mockRetentionPolicy(),
+  )
+}
+
+export function saveRetentionPolicy(retentionDays: number, version?: number | null): Promise<RetentionPolicy> {
+  return withFallback(
+    () =>
+      apiFetch<RetentionPolicy>('/api/v1/retention/policy', {
+        method: 'PUT',
+        body: { retentionDays, version: version ?? undefined },
+      }),
+    () => mock.mockSaveRetentionPolicy(retentionDays),
+  )
+}
+
+export function runArchival(mode: 'PREVIEW' | 'EXECUTE', application?: string): Promise<ArchiveResult> {
+  return withFallback(
+    () =>
+      apiFetch<ArchiveResult>('/api/v1/retention/archive', {
+        method: 'POST',
+        body: { mode, application: application || undefined },
+      }),
+    () => mock.mockArchive(mode, application),
+  )
+}
+
+export function listRetentionRuns(): Promise<RetentionRun[]> {
+  return withFallback(
+    () => apiFetch<RetentionRun[]>('/api/v1/retention/runs'),
+    () => mock.mockRetentionRuns(),
+  )
+}
+
+export function getSystemStatus(): Promise<SystemStatus> {
+  return withFallback(
+    () => apiFetch<SystemStatus>('/api/v1/system/status'),
+    () => mock.mockSystemStatus(),
+  )
+}
+
+export function runScheduleNow(id: string): Promise<RunView> {
+  return withFallback(
+    () => apiFetch<RunView>(`/api/v1/schedules/${id}/run-now`, { method: 'POST', headers: userHeader() }),
+    () => mock.mockRunScheduleNow(id),
   )
 }
 
@@ -695,6 +896,17 @@ export function getRegulatoryFiling(applicationSlug?: string, framework?: string
   )
 }
 
+/** "Evidence summary — audit documentation": per-control roll-up of the deterministic evidence summaries. */
+export function getEvidenceSummaryReport(applicationSlug?: string, framework?: string): Promise<EvidenceSummaryReport> {
+  return withFallback(
+    () =>
+      apiFetch<EvidenceSummaryReport>(
+        `/api/v1/reports/evidence-summary${buildQuery({ applicationSlug, framework })}`,
+      ),
+    () => mock.mockEvidenceSummaryReport(applicationSlug, framework),
+  )
+}
+
 export function getCompliance(applicationSlug: string, framework?: string): Promise<ComplianceReport> {
   return withFallback(
     () =>
@@ -740,11 +952,16 @@ export function runAllPredefinedQueries(
   )
 }
 
-export function getEvidenceSummary(id: string): Promise<EvidenceSummary> {
+/** Deterministic evidence summary; `version` defaults to the current one. Falls back to mocks only
+ *  when the backend is unreachable — a live 404 (unknown id/version) is a real answer, not a reason
+ *  to show an unrelated fixture. */
+export function getEvidenceSummary(id: string, version?: number): Promise<EvidenceSummary> {
   return withFallback(
-    () => apiFetch<EvidenceSummary>(`/api/v1/insight/evidence/${id}/summary`),
-    () => mock.mockSummary(id),
-    true,
+    () =>
+      apiFetch<EvidenceSummary>(
+        `/api/v1/insight/evidence/${encodeURIComponent(id)}/summary${version == null ? '' : `?version=${version}`}`,
+      ),
+    () => mock.mockSummary(id, version),
   )
 }
 

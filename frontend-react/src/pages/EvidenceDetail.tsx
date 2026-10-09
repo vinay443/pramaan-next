@@ -13,6 +13,7 @@ import { DataTable, ErrorNote, JsonBlock, Loading, Section, StatusPill } from '.
 import { EvidenceSummaryPanel } from '../components/EvidenceSummaryPanel'
 import { MetadataTaggingPanel } from '../components/MetadataTaggingPanel'
 import { LifecycleHistoryTable } from '../components/LifecycleHistoryTable'
+import { ObservationsPanel } from '../components/ObservationsPanel'
 
 export function EvidenceDetail() {
   const { id = '' } = useParams()
@@ -46,6 +47,7 @@ export function EvidenceDetail() {
     APPROVED: ['RETIRE'],
     EXPIRED: ['SUBMIT'],
     SUPERSEDED: [],
+    ARCHIVED: [], // terminal (retention)
   }
 
   async function runVerify(version?: number) {
@@ -147,6 +149,9 @@ export function EvidenceDetail() {
             <p>
               <StatusPill status={lifecycle.data.effectiveState} />
               {lifecycle.data.expired ? <StatusPill status="past retention" /> : null}
+              {lifecycle.data.archivedAt ? (
+                <span className="muted"> archived {new Date(lifecycle.data.archivedAt).toLocaleString()}</span>
+              ) : null}
               {lifecycle.data.reviewedBy ? (
                 <span className="muted"> reviewed by {lifecycle.data.reviewedBy}</span>
               ) : null}
@@ -159,6 +164,10 @@ export function EvidenceDetail() {
             <LifecycleHistoryTable history={lifecycle.data.history} />
           </>
         ) : null}
+      </Section>
+
+      <Section title="Audit observations">
+        <ObservationsPanel evidenceId={id} />
       </Section>
 
       <Section

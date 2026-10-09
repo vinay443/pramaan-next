@@ -31,6 +31,10 @@ public final class EvidenceNaming {
     public static final String TAG_COLLECTION_METHOD = "collectionMethod";
     public static final String TAG_VERSION = "version";
 
+    /** Tag keys every record is expected to carry (the set {@link #standardTags} always writes; sourceTitle is optional). */
+    public static final List<String> EXPECTED_TAG_KEYS = List.of(TAG_APPLICATION, TAG_TECHNOLOGY, TAG_CONTROL,
+            TAG_FRAMEWORK, TAG_FRAMEWORKS, TAG_EVIDENCE_TYPE, TAG_NAME, TAG_COLLECTION_METHOD, TAG_VERSION);
+
     private static final DateTimeFormatter STAMP =
             DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
 

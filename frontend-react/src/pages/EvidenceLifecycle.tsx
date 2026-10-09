@@ -3,6 +3,7 @@ import { getEvidenceLifecycle, getEvidenceVersions, listEvidence, transitionEvid
 import type { EvidenceLifecycleView, EvidenceQueryParams, EvidenceVersionView } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
 import { DataTable, Empty, ErrorNote, Loading, Section, StatusPill } from '../components/ui'
+import { RetentionPanel } from '../components/RetentionPanel'
 
 const PAGE_SIZE = 20
 
@@ -60,6 +61,8 @@ export function EvidenceLifecycle() {
     <div className="page">
       <h1>Evidence Lifecycle</h1>
       <p className="muted">Retention status, archival, and version history across all evidence.</p>
+
+      <RetentionPanel onArchived={() => list.reload()} />
 
       <Section title="Filters">
         <div className="filter-row">
@@ -141,7 +144,7 @@ export function EvidenceLifecycle() {
         <Section
           title="Retention & archival"
           actions={
-            detail.data?.lifecycle.effectiveState === 'APPROVED' ? (
+            detail.data?.lifecycle.effectiveState === 'APPROVED' && !detail.data.lifecycle.archivedAt ? (
               <button disabled={acting} onClick={archive}>
                 {acting ? 'Archiving…' : 'Archive'}
               </button>
@@ -156,6 +159,9 @@ export function EvidenceLifecycle() {
               <p>
                 <StatusPill status={detail.data.lifecycle.effectiveState} />
                 {detail.data.lifecycle.expired ? <StatusPill status="past retention" /> : null}
+                {detail.data.lifecycle.archivedAt ? (
+                  <span className="muted small"> archived {new Date(detail.data.lifecycle.archivedAt).toLocaleString()}</span>
+                ) : null}
                 <span className="muted small">
                   {' '}
                   {detail.data.lifecycle.applicationSlug} / {detail.data.lifecycle.controlId} · retention{' '}

@@ -43,3 +43,15 @@ describe('EvidenceDetail integrity badge (UC04)', () => {
     expect((await screen.findAllByText('TAMPERED')).length).toBeGreaterThan(0)
   })
 })
+
+describe('EvidenceDetail evidence summary', () => {
+  it('shows the rule-based summary automatically — no Generate button, no AI wording', async () => {
+    renderAtEvidenceId('ev-004')
+
+    expect(await screen.findByRole('heading', { name: 'Evidence summary' })).toBeInTheDocument()
+    expect(await screen.findByText(/fails an automated check/)).toBeInTheDocument()
+    expect(screen.getByText(/No AI model is involved/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /generate summary/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/AI summary|prompt digest|model-generated/i)).not.toBeInTheDocument()
+  })
+})

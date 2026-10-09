@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useDataSource, useDataSourceBannerSuppressed } from '../hooks/useDataSource'
-import { PERSONA_STORAGE_KEY, PERSONAS } from '../pages/PersonaLogin'
+import { clearPersona, currentPersona } from '../pages/PersonaLogin'
+import { NotificationBell } from './NotificationBell'
 
 interface NavItem {
   to: string
@@ -98,11 +99,10 @@ export function Layout() {
   const source = useDataSource()
   const bannerSuppressed = useDataSourceBannerSuppressed()
   const navigate = useNavigate()
-  const personaCode = localStorage.getItem(PERSONA_STORAGE_KEY)
-  const persona = PERSONAS.find((p) => p.code === personaCode)
+  const persona = currentPersona()
 
   function handleLogout() {
-    localStorage.removeItem(PERSONA_STORAGE_KEY)
+    clearPersona() // this tab only
     navigate('/login')
   }
 
@@ -116,6 +116,7 @@ export function Layout() {
         {persona ? (
           <div className="persona-bar">
             <span className="pill pill-muted">{persona.name}</span>
+            <NotificationBell />
             <button type="button" className="ghost persona-logout" onClick={handleLogout}>
               Logout
             </button>

@@ -79,9 +79,7 @@ public class EvidenceQueryService {
         return search(f, TagFacets.NONE);
     }
 
-    public PageResponse<EvidenceView> search(EvidenceFilter f, TagFacets facets) {
-        var pageable = PageRequest.of(Math.max(f.page(), 0), clampSize(f.size()),
-                Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("id")));
+    private Specification<EvidenceRecord> specOf(EvidenceFilter f, TagFacets facets) {
         Specification<EvidenceRecord> spec = specOf(f);
         if (facets != null && facets.technology() != null && !facets.technology().isBlank()) {
             spec = spec.and(EvidenceSpecs.tagPair("technology", facets.technology()));
@@ -89,7 +87,18 @@ public class EvidenceQueryService {
         if (facets != null && facets.collectionMethod() != null && !facets.collectionMethod().isBlank()) {
             spec = spec.and(EvidenceSpecs.tagPair("collectionMethod", facets.collectionMethod()));
         }
-        return PageResponse.of(records.findAll(spec, pageable).map(r -> EvidenceView.from(r, integrityStatusOf(r))));
+        return spec;
+    }
+
+    public PageResponse<EvidenceView> search(EvidenceFilter f, TagFacets facets) {
+        var pageable = PageRequest.of(Math.max(f.page(), 0), clampSize(f.size()),
+                Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("id")));
+        return PageResponse.of(records.findAll(specOf(f, facets), pageable).map(r -> EvidenceView.from(r, integrityStatusOf(r))));
+    }
+
+    /** Every record the repository search would return for the same filter + facets (dashboard reconciliation). */
+    public List<EvidenceRecord> recordsMatching(EvidenceFilter f, TagFacets facets) {
+        return records.findAll(specOf(f, facets), Sort.by(Sort.Order.asc("id")));
     }
 
     public EvidenceView get(UUID id) {

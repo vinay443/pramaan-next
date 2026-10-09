@@ -1,0 +1,11 @@
+{
+  "sourceSystem": "JIRA",
+  "objectType": "change_ticket",
+  "key": "CHG-1042",
+  "status": "APPROVED",
+  "approvedBy": "Priya Nair",
+  "approvedAt": "2026-08-30T12:15:00Z",
+  "createdAt": "2026-08-28T09:00:00Z",
+  "linkedItems": ["PR-311", "INC-77"],
+  "summary": "Rotate TLS certificates"
+}

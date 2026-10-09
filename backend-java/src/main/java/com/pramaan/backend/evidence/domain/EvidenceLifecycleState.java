@@ -13,5 +13,7 @@ public enum EvidenceLifecycleState {
     APPROVED,
     REJECTED,
     EXPIRED,
-    SUPERSEDED
+    SUPERSEDED,
+    /** Terminal. Set by the retention archival workflow; the object, hash and versions are untouched. */
+    ARCHIVED
 }

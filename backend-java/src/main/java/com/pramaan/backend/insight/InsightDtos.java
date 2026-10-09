@@ -1,6 +1,13 @@
 package com.pramaan.backend.insight;
 
 import com.pramaan.backend.evidence.EvidenceDtos.IntegrityStatus;
+import com.pramaan.backend.insight.summary.ContentKind;
+import com.pramaan.backend.insight.summary.SummaryEnums.ControlSource;
+import com.pramaan.backend.insight.summary.SummaryEnums.Freshness;
+import com.pramaan.backend.insight.summary.SummaryEnums.Integrity;
+import com.pramaan.backend.insight.summary.SummaryEnums.Severity;
+import com.pramaan.backend.insight.summary.SummaryEnums.Verdict;
+import com.pramaan.backend.rules.CheckStatus;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -135,20 +142,67 @@ public final class InsightDtos {
             List<String> frameworks,
             List<ControlReuseEvidence> evidence) {}
 
-    // ---- AI summary ---------------------------------------------------
+    // ---- deterministic evidence summary ---------------------------------
 
+    /**
+     * Rule- and template-based summary of one evidence version's stored content. No model is
+     * involved: {@code method} is always {@code DETERMINISTIC_RULES}. {@code model},
+     * {@code modelGenerated}, {@code summary} and {@code groundedOn} are kept for backward
+     * compatibility; the remaining fields are the structured form.
+     */
     public record EvidenceSummary(
             String evidenceId,
             String applicationSlug,
             String framework,
             String controlId,
+            /** Always {@code deterministic-rules/v1}. */
             String model,
+            /** True iff the evidence version's metadata says {@code simulated=true}. */
             boolean simulated,
-            /** False when the text is a deterministic prompt digest rather than model output. */
+            /** Always false — kept for backward compatibility. */
             boolean modelGenerated,
             String summary,
             List<String> groundedOn,
-            Instant generatedAt) {}
+            Instant generatedAt,
+            String method,
+            int version,
+            String sha256,
+            ContentKind contentKind,
+            Verdict verdict,
+            String headline,
+            SummaryControl control,
+            List<SummaryCheck> checks,
+            List<SummaryFact> facts,
+            List<SummaryFinding> findings,
+            SummaryHealth health,
+            List<String> limits) {}
+
+    public record SummaryControl(
+            String controlId,
+            String name,
+            String description,
+            String framework,
+            ControlSource source,
+            List<SummaryAlsoSatisfies> alsoSatisfies) {}
+
+    public record SummaryAlsoSatisfies(String framework, String controlId, String name) {}
+
+    public record SummaryCheck(
+            String checkId, CheckStatus status, String observed, String expected, String detail) {}
+
+    /** {@code pointer} is a JSON Pointer, "line N", "row N", "page N", or "record" for record-level facts. */
+    public record SummaryFact(String label, String value, String pointer) {}
+
+    public record SummaryFinding(Severity severity, String message, String pointer) {}
+
+    public record SummaryHealth(
+            Integrity integrity,
+            Instant collectedAt,
+            Integer ageDays,
+            Freshness freshness,
+            String lifecycleState,
+            int versionCount,
+            List<String> missingTags) {}
 
     // ---- evidence context (Use Case 1 — Evidence Detail enrichment) ----
 
@@ -192,7 +246,18 @@ public final class InsightDtos {
             String framework,
             String controlId,
             ControlStatus status,
-            String detail) {}
+            String detail,
+            /** Open audit observations on this control for the application. */
+            int openObservations) {
+
+        public ControlPosture(String framework, String controlId, ControlStatus status, String detail) {
+            this(framework, controlId, status, detail, 0);
+        }
+
+        public ControlPosture withOpenObservations(int n) {
+            return new ControlPosture(framework, controlId, status, detail, n);
+        }
+    }
 
     public record FrameworkPosture(
             String framework,
@@ -328,7 +393,11 @@ public final class InsightDtos {
     // ---- App Owner dashboard — evidence lifecycle summary (counts/rejections/SLA/aging) ----
 
     public record LifecycleStateCounts(int draft, int submitted, int approved, int rejected,
-                                       int expired, int superseded) {}
+                                       int expired, int superseded, int archived) {
+        public LifecycleStateCounts(int draft, int submitted, int approved, int rejected, int expired, int superseded) {
+            this(draft, submitted, approved, rejected, expired, superseded, 0);
+        }
+    }
 
     public record RejectionAuditRow(String evidenceId, String applicationSlug, String framework,
                                     String controlId, String reason, String rejectedBy,

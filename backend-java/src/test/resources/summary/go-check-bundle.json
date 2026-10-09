@@ -1,0 +1,18 @@
+{
+  "collector": "os",
+  "technology": "linux",
+  "target": "web-01",
+  "simulated": true,
+  "collectedAt": "2026-09-01T08:00:00Z",
+  "facts": {
+    "db_password": "s3cr3t-value",
+    "os.release": "RHEL 9.3",
+    "ssh.permitrootlogin": "yes"
+  },
+  "findings": [
+    {"checkId": "OS-LNX-01", "controlId": "OSBL-C1", "framework": "OS_BASELINING", "title": "Supported OS version", "status": "PASS", "observed": "RHEL 9.3", "expected": "RHEL 8+"},
+    {"checkId": "OS-LNX-02", "controlId": "OSBL-C7", "framework": "OS_BASELINING", "title": "SSH root login disabled", "status": "FAIL", "observed": "yes", "expected": "no", "detail": "PermitRootLogin is enabled"},
+    {"checkId": "OS-LNX-03", "controlId": "OSBL-C4", "framework": "OS_BASELINING", "title": "Password ageing", "status": "WARNING", "observed": "90 days", "expected": "30 days", "detail": "Password max age exceeds baseline"},
+    {"checkId": "OS-LNX-04", "controlId": "OSBL-C5", "framework": "OS_BASELINING", "title": "FIPS mode", "status": "NOT_APPLICABLE"}
+  ]
+}

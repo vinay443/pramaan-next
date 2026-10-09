@@ -1,0 +1,11 @@
+# Opt-in companion to 'dev':  --spring.profiles.active=dev,dev-persist
+# Same mock integrations / no external infra, but H2 is file-backed and the schema is
+# updated in place, so schedules, runs, source connections and evidence survive a restart.
+# (Admin registry is in-memory by design and the AI vector store stays 'memory'; it is
+# rebuilt on demand.) Data lives in backend-java/data/ (gitignored).
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/pramaan-dev;MODE=PostgreSQL;AUTO_SERVER=TRUE
+  jpa:
+    hibernate:
+      ddl-auto: update

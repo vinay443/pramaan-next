@@ -1808,3 +1808,62 @@ pre.json {
   color: var(--accent-ink);
   text-decoration: none;
 }
+
+.field-error {
+  color: var(--bad, #b42318);
+  font-weight: 500;
+}
+
+.audit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px 20px;
+  margin: 0 0 16px;
+}
+
+.audit-grid dt {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.audit-grid dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.notif-bell {
+  position: relative;
+}
+
+.notif-badge {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--bad, #b42318);
+  color: #fff;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.notif-item {
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+}
+
+.notif-unread {
+  border-left: 3px solid var(--accent);
+}
+
+.notif-actions {
+  margin-bottom: 10px;
+}

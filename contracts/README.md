@@ -8,8 +8,9 @@ Single source of truth for cross-service interfaces shared by `backend-java`,
     - Phase 1: applications, frameworks, controls, agents, technical checks +
       check-results, evidence (ingest / bulk / upload / versions / verify /
       deterministic queries), scheduler.
-    - Phase 2 (`insight` tag): evidence completeness, reuse/similarity, AI evidence
-      summaries, natural-language queries, compliance aggregation. AI features run
+    - Phase 2 (`insight` tag): evidence completeness, reuse/similarity, deterministic
+      rule-based evidence summaries (no AI model), natural-language queries, compliance
+      aggregation. The AI features (NL query, audit-prep narrative, similarity) run
       deterministically unless `pramaan.ai.mode=live`.
 - `proto/` — gRPC / protobuf for backend ⇄ agents.
   - `agent.proto` — `AgentCollector` service: `Describe` + `RunChecks` streaming

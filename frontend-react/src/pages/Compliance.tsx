@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { getCompliance, listApplications } from '../api/endpoints'
+import { getCompliance, listApplications, searchObservations } from '../api/endpoints'
+import { ObservationItem } from '../components/ObservationsPanel'
 import type { ControlPosture } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
 import { DataTable, Empty, ErrorNote, Loading, Section, StatCard, StatusPill } from '../components/ui'
@@ -68,6 +69,20 @@ export function ComplianceView({ slug, actionable = false }: { slug: string; act
     () => (slug ? getCompliance(slug) : Promise.resolve(undefined)),
     [slug],
   )
+  // control whose open observations are listed inline under the table
+  const [obsControl, setObsControl] = useState<ControlPosture>()
+  const obs = useAsync(
+    () =>
+      obsControl
+        ? searchObservations({
+            application: slug,
+            framework: obsControl.framework,
+            control: obsControl.controlId,
+            status: 'OPEN',
+          })
+        : Promise.resolve([]),
+    [slug, obsControl?.framework, obsControl?.controlId],
+  )
 
   return (
     <>
@@ -116,6 +131,17 @@ export function ComplianceView({ slug, actionable = false }: { slug: string; act
                 { header: 'Framework', cell: (c) => c.framework },
                 { header: 'Control', cell: (c) => c.controlId },
                 { header: 'Detail', cell: (c) => c.detail },
+                {
+                  header: 'Open obs.',
+                  cell: (c) =>
+                    (c.openObservations ?? 0) > 0 ? (
+                      <button type="button" className="ghost" onClick={() => setObsControl(c)}>
+                        {c.openObservations}
+                      </button>
+                    ) : (
+                      0
+                    ),
+                },
                 ...(actionable
                   ? [
                       {
@@ -130,6 +156,18 @@ export function ComplianceView({ slug, actionable = false }: { slug: string; act
               ]}
             />
           </Section>
+
+          {obsControl ? (
+            <Section title={`Open observations — ${obsControl.controlId} (${obsControl.framework})`}>
+              {obs.error ? <ErrorNote message={obs.error} /> : null}
+              {obs.data && obs.data.length === 0 ? <Empty message="No open observations." /> : null}
+              <ul className="notif-list">
+                {(obs.data ?? []).map((o) => (
+                  <ObservationItem key={o.id} o={o} />
+                ))}
+              </ul>
+            </Section>
+          ) : null}
         </>
       ) : null}
     </>

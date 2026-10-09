@@ -9,6 +9,7 @@ import frameworksRaw from '@mockdata/frameworks.json'
 import manifest from '@mockdata/manifest.json'
 import resultsRaw from '@mockdata/results.json'
 import runsRaw from '@mockdata/scheduler-runs.json'
+import { currentPersona } from '../pages/PersonaLogin'
 import type {
   AdminRole,
   AdminUserUpsert,
@@ -66,12 +67,27 @@ import type {
   OnboardingScanView,
   RegulatoryFiling,
   ReportInfo,
+  EvidenceSummaryReport,
   TrendReport,
   Page,
   ReuseEvidenceDetail,
   ReuseResult,
   RunRequest,
   RunView,
+  CreateScheduleRequest,
+  ScheduleOptions,
+  ScheduleView,
+  ArchiveResult,
+  DashboardFilterParams,
+  RetentionPolicy,
+  RetentionRun,
+  DashboardKpis,
+  NotificationList,
+  NotificationSettings,
+  NotificationView,
+  ObservationView,
+  SourceConnectionView,
+  SystemStatus,
   SimilarEvidence,
 } from './types'
 
@@ -1061,7 +1077,87 @@ export const mockReports: ReportInfo[] = [
   { name: 'audit-readiness', title: 'AI-assisted audit-readiness checklist', formats: ['json', 'csv'], params: ['applicationSlug', 'framework'] },
   { name: 'pan-india', title: 'National / pan-India compliance report', formats: ['json', 'csv'], params: [] },
   { name: 'regulatory-filing', title: 'Regulator-ready compliance filing', formats: ['json', 'csv'], params: ['applicationSlug', 'framework'] },
+  { name: 'evidence-summary', title: 'Evidence summary — audit documentation', formats: ['json', 'csv'], params: ['applicationSlug', 'framework'] },
 ]
+
+// ---- evidence-summary report (audit documentation) -----------------------
+// Offline stand-in for GET /reports/evidence-summary: expected controls + coverage from mockCompleteness,
+// evidence entries from mockSummary — the same derivation the backend uses, so MISSING controls appear.
+
+const VERDICT_ORDER: Array<NonNullable<EvidenceSummaryReport['controls'][number]['verdict']>> = [
+  'FAIL',
+  'WARNING',
+  'PASS',
+  'NOT_APPLICABLE',
+  'NOT_ASSESSED',
+]
+
+export function mockEvidenceSummaryReport(applicationSlug?: string, framework?: string): EvidenceSummaryReport {
+  const slugs = applicationSlug ? [applicationSlug] : mockApplications.map((a) => a.slug).sort()
+  const controls: EvidenceSummaryReport['controls'] = []
+  for (const slug of slugs) {
+    for (const c of mockCompleteness(slug, framework).controls) {
+      const records = mockEvidence
+        .filter((e) => e.applicationSlug === slug && e.framework === c.framework && e.controlId === c.controlId)
+        .sort((a, b) => a.evidenceId.localeCompare(b.evidenceId))
+      const summaries = records.map((r) => mockSummary(r.evidenceId))
+      const evidence = summaries.map((s) => ({
+        evidenceId: s.evidenceId,
+        version: s.version,
+        headline: s.headline,
+        verdict: s.verdict,
+        collectedAt: s.health.collectedAt ?? null,
+        integrity: s.health.integrity,
+        freshness: s.health.freshness,
+      }))
+      controls.push({
+        application: slug,
+        framework: c.framework,
+        controlId: c.controlId,
+        controlName: c.title,
+        description: summaries[0]?.control.description ?? null,
+        status: c.coverage as Coverage,
+        verdict:
+          c.coverage === 'MISSING' || evidence.length === 0
+            ? null
+            : (VERDICT_ORDER.find((v) => evidence.some((e) => e.verdict === v)) ?? null),
+        evidenceCount: records.length,
+        latestCollectedAt:
+          records.map((r) => r.latest?.collectedAt ?? '').sort().reverse()[0] || null,
+        evidence,
+      })
+    }
+  }
+  const byVerdict = { PASS: 0, WARNING: 0, FAIL: 0, NOT_APPLICABLE: 0, NOT_ASSESSED: 0 }
+  let records = 0
+  let stale = 0
+  let mismatch = 0
+  for (const c of controls) {
+    for (const e of c.evidence) {
+      records++
+      byVerdict[e.verdict]++
+      if (e.freshness === 'STALE') stale++
+      if (e.integrity === 'MISMATCH') mismatch++
+    }
+  }
+  const missing = controls.filter((c) => c.status === 'MISSING').length
+  return {
+    generatedAt: NOW,
+    scope: { applicationSlug: applicationSlug ?? null, framework: framework ?? null },
+    totals: {
+      controlsExpected: controls.length,
+      controlsWithEvidence: controls.length - missing,
+      controlsMissing: missing,
+      evidenceRecords: records,
+      byVerdict,
+      stale,
+      integrityMismatch: mismatch,
+    },
+    truncated: false,
+    limits: [],
+    controls,
+  }
+}
 
 // ---- UC17 regulator-ready filing (fixed cover-page schema) --------------
 
@@ -1275,13 +1371,38 @@ export function mockStartRun(req: RunRequest): RunView {
     failed: 0,
     message: 'queued (mock)',
     perSource: {},
-    createdAt: NOW,
+    triggeredBy: mockActor(),
+    createdAt: new Date().toISOString(),
     startedAt: null,
     finishedAt: null,
   }
   mockRuns.unshift(run)
   runStartedAt.set(run.runId, Date.now())
   return run
+}
+
+function mockActor(): string {
+  return currentPersona()?.name ?? 'anonymous'
+}
+
+/** Duration and per-source audit rows, as the real RunView derives them. */
+function finalizeMockAudit(run: RunView) {
+  if (run.startedAt && run.finishedAt) run.durationMs = Date.parse(run.finishedAt) - Date.parse(run.startedAt)
+  run.slaSeconds = MOCK_SLA_SECONDS
+  if (run.startedAt) run.queuedMs = Date.parse(run.startedAt) - Date.parse(run.createdAt)
+  if (run.finishedAt) run.slaStatus = Date.parse(run.finishedAt) - Date.parse(run.createdAt) > MOCK_SLA_SECONDS * 1000 ? 'BREACHED' : 'WITHIN_SLA'
+  const each = Math.floor(run.ingested / Math.max(run.sources.length, 1))
+  run.sourceResults = run.sources.map((source) => {
+    const err = run.sourceErrors?.[source]
+    const n = /ingested=([0-9]+)/.exec(run.perSource[source] ?? '')
+    return {
+      source,
+      status: err ? 'FAILED' : 'CONNECTED',
+      evidenceCount: err ? 0 : n ? Number(n[1]) : each,
+      errorCode: err?.errorCode ?? null,
+      errorMessage: err?.errorMessage ?? null,
+    }
+  })
 }
 
 /** Progress a mock run based on elapsed wall-clock time since it was started. */
@@ -1305,7 +1426,9 @@ function advanceMockRun(run: RunView): RunView {
     run.ingested = 6
     run.duplicates = 2
     run.message = 'completed (mock)'
-    if (!runEvidenceAdded.has(run.runId) && mockEvidence.length > 0) {
+    applyMockConnectionFailures(run)
+    finalizeMockAudit(run)
+    if (run.status !== 'FAILED' && !runEvidenceAdded.has(run.runId) && mockEvidence.length > 0) {
       runEvidenceAdded.add(run.runId)
       const seed = mockEvidence[0]
       const copy = JSON.parse(JSON.stringify(seed)) as EvidenceView
@@ -1318,7 +1441,8 @@ function advanceMockRun(run: RunView): RunView {
 }
 
 export function mockRunById(id: string): RunView {
-  const run = mockRuns.find((r) => r.runId === id) ?? mockRuns[0]
+  const run = mockRuns.find((r) => r.runId === id)
+  if (!run) throw new Error(`unknown run: ${id}`)
   return advanceMockRun(run)
 }
 
@@ -1326,6 +1450,314 @@ export function mockRunById(id: string): RunView {
 export function mockRunsList(): RunView[] {
   mockRuns.forEach(advanceMockRun)
   return mockRuns
+}
+
+// ---- scheduled collection jobs (UC01-FT001) ---------------------------
+
+const FREQ_MS: Record<string, number> = { MINUTELY: 60_000, HOURLY: 3_600_000, DAILY: 86_400_000, WEEKLY: 604_800_000 }
+export const mockSchedules: ScheduleView[] = []
+
+export function mockScheduleOptions(): ScheduleOptions {
+  return {
+    sources: mockSources,
+    applications: mockApplications.filter((a) => a.active).map((a) => a.slug),
+    evidenceTypes: ['HOST-CONFIG', 'DB-CONFIG', 'MIDDLEWARE-CONFIG', 'TLS-SCAN', 'CHANGE-TICKET', 'CODE-REVIEW', 'AGENT-SCAN', 'GENERAL'],
+    frequencies: ['HOURLY', 'DAILY', 'WEEKLY', 'MINUTELY'],
+  }
+}
+
+export function mockCreateSchedule(req: CreateScheduleRequest): ScheduleView {
+  if (!req.name?.trim()) throw new Error('name is required')
+  if (!req.sourceSystem?.trim()) throw new Error('sourceSystem is required')
+  if (!req.application?.trim()) throw new Error('application is required')
+  if (!req.evidenceType?.trim()) throw new Error('evidenceType is required')
+  if (!FREQ_MS[req.frequency]) throw new Error('frequency must be one of [HOURLY, DAILY, WEEKLY, MINUTELY]')
+  const now = Date.now()
+  const job: ScheduleView = {
+    id: `sched-${mockSchedules.length + 1}`,
+    name: req.name.trim(),
+    sourceSystem: req.sourceSystem,
+    application: req.application,
+    evidenceType: req.evidenceType,
+    frequency: req.frequency,
+    active: true,
+    createdBy: req.createdBy ?? 'ui',
+    createdAt: new Date(now).toISOString(),
+    nextRunAt: new Date(now + FREQ_MS[req.frequency]).toISOString(),
+    lastRunAt: null,
+  }
+  mockSchedules.unshift(job)
+  return job
+}
+
+export function mockSetScheduleActive(id: string, active: boolean): ScheduleView {
+  const job = mockSchedules.find((s) => s.id === id)
+  if (!job) throw new Error(`unknown schedule: ${id}`)
+  job.active = active
+  job.nextRunAt = active ? new Date(Date.now() + FREQ_MS[job.frequency]).toISOString() : null
+  return job
+}
+
+const mockConnectionState = new Map<string, string>()
+
+export function mockSourceConnections(): SourceConnectionView[] {
+  return mockSources.map((s) => ({ sourceSystem: s, status: mockConnectionState.get(s) ?? 'VALID' }))
+}
+
+export function mockSetSourceConnection(source: string, status: string): SourceConnectionView {
+  if (!mockSources.includes(source)) throw new Error(`unknown source '${source}'`)
+  if (!['VALID', 'INVALID', 'DISABLED'].includes(status)) throw new Error('status must be one of [VALID, INVALID, DISABLED]')
+  mockConnectionState.set(source, status)
+  return { sourceSystem: source, status, updatedAt: new Date().toISOString(), updatedBy: 'ui' }
+}
+
+/** Mirror of the executor: blocked sources fail with an error code and are never counted as ingested. */
+function applyMockConnectionFailures(run: RunView) {
+  const blocked = run.sources.filter((s) => (mockConnectionState.get(s) ?? 'VALID') !== 'VALID')
+  if (blocked.length === 0) return
+  run.sourceErrors = {}
+  run.sourceStatus = {}
+  run.perSource = {}
+  for (const s of run.sources) {
+    if (blocked.includes(s)) {
+      const disabled = mockConnectionState.get(s) === 'DISABLED'
+      run.sourceStatus[s] = 'FAILED'
+      run.sourceErrors[s] = {
+        errorCode: disabled ? 'CONNECTION_DISABLED' : 'AUTH_FAILED',
+        errorMessage: disabled ? `Connection for ${s} is disabled` : `Authentication failed for ${s}: credential invalid or expired (HTTP 401)`,
+      }
+      run.perSource[s] = 'error: ' + run.sourceErrors[s].errorMessage
+    } else {
+      run.sourceStatus[s] = 'CONNECTED'
+      run.perSource[s] = 'received=4 ingested=3 duplicates=1 failed=0 connectivity=CONNECTED'
+    }
+  }
+  const all = blocked.length === run.sources.length
+  run.status = all ? 'FAILED' : 'PARTIAL'
+  run.received = all ? 0 : 4 * (run.sources.length - blocked.length)
+  run.ingested = all ? 0 : 3 * (run.sources.length - blocked.length)
+  run.duplicates = all ? 0 : run.sources.length - blocked.length
+  run.failed = blocked.length
+  run.message = `${blocked.length} of ${run.sources.length} sources failed`
+}
+
+// Offline notifications: nothing generates them (that is the backend's job), so the list starts empty.
+const mockNotificationRows: NotificationView[] = []
+let mockNotifSettings: NotificationSettings = {
+  enabled: true,
+  notifyOnSuccess: true,
+  notifyOnFailure: true,
+  recipientRoles: ['APP', 'ADMIN'],
+  emailSimulated: true,
+}
+
+export function mockNotifications(): NotificationList {
+  return { items: mockNotificationRows, unreadCount: mockNotificationRows.filter((n) => !n.readAt).length }
+}
+
+export function mockMarkNotificationRead(id: string): NotificationView {
+  const n = mockNotificationRows.find((r) => r.id === id)
+  if (!n) throw new Error(`unknown notification: ${id}`)
+  n.readAt = n.readAt ?? new Date().toISOString()
+  return n
+}
+
+export function mockMarkAllNotificationsRead(): NotificationList {
+  mockNotificationRows.forEach((n) => (n.readAt = n.readAt ?? new Date().toISOString()))
+  return mockNotifications()
+}
+
+export function mockNotificationSettings(): NotificationSettings {
+  return mockNotifSettings
+}
+
+export function mockSaveNotificationSettings(s: NotificationSettings): NotificationSettings {
+  mockNotifSettings = { ...s }
+  return mockNotifSettings
+}
+
+// Offline audit observations (the real ones are backend records).
+const mockObservationRows: ObservationView[] = []
+
+export function mockObservationsFor(evidenceId: string): ObservationView[] {
+  return mockObservationRows.filter((o) => o.evidenceId === evidenceId)
+}
+
+export function mockCreateObservation(evidenceId: string, text: string): ObservationView {
+  const ev = mockEvidence.find((e) => e.evidenceId === evidenceId)
+  if (!ev) throw new Error(`Unknown evidence: ${evidenceId}`)
+  if (!text.trim() || text.length > 1000) throw new Error('text must be 1-1000 characters')
+  const o: ObservationView = {
+    id: `obs-${mockObservationRows.length + 1}`,
+    evidenceId,
+    controlId: ev.controlId,
+    framework: ev.framework,
+    application: ev.applicationSlug,
+    text: text.trim(),
+    status: 'OPEN',
+    raisedByRole: 'AUDITOR',
+    raisedBy: mockActor(),
+    createdAt: new Date().toISOString(),
+    closedAt: null,
+  }
+  mockObservationRows.unshift(o)
+  return o
+}
+
+export function mockCloseObservation(id: string): ObservationView {
+  const o = mockObservationRows.find((r) => r.id === id)
+  if (!o) throw new Error(`Unknown observation: ${id}`)
+  o.status = 'CLOSED'
+  o.closedAt = o.closedAt ?? new Date().toISOString()
+  return o
+}
+
+export function mockSearchObservations(q: {
+  application?: string
+  framework?: string
+  control?: string
+  status?: string
+}): ObservationView[] {
+  return mockObservationRows.filter(
+    (o) =>
+      (!q.application || o.application === q.application) &&
+      (!q.framework || o.framework === q.framework) &&
+      (!q.control || o.controlId === q.control) &&
+      (!q.status || o.status === q.status),
+  )
+}
+
+/** Offline sample only: the page labels it as such. Real numbers come from GET /api/v1/dashboard/kpis. */
+export function mockDashboardKpis(filters: DashboardFilterParams): DashboardKpis {
+  const empty = !!filters.from && !!filters.to && filters.to < '2020-01-01' // an obviously empty window
+  const n = empty ? 0 : mockEvidence.filter((e) => !filters.application || e.applicationSlug === filters.application)
+    .filter((e) => !filters.framework || e.framework === filters.framework).length
+  const runs = empty ? [] : mockRuns
+  const completed = runs.filter((r) => r.status === 'COMPLETED').length
+  const failed = runs.filter((r) => r.status === 'FAILED').length
+  return {
+    generatedAt: new Date().toISOString(),
+    filters: { ...filters } as Record<string, string | null>,
+    evidence: {
+      total: n,
+      counts: { draft: n, submitted: 0, approved: 0, rejected: 0, expired: 0, superseded: 0 },
+      closed: 0,
+      closureRatePct: n === 0 ? null : 0,
+      rejected: 0,
+      expiringSoon: 0,
+      expired: 0,
+      retentionDays: 365,
+      avgReviewTimeDays: null,
+      auditorSla: null,
+      pendingAging: null,
+    },
+    automated: {
+      totalRuns: runs.length,
+      scheduledRuns: runs.filter((r) => r.trigger === 'SCHEDULED').length,
+      manualRuns: runs.filter((r) => r.trigger === 'MANUAL').length,
+      bulkRuns: runs.filter((r) => r.trigger === 'BULK').length,
+      completed,
+      partial: 0,
+      failed,
+      inProgress: runs.length - completed - failed,
+      successRatePct: completed + failed === 0 ? null : Math.round((completed * 1000) / (completed + failed)) / 10,
+      evidenceIngested: runs.reduce((s, r) => s + r.ingested, 0),
+      duplicatesSkipped: runs.reduce((s, r) => s + r.duplicates, 0),
+      lastRun: runs[0] ? { runId: runs[0].runId, status: runs[0].status, at: runs[0].finishedAt ?? runs[0].createdAt } : null,
+      activeSchedules: mockSchedules.filter((s) => s.active).length,
+      nextDueAt: null,
+      runsWithinSla: completed,
+      runsBreached: 0,
+      slaSeconds: 60,
+      openObservations: mockObservationRows.filter((o) => o.status === 'OPEN').length,
+      unreadNotifications: 0,
+    },
+  }
+}
+
+// Offline retention sample: archival here only flips the sample evidence state, like the backend flips the real one.
+let mockRetention: RetentionPolicy = { retentionDays: 365, version: null }
+const mockRetentionRunRows: RetentionRun[] = []
+
+export function mockRetentionPolicy(): RetentionPolicy {
+  return mockRetention
+}
+
+export function mockSaveRetentionPolicy(days: number): RetentionPolicy {
+  if (!Number.isInteger(days) || days < 0 || days > 3650) throw new Error('retentionDays must be an integer between 0 and 3650')
+  mockRetention = { retentionDays: days, updatedBy: mockActor(), updatedAt: new Date().toISOString(), version: (mockRetention.version ?? -1) + 1 }
+  return mockRetention
+}
+
+export function mockArchive(mode: 'PREVIEW' | 'EXECUTE', application?: string): ArchiveResult {
+  const now = Date.now()
+  const days = mockRetention.retentionDays
+  const collected = (e: EvidenceView) => e.latest?.collectedAt ?? e.updatedAt
+  const scope = mockEvidence.filter((e) => !application || e.applicationSlug === application)
+  const eligible = scope.filter((e) => e.lifecycleState !== 'ARCHIVED' && Date.parse(collected(e)) + days * 86_400_000 <= now)
+  if (mode === 'EXECUTE') eligible.forEach((e) => (e.lifecycleState = 'ARCHIVED'))
+  const run: RetentionRun = {
+    id: `ret-${mockRetentionRunRows.length + 1}`,
+    mode,
+    triggeredBy: mockActor(),
+    startedAt: new Date(now).toISOString(),
+    finishedAt: new Date().toISOString(),
+    retentionDays: days,
+    application: application || null,
+    scanned: scope.length,
+    archived: mode === 'EXECUTE' ? eligible.length : 0,
+    skipped: scope.length - eligible.length,
+  }
+  mockRetentionRunRows.unshift(run)
+  return {
+    runId: run.id,
+    mode,
+    retentionDays: days,
+    application: application || null,
+    scanned: scope.length,
+    eligible: eligible.length,
+    archived: run.archived,
+    skipped: run.skipped,
+    items: eligible.map((e) => ({
+      evidenceId: e.evidenceId,
+      applicationSlug: e.applicationSlug,
+      controlId: e.controlId,
+      framework: e.framework,
+      collectedAt: collected(e),
+      expiresAt: new Date(Date.parse(collected(e)) + days * 86_400_000).toISOString(),
+    })),
+  }
+}
+
+export function mockRetentionRuns(): RetentionRun[] {
+  return mockRetentionRunRows
+}
+
+const MOCK_SLA_SECONDS = 60
+const mockStartedAt = new Date().toISOString()
+
+export function mockSystemStatus(): SystemStatus {
+  return {
+    serverStartedAt: mockStartedAt,
+    now: new Date().toISOString(),
+    activeSchedules: mockSchedules.filter((s) => s.active).length,
+    slaSeconds: MOCK_SLA_SECONDS,
+  }
+}
+
+export function mockRunScheduleNow(id: string): RunView {
+  const job = mockSchedules.find((s) => s.id === id)
+  if (!job) throw new Error(`unknown schedule: ${id}`)
+  const run = mockStartRun({ applications: [job.application], sources: [job.sourceSystem], requestedBy: `schedule:${job.name}` })
+  run.trigger = 'SCHEDULED'
+  run.scheduleId = job.id
+  run.scheduleName = job.name
+  run.scheduleFrequency = job.frequency
+  run.scheduleCreatedBy = job.createdBy
+  run.sourceStatus = { [job.sourceSystem]: 'CONNECTED' }
+  run.perSource = { [job.sourceSystem]: 'received=8 ingested=6 duplicates=2 failed=0 connectivity=CONNECTED' }
+  job.lastRunAt = new Date().toISOString()
+  return run
 }
 
 // Per-check PASS / WARNING / FAIL rows from the shared fixtures.
@@ -2002,32 +2434,227 @@ export function mockAddEvidenceFramework(evidenceId: string, framework: string):
   return ev
 }
 
-export function mockSummary(evidenceId: string): EvidenceSummary {
+// ---- deterministic evidence summary (offline stand-in for GET /insight/evidence/{id}/summary) ----
+// Derived from the mock evidence + mock check results with the same fixed templates and the same
+// contract shape as the backend, so the offline panel looks like the real one. Nothing here is a model.
+
+/** Illustrative control names/descriptions (LIBRARY entries carry the library description). */
+const MOCK_CONTROL_INFO: Record<string, { name: string; description?: string; source: 'LEGACY' | 'LIBRARY' }> = {
+  'OS-SSH-ROOT-LOGIN': { name: 'SSH root login disabled', source: 'LEGACY' },
+  'DB-TLS-IN-TRANSIT': {
+    name: 'Encryption in Transit',
+    description: 'Database connections must be encrypted in transit.',
+    source: 'LIBRARY',
+  },
+  'MW-TLS-VERSION': {
+    name: 'TLS Protocol Compliance',
+    description: 'Only approved TLS versions may be enabled.',
+    source: 'LIBRARY',
+  },
+  'TLS-CERT-EXPIRY': { name: 'Leaf certificate has > 30 days remaining', source: 'LEGACY' },
+  'ITPP-CHG-02': { name: 'Production change is backed by an approved change ticket', source: 'LEGACY' },
+  'DPSC-SDLC-04': { name: 'Pull requests receive an approving review', source: 'LEGACY' },
+  'POLICY-ACCESS-REVIEW': { name: 'Access review policy', source: 'LEGACY' },
+  'NET-FIREWALL-RULES': { name: 'Firewall rules reviewed', source: 'LEGACY' },
+}
+
+const VERDICT_WORD: Record<EvidenceSummary['verdict'], string> = {
+  PASS: 'meets the automated checks',
+  WARNING: 'passes with warnings',
+  FAIL: 'fails an automated check',
+  NOT_APPLICABLE: 'not applicable to this target',
+  NOT_ASSESSED: 'collected, not assessed (no automated rule)',
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+function mockSize(bytes: number): string {
+  if (bytes < 1024) return plural(bytes, 'byte', 'bytes')
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`
+}
+
+const MOCK_STALE_AFTER_DAYS = 90
+
+export function mockSummary(evidenceId: string, version?: number): EvidenceSummary {
   const ev = mockEvidenceById(evidenceId)
-  const verdicts = resultsRaw.results.filter((r) => r.evidenceId === ev.evidenceId)
-  const groundedOn = [
-    `application: ${ev.applicationSlug}`,
-    `framework: ${ev.framework}`,
-    `control: ${ev.controlId}`,
-    `source system: ${ev.sourceSystem}`,
-    ...(ev.latest ? [`collected at: ${ev.latest.collectedAt}`, `current version: ${ev.currentVersion}`] : []),
-    ...Object.entries(ev.tags).map(([k, v]) => `tag ${k}: ${v}`),
-    ...verdicts.map((v) => `check ${v.checkId} -> ${v.status} (${v.detail})`),
+  const shown = version ?? ev.currentVersion
+  if (shown < 1 || shown > ev.currentVersion) throw new Error(`Evidence ${ev.evidenceId} has no version ${shown}`)
+  const isCurrent = shown === ev.currentVersion
+  const latest = ev.latest
+  const meta = latest?.metadata ?? {}
+
+  // check results describe the current version only, like the backend's per-version filter
+  const checks: EvidenceSummary['checks'] = isCurrent
+    ? resultsRaw.results
+        .filter((r) => r.evidenceId === ev.evidenceId)
+        .map((r) => ({
+          checkId: r.checkId,
+          status: r.status as EvidenceSummary['checks'][number]['status'],
+          observed: r.observed,
+          expected: r.expected,
+          detail: r.detail,
+        }))
+        .sort((a, b) => a.checkId.localeCompare(b.checkId))
+    : []
+  const verdict: EvidenceSummary['verdict'] =
+    checks.length === 0
+      ? 'NOT_ASSESSED'
+      : checks.some((c) => c.status === 'FAIL')
+        ? 'FAIL'
+        : checks.some((c) => c.status === 'WARNING')
+          ? 'WARNING'
+          : checks.some((c) => c.status === 'PASS')
+            ? 'PASS'
+            : 'NOT_APPLICABLE'
+
+  const facts: EvidenceSummary['facts'] = []
+  const findings: EvidenceSummary['findings'] = []
+  const limits: string[] = []
+  let contentKind: EvidenceSummary['contentKind']
+  let sentence: string
+
+  const day = (latest?.collectedAt ?? '').slice(0, 10)
+  if (ev.sourceSystem.startsWith('AGENT_') && checks.length > 0) {
+    contentKind = 'CHECK_BUNDLE'
+    facts.push({ label: 'collector', value: meta.collector ?? 'agent', pointer: '/collector' })
+    facts.push({ label: 'technology', value: meta.technology ?? ev.tags.technology ?? 'unknown', pointer: '/technology' })
+    facts.push({ label: 'collectedAt', value: latest?.collectedAt ?? '', pointer: '/collectedAt' })
+    facts.push({ label: 'simulated', value: meta.simulated ?? 'false', pointer: '/simulated' })
+    checks.forEach((c, i) => {
+      const parts = [c.status, `observed ${c.observed}`, `expected ${c.expected}`]
+      facts.push({ label: `check ${c.checkId}`, value: parts.join('; '), pointer: `/findings/${i}` })
+    })
+    const pass = checks.filter((c) => c.status === 'PASS').length
+    const warn = checks.filter((c) => c.status === 'WARNING').length
+    const fail = checks.filter((c) => c.status === 'FAIL').length
+    const na = checks.filter((c) => c.status === 'NOT_APPLICABLE').length
+    const problems: string[] = []
+    checks.forEach((c, i) => {
+      if (c.status !== 'FAIL' && c.status !== 'WARNING') return
+      const line = `${c.checkId}: observed ${c.observed}, expected ${c.expected} — ${c.detail}.`
+      problems.push(line)
+      findings.push({ severity: c.status === 'FAIL' ? 'FAIL' : 'WARNING', message: line, pointer: `/findings/${i}` })
+    })
+    sentence =
+      `${pass} of ${plural(checks.length, 'check', 'checks')} passed` +
+      (warn ? `, ${plural(warn, 'warning', 'warnings')}` : '') +
+      (fail ? `, ${fail} failed` : '') +
+      (na ? `, ${na} not applicable` : '') +
+      '.' +
+      problems.map((p) => ` ${p}`).join('')
+  } else if (ev.sourceSystem.startsWith('MOCK_') && latest?.contentType === 'application/json') {
+    contentKind = 'INTEGRATION_OBJECT'
+    const objectType = ev.tags.evidenceType === 'CODE-REVIEW' ? 'pull_request_review' : 'change_ticket'
+    const reference = ev.sourceObjectId ?? ev.evidenceId
+    facts.push({ label: 'sourceSystem', value: ev.sourceSystem, pointer: '/sourceSystem' })
+    facts.push({ label: 'objectType', value: objectType, pointer: '/objectType' })
+    facts.push({ label: 'reference', value: reference, pointer: '/reference' })
+    facts.push({ label: 'status', value: 'COLLECTED', pointer: '/status' })
+    facts.push({ label: 'asOf', value: day, pointer: '/asOf' })
+    sentence = `${ev.sourceSystem} ${objectType.replace('_', ' ')} ${reference} is COLLECTED.`
+  } else if (latest?.contentType === 'application/pdf') {
+    contentKind = 'DOCUMENT'
+    facts.push({ label: 'detected type', value: 'PDF document', pointer: 'content' })
+    facts.push({ label: 'size', value: mockSize(latest.sizeBytes), pointer: 'content' })
+    limits.push('Content is not machine-readable here.')
+    sentence = `PDF document of ${mockSize(latest.sizeBytes)}.`
+  } else {
+    contentKind = 'STRUCTURED_DATA'
+    facts.push({ label: 'collector', value: meta.collector ?? 'unknown', pointer: '/collector' })
+    facts.push({ label: 'sourceSystem', value: meta.sourceSystem ?? ev.sourceSystem, pointer: '/sourceSystem' })
+    sentence = `JSON data of ${mockSize(latest?.sizeBytes ?? 0)}, ${plural(facts.length, 'top-level field', 'top-level fields')}.`
+  }
+  if (!isCurrent) limits.push(`Check results were evaluated on a different version; none exist for version ${shown}.`)
+
+  const info = MOCK_CONTROL_INFO[ev.controlId]
+  const alsoSatisfies = frameworksFor(ev.controlId, ev.framework)
+    .filter((fw) => fw !== ev.framework.toUpperCase())
+    .map((fw) => ({ framework: fw, controlId: ev.controlId, name: info?.name ?? ev.controlId }))
+  const control: EvidenceSummary['control'] = {
+    controlId: ev.controlId,
+    name: info?.name ?? ev.controlId,
+    description: info ? (info.description ?? info.name) : null,
+    framework: ev.framework,
+    source: info ? info.source : 'UNKNOWN',
+    alsoSatisfies,
+  }
+
+  const integrity: EvidenceSummary['health']['integrity'] =
+    ev.integrityStatus === 'TAMPERED' ? 'MISMATCH' : ev.integrityStatus === 'VERIFIED' ? 'INTACT' : 'UNVERIFIABLE'
+  if (integrity === 'MISMATCH') {
+    findings.unshift({
+      severity: 'FAIL',
+      message: 'The stored content does not match the recorded SHA-256, so it may have been altered after collection.',
+      pointer: 'record',
+    })
+  }
+  if (verdict === 'NOT_ASSESSED') {
+    findings.push({ severity: 'INFO', message: 'No automated rule applies to this evidence.', pointer: 'record' })
+  }
+
+  const label = ev.framework.toUpperCase() === 'PCI_DSS' ? 'PCI DSS' : ev.framework.replace(/_/g, ' ')
+  const headline =
+    `${control.name} (${ev.controlId}, ${label}) — ${VERDICT_WORD[verdict]}. ${sentence}` +
+    (integrity === 'MISMATCH' ? ' The stored content does not match the recorded SHA-256.' : '')
+
+  const recordFacts: EvidenceSummary['facts'] = [
+    { label: 'application', value: ev.applicationSlug, pointer: 'record' },
+    { label: 'source system', value: ev.sourceSystem, pointer: 'record' },
+    ...(latest ? [{ label: 'collected at', value: latest.collectedAt, pointer: 'record' }] : []),
+    ...(latest?.collectedBy ? [{ label: 'collected by', value: latest.collectedBy, pointer: 'record' }] : []),
+    { label: 'version', value: `v${shown} of ${ev.currentVersion}`, pointer: 'record' },
+    ...(latest ? [{ label: 'declared content type', value: latest.contentType, pointer: 'record' }] : []),
   ]
-  const summary =
-    '[mock-ai] Summary based only on the supplied evidence:\n' +
-    groundedOn.map((g) => `- ${g}`).join('\n')
+  const allFacts = [...recordFacts, ...facts]
+
+  const age = latest ? Math.floor(ageDays(latest.collectedAt)) : null
+  const health: EvidenceSummary['health'] = {
+    integrity,
+    collectedAt: latest?.collectedAt ?? null,
+    ageDays: age,
+    freshness: age != null && age <= MOCK_STALE_AFTER_DAYS ? 'CURRENT' : 'STALE',
+    lifecycleState: (ev.lifecycleState as string) || 'DRAFT',
+    versionCount: ev.currentVersion,
+    // demo seam: one record shows the "missing tags" line
+    missingTags: ev.evidenceId === 'ev-008' ? ['technology'] : [],
+  }
+
+  const sev = { FAIL: 2, WARNING: 1, INFO: 0 } as const
+  const ordered = [...findings].sort((a, b) => sev[b.severity] - sev[a.severity])
+  const tail =
+    ` Collected ${day || 'on an unknown date'} from ${ev.sourceSystem} for ${ev.applicationSlug} (v${shown}); ` +
+    `integrity ${integrity === 'INTACT' ? 'intact' : integrity === 'MISMATCH' ? 'NOT intact' : 'unverifiable'}; ` +
+    `${health.freshness === 'CURRENT' ? 'current' : 'stale'}.`
+  const extra = ordered
+    .map((f) => f.message)
+    .filter((m) => !headline.includes(m))
+    .slice(0, 3)
+    .join(' ')
+
   return {
     evidenceId: ev.evidenceId,
     applicationSlug: ev.applicationSlug,
     framework: ev.framework,
     controlId: ev.controlId,
-    model: 'mock-chat:v1',
-    simulated: true,
+    model: 'deterministic-rules/v1',
+    simulated: meta.simulated === 'true',
     modelGenerated: false,
-    summary,
-    groundedOn,
+    summary: headline + (extra ? ` ${extra}` : '') + tail,
+    groundedOn: allFacts.map((f) => `${f.label}: ${f.value} [${f.pointer}]`),
     generatedAt: NOW,
+    method: 'DETERMINISTIC_RULES',
+    version: shown,
+    sha256: isCurrent ? (latest?.sha256 ?? '') : (latest?.sha256 ?? '').split('').reverse().join(''),
+    contentKind,
+    verdict,
+    headline,
+    control,
+    checks,
+    facts: allFacts,
+    findings: ordered,
+    health,
+    limits,
   }
 }
 

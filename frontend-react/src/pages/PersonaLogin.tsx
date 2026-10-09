@@ -5,7 +5,7 @@ export const PERSONA_STORAGE_KEY = 'pramaan_selected_persona'
 
 export type PersonaCode = 'APP' | 'AUDITOR' | 'FH' | 'VH' | 'CIO' | 'ADMIN'
 
-interface Persona {
+export interface Persona {
   code: PersonaCode
   name: string
 }
@@ -19,13 +19,60 @@ export const PERSONAS: Persona[] = [
   { code: 'ADMIN', name: 'Admin' },
 ]
 
+/** The persona picked at login, if any. */
+export function currentPersona(): Persona | undefined {
+  const code = getPersonaCode()
+  return PERSONAS.find((p) => p.code === code)
+}
+
+/**
+ * The persona is kept per browser tab (sessionStorage), so signing in as someone else in a second tab - or
+ * logging out there - cannot change this tab's identity or role headers. A persona left in localStorage by an
+ * older version is adopted once by the first tab that loads, then removed so it cannot leak into other tabs.
+ */
+export function getPersonaCode(): string | null {
+  try {
+    const own = sessionStorage.getItem(PERSONA_STORAGE_KEY)
+    if (own) return own
+    const legacy = localStorage.getItem(PERSONA_STORAGE_KEY)
+    if (legacy) {
+      sessionStorage.setItem(PERSONA_STORAGE_KEY, legacy)
+      localStorage.removeItem(PERSONA_STORAGE_KEY)
+      return legacy
+    }
+  } catch {
+    /* storage unavailable */
+  }
+  return null
+}
+
+export function setPersonaCode(code: string): void {
+  sessionStorage.setItem(PERSONA_STORAGE_KEY, code)
+}
+
+/** Logout: affects this tab only. */
+export function clearPersona(): void {
+  try {
+    sessionStorage.removeItem(PERSONA_STORAGE_KEY)
+    localStorage.removeItem(PERSONA_STORAGE_KEY)
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+/** Mirrors the backend SchedulerAccessPolicy: only these personas may change schedules, runs and source connections. */
+export const SCHEDULER_MANAGE_ROLES: PersonaCode[] = ['APP', 'ADMIN']
+
+/** Mirrors the backend: only these personas may raise or close audit observations. */
+export const OBSERVATION_WRITE_ROLES: PersonaCode[] = ['AUDITOR', 'ADMIN']
+
 export function PersonaLogin() {
   const [selected, setSelected] = useState<PersonaCode | ''>('')
   const navigate = useNavigate()
 
   function handleContinue() {
     if (!selected) return
-    localStorage.setItem(PERSONA_STORAGE_KEY, selected)
+    setPersonaCode(selected)
     navigate('/dashboard')
   }
 

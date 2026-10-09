@@ -86,6 +86,8 @@ public class ReportService {
             new ReportInfo("pan-india", "National / pan-India compliance report",
                     List.of("json", "csv"), List.of()),
             new ReportInfo("regulatory-filing", "Regulator-ready compliance filing",
+                    List.of("json", "csv"), List.of("applicationSlug", "framework")),
+            new ReportInfo("evidence-summary", "Evidence summary — audit documentation",
                     List.of("json", "csv"), List.of("applicationSlug", "framework")));
 
     private final EvidenceQueryService evidence;
@@ -93,16 +95,18 @@ public class ReportService {
     private final ComplianceService compliance;
     private final EnterpriseDashboardService enterprise;
     private final AuditPrepService auditPrep;
+    private final EvidenceSummaryReport evidenceSummary;
     private final Clock clock;
 
     public ReportService(EvidenceQueryService evidence, ComparisonService comparison,
                          ComplianceService compliance, EnterpriseDashboardService enterprise,
-                         AuditPrepService auditPrep, Clock clock) {
+                         AuditPrepService auditPrep, EvidenceSummaryReport evidenceSummary, Clock clock) {
         this.evidence = evidence;
         this.comparison = comparison;
         this.compliance = compliance;
         this.enterprise = enterprise;
         this.auditPrep = auditPrep;
+        this.evidenceSummary = evidenceSummary;
         this.clock = clock;
     }
 
@@ -119,6 +123,7 @@ public class ReportService {
             case "audit-readiness" -> auditPrep.prepare(applicationSlug, framework);
             case "pan-india" -> enterprise.national();
             case "regulatory-filing" -> regulatoryFiling(applicationSlug, framework);
+            case "evidence-summary" -> evidenceSummary.build(applicationSlug, framework);
             default -> throw ApiException.notFound("unknown report: " + name);
         };
     }
@@ -132,6 +137,7 @@ public class ReportService {
             case "compliance-summary" -> csvSummary();
             case "pan-india" -> csvRegions(enterprise.national().regions());
             case "regulatory-filing" -> csvRegulatoryFiling(regulatoryFiling(applicationSlug, framework));
+            case "evidence-summary" -> evidenceSummary.csv(evidenceSummary.build(applicationSlug, framework));
             default -> throw ApiException.notFound("unknown report: " + name);
         };
     }

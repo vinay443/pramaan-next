@@ -18,7 +18,8 @@ network calls (mock integrations only).
 | Completeness (P2) | `GET /api/v1/insight/completeness` | expected-control catalog (`phase2/control-catalog.json`) vs current evidence → `COVERED`/`STALE`/`MISSING` |
 | Compliance (P2) | `GET /api/v1/insight/compliance` | check verdicts rolled up per control / framework / application |
 | Evidence reuse (P2) | `GET /api/v1/insight/reuse/{id}`, `POST /api/v1/insight/reuse/search`, `POST /api/v1/insight/embeddings/reindex` | embedding nearest-neighbour + deterministic reuse hints |
-| AI summary (P2) | `GET /api/v1/insight/evidence/{id}/summary` | grounded evidence summary; deterministic in mock mode |
+| Evidence summary (P2) | `GET /api/v1/insight/evidence/{id}/summary[?version=N]` | deterministic, rule-based summary of the stored content (PDF/DOCX/XLSX/text/JSON/images), check verdicts and health; no LLM — see [`../docs/evidence-summary.md`](../docs/evidence-summary.md) |
+| Evidence summary report (P2) | `GET /api/v1/reports/evidence-summary` | per-control audit documentation roll-up (JSON/CSV); expected controls with no evidence appear as `MISSING` |
 | NL query (P2) | `POST /api/v1/insight/nl-query` | deterministic keyword routing + AI narration |
 
 Contract: [`../contracts/openapi/pramaan-backend.yaml`](../contracts/openapi/pramaan-backend.yaml).
@@ -29,7 +30,7 @@ Contract: [`../contracts/openapi/pramaan-backend.yaml`](../contracts/openapi/pra
 - **Object storage:** `ObjectStore` abstraction — `FilesystemObjectStore` (default) / `InMemoryObjectStore` (tests). S3/MinIO can slot in behind the same interface.
 - **Integrations:** `EnterpriseIntegration` interface; Phase 1 ships deterministic mocks (`MOCK_JIRA`, `MOCK_SERVICENOW`, `MOCK_GITHUB`, `MOCK_CONFLUENCE`) — same (app, control, day) → identical bytes, so re-runs dedup and a new day yields a new version.
 - **Rule engine:** `RuleCatalog` + `RuleEvaluationService` — data-driven, no LLM. Rules in `src/main/resources/rules/phase1-rules.json` (framework/control matcher + ordered substring clauses + default verdict); results persisted to `check_result`, overwritten per (evidence, check) on re-evaluation. Reference: ECS `evidence_validation.py`.
-- **Phase 2 AI (`com.pramaan.backend.ai` + `.insight`):** `pramaan.ai.mode=mock` (default) uses deterministic in-process models — no external calls, tests hermetic. `mode=live` calls configurable HTTP APIs (`ChatModel`: OpenAI `/chat/completions` or Anthropic `/v1/messages`; `EmbeddingModel`: OpenAI `/embeddings`). `EmbeddingStore` is `memory` (default) or `pgvector` (`pramaan.ai.vector-store=pgvector`, needs the `pgvector/pgvector` image; DDL is self-applied, not a Flyway migration). Completeness & compliance are fully deterministic; reuse uses embeddings; summaries & NL-query narration use the chat model (routing stays deterministic).
+- **Phase 2 AI (`com.pramaan.backend.ai` + `.insight`):** `pramaan.ai.mode=mock` (default) uses deterministic in-process models — no external calls, tests hermetic. `mode=live` calls configurable HTTP APIs (`ChatModel`: OpenAI `/chat/completions` or Anthropic `/v1/messages`; `EmbeddingModel`: OpenAI `/embeddings`). `EmbeddingStore` is `memory` (default) or `pgvector` (`pramaan.ai.vector-store=pgvector`, needs the `pgvector/pgvector` image; DDL is self-applied, not a Flyway migration). Completeness, compliance and evidence summaries are fully deterministic (evidence summaries no longer use the chat model at all); reuse uses embeddings; NL-query and audit-prep narration use the chat model (routing stays deterministic).
 - **Config:** `pramaan.*` in `application.yml` (`PramaanProperties`).
 
 Behavioural reference: the ECS system (`../../ecs-enterprise-backup`, read-only). Not imported.
@@ -57,6 +58,9 @@ Focused run (Phase 1 suite):
 
 ```bash
 ./mvnw "-Dtest=HashingTest,EvidenceIngestionServiceTest,SchedulerRunExecutorTest,EvidenceControllerWebTest,RuleEvaluationServiceTest,InsightServicesTest,InsightControllerWebTest,MockEmbeddingModelTest,BackendApplicationTests" test
+
+# evidence summary + report (focused):
+./mvnw "-Dtest=SummaryTemplatesTest,RedactorTest,*SummarizerTest,DocumentSignalsTest,EvidenceSummaryServiceTest,EvidenceSummaryReportTest,ReportControllerWebTest,ControlCatalogTest" test
 ```
 
 Tests use H2 (`application-test.yml`), the in-memory object store, and mock integrations — no Docker needed.

@@ -1,6 +1,8 @@
 package com.pramaan.backend.insight;
 
 import com.pramaan.backend.application.ApplicationService;
+import com.pramaan.backend.observation.AuditObservation;
+import com.pramaan.backend.observation.AuditObservationRepository;
 import com.pramaan.backend.evidence.EvidenceQueryService;
 import com.pramaan.backend.evidence.EvidenceQueryService.EvidenceFilter;
 import com.pramaan.backend.evidence.domain.EvidenceRecord;
@@ -35,9 +37,12 @@ public class ComplianceService {
     private final CheckResultRepository checkResults;
     private final ApplicationService applications;
     private final Clock clock;
+    private final AuditObservationRepository observations;
 
     public ComplianceService(ControlCatalog catalog, EvidenceQueryService evidence,
-                             CheckResultRepository checkResults, ApplicationService applications, Clock clock) {
+                             CheckResultRepository checkResults, ApplicationService applications, Clock clock,
+                             AuditObservationRepository observations) {
+        this.observations = observations;
         this.catalog = catalog;
         this.evidence = evidence;
         this.checkResults = checkResults;
@@ -52,8 +57,12 @@ public class ComplianceService {
                         new EvidenceFilter(slug, framework, null, null, null, null, null, 0, 100_000)).stream()
                 .collect(Collectors.groupingBy(r -> key(r.getFramework(), r.getControlId())));
 
+        Map<String, Long> openObs = observations.findByApplicationAndStatus(slug, AuditObservation.Status.OPEN).stream()
+                .collect(Collectors.groupingBy(o -> key(o.getFramework(), o.getControlId()), Collectors.counting()));
+
         List<ControlPosture> controls = catalog.forApplication(slug, framework).stream()
-                .map(e -> posture(e, evidenceByControl.getOrDefault(key(e.framework(), e.controlId()), List.of())))
+                .map(e -> posture(e, evidenceByControl.getOrDefault(key(e.framework(), e.controlId()), List.of()))
+                        .withOpenObservations(openObs.getOrDefault(key(e.framework(), e.controlId()), 0L).intValue()))
                 .sorted(Comparator.comparing(ControlPosture::framework).thenComparing(ControlPosture::controlId))
                 .toList();
 

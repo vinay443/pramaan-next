@@ -1,7 +1,7 @@
 package com.pramaan.backend.evidence;
 
 import com.pramaan.backend.common.ApiException;
-import com.pramaan.backend.config.PramaanProperties;
+import com.pramaan.backend.retention.RetentionPolicyService;
 import com.pramaan.backend.evidence.EvidenceDtos.EvidenceLifecycleView;
 import com.pramaan.backend.evidence.EvidenceDtos.LifecycleAction;
 import com.pramaan.backend.evidence.EvidenceDtos.LifecycleEventView;
@@ -30,14 +30,18 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class EvidenceLifecycleService {
 
+    public static final String DUPLICATE_SKIPPED = "DUPLICATE_SKIPPED";
+
     /** Allowed source states per action; the target state each action produces. */
     private static final Map<LifecycleAction, Set<EvidenceLifecycleState>> ALLOWED_FROM = Map.of(
             LifecycleAction.SUBMIT, EnumSet.of(EvidenceLifecycleState.DRAFT, EvidenceLifecycleState.REJECTED,
                     EvidenceLifecycleState.EXPIRED),
             LifecycleAction.APPROVE, EnumSet.of(EvidenceLifecycleState.SUBMITTED),
             LifecycleAction.REJECT, EnumSet.of(EvidenceLifecycleState.SUBMITTED),
-            LifecycleAction.RETIRE, EnumSet.complementOf(EnumSet.of(EvidenceLifecycleState.SUPERSEDED)),
-            LifecycleAction.RESET, EnumSet.allOf(EvidenceLifecycleState.class));
+            LifecycleAction.RETIRE, EnumSet.complementOf(EnumSet.of(EvidenceLifecycleState.SUPERSEDED,
+                    EvidenceLifecycleState.ARCHIVED)),
+            // ARCHIVED is terminal: no further lifecycle action
+            LifecycleAction.RESET, EnumSet.complementOf(EnumSet.of(EvidenceLifecycleState.ARCHIVED)));
 
     private static final Map<LifecycleAction, EvidenceLifecycleState> TARGET = Map.of(
             LifecycleAction.SUBMIT, EvidenceLifecycleState.SUBMITTED,
@@ -50,17 +54,17 @@ public class EvidenceLifecycleService {
     private final EvidenceLifecycleEventRepository events;
     private final EvidenceApprovalAuthorizer authorizer;
     private final Clock clock;
-    private final int retentionDays;
+    private final RetentionPolicyService retention;
 
     public EvidenceLifecycleService(EvidenceRecordRepository records,
                                     EvidenceLifecycleEventRepository events,
                                     EvidenceApprovalAuthorizer authorizer,
-                                    Clock clock, PramaanProperties props) {
+                                    Clock clock, RetentionPolicyService retention) {
         this.records = records;
         this.events = events;
         this.authorizer = authorizer;
         this.clock = clock;
-        this.retentionDays = props.evidenceOrDefault().retentionDaysOrDefault();
+        this.retention = retention;
     }
 
     /** Called by the ingestion path (the only writer of evidence). No new state machine outside this. */
@@ -79,6 +83,22 @@ public class EvidenceLifecycleService {
             append(record, from, EvidenceLifecycleState.SUBMITTED, "RE_SUBMITTED",
                     null, "new version ingested — re-review required", now);
         }
+    }
+
+    /**
+     * A scheduler run found this evidence unchanged and skipped it. Audit-only: no new version, object or
+     * hash change, and the lifecycle state is left as is. At most one event per (evidence, run).
+     */
+    @Transactional
+    public void recordDuplicateSkipped(UUID evidenceId, UUID runId, String trigger, String actor) {
+        EvidenceRecord r = records.findById(evidenceId).orElse(null);
+        if (r == null || events.existsByEvidenceRecordIdAndActionAndNoteContaining(
+                evidenceId, DUPLICATE_SKIPPED, runId.toString())) {
+            return;
+        }
+        EvidenceLifecycleState state = r.getLifecycleState();
+        events.save(new EvidenceLifecycleEvent(UUID.randomUUID(), r.getId(), state, state, DUPLICATE_SKIPPED, actor,
+                "unchanged in run " + runId + " (" + trigger + ")", clock.instant()));
     }
 
     /**
@@ -129,10 +149,20 @@ public class EvidenceLifecycleService {
 
     private boolean isExpired(EvidenceRecord r) {
         Instant last = r.getLatestCollectedAt();
-        return last != null && ChronoUnit.DAYS.between(last, clock.instant()) > retentionDays;
+        return last != null && ChronoUnit.DAYS.between(last, clock.instant()) > retention.days();
+    }
+
+    /** Retention archival: terminal state + audit event only. Callers decide eligibility. */
+    @Transactional
+    public void archive(EvidenceRecord r, String actor, String note) {
+        Instant now = clock.instant();
+        EvidenceLifecycleState from = r.getLifecycleState();
+        r.markArchived(now);
+        append(r, from, EvidenceLifecycleState.ARCHIVED, "ARCHIVED", actor, note, now);
     }
 
     private EvidenceLifecycleView view(EvidenceRecord r) {
+        int retentionDays = retention.days();
         Instant last = r.getLatestCollectedAt();
         Integer ageDays = last == null ? null : (int) ChronoUnit.DAYS.between(last, clock.instant());
         Instant expiresAt = last == null ? null : last.plus(retentionDays, ChronoUnit.DAYS);
@@ -145,6 +175,7 @@ public class EvidenceLifecycleService {
         return new EvidenceLifecycleView(r.getId().toString(), r.getApplicationSlug(), r.getControlId(),
                 r.getLifecycleState().name(), effective.name(),
                 effective == EvidenceLifecycleState.EXPIRED, r.getReviewedBy(), r.getReviewedAt(),
-                r.getLifecycleNote(), retentionDays, ageDays, expiresAt, r.getCurrentVersion(), history);
+                r.getLifecycleNote(), retentionDays, ageDays, expiresAt, r.getCurrentVersion(), history,
+                r.getLifecycleState() == EvidenceLifecycleState.ARCHIVED ? r.getArchivedAt() : null);
     }
 }

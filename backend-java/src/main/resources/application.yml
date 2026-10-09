@@ -19,6 +19,15 @@ spring:
       max-file-size: 25MB
       max-request-size: 100MB
 
+  # @Async pool (scheduler runs, onboarding scans): bounded, with a queue deep enough that a burst of
+  # simultaneous runs is accepted and waits as PENDING instead of being rejected.
+  task:
+    execution:
+      pool:
+        core-size: 4
+        max-size: 8
+        queue-capacity: 200
+
 server:
   port: 8080
 
@@ -160,6 +169,8 @@ pramaan:
     cron: ${PRAMAAN_SCHEDULER_CRON:0 0 * * * *}
     default-sources: MOCK_JIRA,MOCK_SERVICENOW,MOCK_GITHUB,MOCK_CONFLUENCE,SIM_POSTGRES,SIM_MYSQL,SIM_NGINX,SIM_TOMCAT,SHAREPOINT,SERVICENOW
     stale-after-days: 90
+    # Run SLA: request -> finish, in seconds (queue wait + execution). Reported per run as slaStatus.
+    sla-seconds: ${PRAMAAN_SCHEDULER_SLA_SECONDS:60}
   seed:
     # Insert demo applications on startup if the table is empty.
     applications-enabled: ${PRAMAAN_SEED_APPS:true}
@@ -173,7 +184,8 @@ pramaan:
   admin:
     roles: ADMIN,AUDITOR,APP_OWNER,COMPLIANCE_OFFICER,VIEWER
 
-  # Phase 2 AI features (evidence summaries, NL queries, reuse/similarity).
+  # Phase 2 AI features (NL queries, audit-prep narration, reuse/similarity). Evidence summaries are
+  # deterministic and rule-based — they do not use these settings.
   ai:
     # mode: mock (deterministic, no external calls) | live (call the HTTP model APIs)
     mode: ${PRAMAAN_AI_MODE:mock}

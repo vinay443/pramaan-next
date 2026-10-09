@@ -26,6 +26,7 @@ pramaan:
     dispatch: false
   scheduler:
     auto-enabled: false
+    jobs-tick: false
     dispatch: false
     default-sources: MOCK_JIRA,MOCK_SERVICENOW,MOCK_GITHUB,MOCK_CONFLUENCE,SIM_POSTGRES,SIM_MYSQL,SIM_NGINX,SIM_TOMCAT
     stale-after-days: 90

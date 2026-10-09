@@ -242,6 +242,7 @@ public class TrendService {
             evs.sort(Comparator.comparing(EvidenceLifecycleEvent::getOccurredAt));
             Instant submittedAt = null;
             for (EvidenceLifecycleEvent e : evs) {
+                if ("DUPLICATE_SKIPPED".equals(e.getAction())) continue; // audit-only, not a state change
                 if (e.getToState() == EvidenceLifecycleState.SUBMITTED) {
                     submittedAt = e.getOccurredAt();
                 } else if (e.getAction().equals("APPROVE") && submittedAt != null) {

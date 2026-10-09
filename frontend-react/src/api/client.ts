@@ -1,4 +1,13 @@
 // Minimal typed fetch wrapper for the Pramaan backend.
+import { currentPersona } from '../pages/PersonaLogin'
+
+/** Scheduler / source-connection / system-status calls carry the declared persona (demo-mode authorization, not authentication). */
+const SCHEDULER_PATH = /^\/api\/v1\/(scheduler|schedules|sources|system|notifications|security|observations|dashboard|retention)(\/|$)|^\/api\/v1\/evidence\/[^/]+\/observations$/
+
+function personaHeaders(path: string): Record<string, string> {
+  const p = SCHEDULER_PATH.test(path) ? currentPersona() : undefined
+  return p ? { 'X-Pramaan-Role': p.code, 'X-Pramaan-User': p.name } : {}
+}
 
 export class ApiError extends Error {
   status: number
@@ -50,6 +59,7 @@ export interface RequestOptions {
   body?: unknown
   signal?: AbortSignal
   timeoutMs?: number
+  headers?: Record<string, string>
 }
 
 export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
@@ -61,7 +71,12 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
   try {
     res = await fetch(url, {
       method: opts.method ?? 'GET',
-      headers: opts.body !== undefined ? { 'Content-Type': 'application/json', Accept: 'application/json' } : { Accept: 'application/json' },
+      headers: {
+        ...(opts.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        Accept: 'application/json',
+        ...personaHeaders(path),
+        ...opts.headers,
+      },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       signal: opts.signal ?? controller.signal,
     })

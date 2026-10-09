@@ -1,0 +1,11 @@
+{
+  "collector": "database",
+  "technology": "postgresql",
+  "application": "payments",
+  "framework": "DB_BASELINING",
+  "control": "DBBL-C8",
+  "asOf": "2026-09-01",
+  "simulated": true,
+  "status": "pass",
+  "checks": [{"checkId":"DB-PG-01","controlId":"DBBL-C8","framework":"DB_BASELINING","status":"PASS","observed":"on","expected":"on","title":"Encryption in Transit"},{"checkId":"DB-PG-02","controlId":"DBBL-C9","framework":"DB_BASELINING","status":"PASS","observed":"on","expected":"on","title":"Database Audit Logging"}]
+}

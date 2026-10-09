@@ -43,11 +43,11 @@ class EndToEndFlowTest {
                 .andExpect(jsonPath("$[?(@.slug=='net-banking')].businessUnit").value("Retail Banking"));
 
         // 2. COLLECT — scheduler pulls SharePoint / ServiceNow / a simulated tech source
-        String runJson = mvc.perform(post("/api/v1/scheduler/runs").contentType(MediaType.APPLICATION_JSON)
+        String runJson = mvc.perform(post("/api/v1/scheduler/runs").header("X-Pramaan-Role", "APP").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"applications\":[\"net-banking\"],\"sources\":[\"SHAREPOINT\",\"SERVICENOW\",\"SIM_NGINX\"]}"))
                 .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
         executor.execute(UUID.fromString(JsonPath.read(runJson, "$.runId")));
-        mvc.perform(get("/api/v1/scheduler/runs/{id}", JsonPath.read(runJson, "$.runId").toString()))
+        mvc.perform(get("/api/v1/scheduler/runs/{id}", JsonPath.read(runJson, "$.runId").toString()).header("X-Pramaan-Role", "APP"))
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.ingested", org.hamcrest.Matchers.greaterThan(0)));
 
@@ -105,9 +105,11 @@ class EndToEndFlowTest {
                 .andExpect(jsonPath("$.checkVerdicts.PASS").exists())
                 .andExpect(jsonPath("$.compliant", org.hamcrest.Matchers.greaterThan(0)));
 
-        // 10. AI — grounded summary + RAG NL query (deterministic MOCK_AI)
+        // 10. Evidence summary (deterministic, rule-based — no model) + RAG NL query (deterministic MOCK_AI)
         mvc.perform(get("/api/v1/insight/evidence/{id}/summary", evidenceId))
-                .andExpect(jsonPath("$.simulated").value(true))
+                .andExpect(jsonPath("$.method").value("DETERMINISTIC_RULES"))
+                .andExpect(jsonPath("$.modelGenerated").value(false))
+                .andExpect(jsonPath("$.headline", org.hamcrest.Matchers.not(org.hamcrest.Matchers.emptyString())))
                 .andExpect(jsonPath("$.groundedOn", org.hamcrest.Matchers.not(org.hamcrest.Matchers.empty())));
         mvc.perform(post("/api/v1/insight/nl-query").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"question\":\"what evidence do we have for HSTS?\"}"))

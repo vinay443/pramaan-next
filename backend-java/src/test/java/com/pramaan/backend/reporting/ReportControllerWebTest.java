@@ -110,4 +110,36 @@ class ReportControllerWebTest {
                 .andExpect(jsonPath("$.readinessScore").isNumber())
                 .andExpect(jsonPath("$.simulated").value(true));
     }
+
+    @Test
+    void evidenceSummaryReportIsInTheCatalogueAndRendersJsonAndCsv() throws Exception {
+        ingestion.ingest(new IngestRequest("payments", "PCI-C6", "PCI_DSS", "AGENT_DB", "s", null,
+                "application/json", null, "{\"collector\":\"db\",\"status\":\"pass\",\"checks\":[{\"checkId\":\"DB-1\",\"status\":\"PASS\"}]}",
+                Instant.now(), "agent", Map.of(), Map.of()));
+
+        mvc.perform(get("/api/v1/reports"))
+                .andExpect(jsonPath("$[?(@.name=='evidence-summary')].title").value(
+                        Matchers.hasItem("Evidence summary — audit documentation")))
+                .andExpect(jsonPath("$[?(@.name=='evidence-summary')].params[0]").value(Matchers.hasItem("applicationSlug")));
+
+        mvc.perform(get("/api/v1/reports/evidence-summary").param("applicationSlug", "payments").param("framework", "PCI_DSS"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scope.applicationSlug").value("payments"))
+                .andExpect(jsonPath("$.totals.evidenceRecords").value(1))
+                .andExpect(jsonPath("$.totals.byVerdict.PASS").value(1))
+                .andExpect(jsonPath("$.controls[?(@.controlId=='PCI-C6')].verdict").value(Matchers.hasItem("PASS")))
+                .andExpect(jsonPath("$.controls[?(@.controlId=='PCI-C2')].status").value(Matchers.hasItem("MISSING")))
+                .andExpect(jsonPath("$.truncated").value(false));
+
+        mvc.perform(get("/api/v1/reports/evidence-summary").param("applicationSlug", "payments")
+                        .param("framework", "PCI_DSS").param("format", "csv"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("text/csv"))
+                .andExpect(header().string("Content-Disposition", Matchers.containsString("evidence-summary")))
+                .andExpect(content().string(Matchers.startsWith("application,framework,controlId,controlName,status,verdict,")))
+                .andExpect(content().string(Matchers.containsString("PCI-C6")));
+
+        mvc.perform(get("/api/v1/reports/evidence-summary").param("applicationSlug", "nope"))
+                .andExpect(status().isNotFound());
+    }
 }

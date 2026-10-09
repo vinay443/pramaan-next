@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { getRegulatoryFiling, listReports, reportUrl } from '../api/endpoints'
+import { Link } from 'react-router-dom'
+import { getEvidenceSummaryReport, getRegulatoryFiling, listReports, reportUrl } from '../api/endpoints'
+import type { SummaryVerdict } from '../api/types'
 import { getDataSource } from '../api/dataSource'
 import { useAsync } from '../hooks/useAsync'
-import { DataTable, ErrorNote, Loading, Section, StatCard } from '../components/ui'
+import { DataTable, ErrorNote, Loading, Section, StatCard, StatusPill } from '../components/ui'
 
-type ReportsTab = 'catalogue' | 'regulatory'
+type ReportsTab = 'catalogue' | 'regulatory' | 'summary'
 
 export function Reports() {
   const [applicationSlug, setApp] = useState('')
@@ -50,12 +52,21 @@ export function Reports() {
         >
           Regulatory Report
         </button>
+        <button
+          aria-pressed={tab === 'summary'}
+          className={tab === 'summary' ? 'primary' : undefined}
+          onClick={() => setTab('summary')}
+        >
+          Evidence summary
+        </button>
       </div>
 
       {tab === 'catalogue' ? (
         <ReportCatalogue applicationSlug={applicationSlug} framework={framework} />
-      ) : (
+      ) : tab === 'regulatory' ? (
         <RegulatoryReport applicationSlug={applicationSlug} framework={framework} />
+      ) : (
+        <EvidenceSummaryReportView applicationSlug={applicationSlug} framework={framework} />
       )}
     </div>
   )
@@ -185,6 +196,126 @@ function RegulatoryReport({ applicationSlug, framework }: { applicationSlug: str
 
           <Section title="Attestation">
             <p className="muted">{filing.data.attestation}</p>
+          </Section>
+        </>
+      ) : null}
+    </>
+  )
+}
+
+const VERDICT_TONE: Record<SummaryVerdict, 'ok' | 'bad' | 'muted' | 'warn'> = {
+  PASS: 'ok',
+  WARNING: 'warn',
+  FAIL: 'bad',
+  NOT_APPLICABLE: 'muted',
+  NOT_ASSESSED: 'muted',
+}
+
+/** Text label first; the tone only reinforces it. */
+function VerdictPill({ verdict }: { verdict: SummaryVerdict | null }) {
+  if (verdict == null) return <span className="muted">no evidence</span>
+  return <StatusPill status={verdict.replace(/_/g, ' ')} tone={VERDICT_TONE[verdict]} />
+}
+
+/** Per-control roll-up of the deterministic evidence summaries ("audit documentation"). Controls with no
+ *  evidence are listed explicitly as MISSING. Backed by GET /api/v1/reports/evidence-summary. */
+function EvidenceSummaryReportView({ applicationSlug, framework }: { applicationSlug: string; framework: string }) {
+  const report = useAsync(
+    () => getEvidenceSummaryReport(applicationSlug || undefined, framework || undefined),
+    [applicationSlug, framework],
+  )
+  const d = report.data
+
+  return (
+    <>
+      {report.loading ? <Loading what="evidence summary report" /> : null}
+      {report.error ? <ErrorNote message={report.error} /> : null}
+      {d ? (
+        <>
+          <Section
+            title="Evidence summary — audit documentation"
+            actions={
+              <span className="row-actions">
+                <a
+                  href={reportUrl('evidence-summary', 'json', applicationSlug || undefined, framework || undefined)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  JSON
+                </a>
+                <a
+                  href={reportUrl('evidence-summary', 'csv', applicationSlug || undefined, framework || undefined)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  CSV
+                </a>
+              </span>
+            }
+          >
+            <p className="muted small">
+              Generated {new Date(d.generatedAt).toLocaleString()} from fixed rules over the stored evidence — no AI
+              model is involved. A verdict describes automated checks only; it does not prove a control is met.
+            </p>
+            <div className="stat-grid">
+              <StatCard label="Controls expected" value={d.totals.controlsExpected} />
+              <StatCard label="With evidence" value={d.totals.controlsWithEvidence} />
+              <StatCard label="Missing" value={d.totals.controlsMissing} />
+              <StatCard label="Evidence FAIL" value={d.totals.byVerdict.FAIL} />
+              <StatCard label="Evidence WARNING" value={d.totals.byVerdict.WARNING} />
+              <StatCard label="Stale evidence" value={d.totals.stale} />
+            </div>
+            {d.truncated ? d.limits.map((l) => <p key={l} className="muted small">{l}</p>) : null}
+          </Section>
+
+          <Section title={`Controls — ${d.controls.length}`}>
+            {d.controls.length === 0 ? (
+              <p className="muted">No expected controls match these filters.</p>
+            ) : (
+              <DataTable
+                rows={d.controls}
+                rowKey={(c) => `${c.application}|${c.framework}|${c.controlId}`}
+                columns={[
+                  {
+                    header: 'Control',
+                    cell: (c) => (
+                      <details>
+                        <summary>
+                          <code>{c.controlId}</code> {c.controlName}
+                        </summary>
+                        {c.description ? <p className="small muted">{c.description}</p> : null}
+                        <p className="small muted">Application: {c.application}</p>
+                        {c.evidence.length === 0 ? (
+                          <p className="small">
+                            {c.status === 'MISSING' ? 'No evidence held for this control.' : 'No evidence entries listed.'}
+                          </p>
+                        ) : (
+                          <ul aria-label={`Evidence for ${c.controlId}`}>
+                            {c.evidence.map((e) => (
+                              <li key={e.evidenceId} className="small">
+                                <VerdictPill verdict={e.verdict} />{' '}
+                                <Link to={`/evidence/${e.evidenceId}`}>{e.headline}</Link>{' '}
+                                <span className="muted">
+                                  (v{e.version}, integrity {e.integrity}, {e.freshness})
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </details>
+                    ),
+                  },
+                  { header: 'Framework', cell: (c) => c.framework },
+                  { header: 'Status', cell: (c) => <StatusPill status={c.status} /> },
+                  { header: 'Verdict', cell: (c) => <VerdictPill verdict={c.verdict} /> },
+                  { header: 'Evidence', cell: (c) => c.evidenceCount, align: 'right' },
+                  {
+                    header: 'Latest collected',
+                    cell: (c) => (c.latestCollectedAt ? new Date(c.latestCollectedAt).toLocaleDateString() : '—'),
+                  },
+                ]}
+              />
+            )}
           </Section>
         </>
       ) : null}

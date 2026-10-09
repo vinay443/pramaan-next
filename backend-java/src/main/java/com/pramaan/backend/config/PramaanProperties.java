@@ -97,7 +97,14 @@ public record PramaanProperties(
             boolean dispatch,
             String cron,
             List<String> defaultSources,
-            int staleAfterDays) {}
+            int staleAfterDays,
+            /** Max seconds from run request to finish (queue wait + execution) before a run is reported BREACHED. */
+            Integer slaSeconds) {
+
+        public int slaSecondsOrDefault() {
+            return slaSeconds != null && slaSeconds >= 0 ? slaSeconds : 60;
+        }
+    }
 
     public record Seed(boolean applicationsEnabled) {}
 }

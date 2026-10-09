@@ -70,6 +70,28 @@ public class EvidenceLifecycleSummaryService {
                 auditorSla(appRecords, eventsByRecord), pendingAging(appRecords));
     }
 
+    /** Review metrics computed from lifecycle events for an arbitrary set of records (the dashboard's filtered set). */
+    public record ReviewMetrics(AuditorSla auditorSla, PendingAging pendingAging, Double avgReviewDays) {}
+
+    @Transactional(readOnly = true)
+    public ReviewMetrics reviewMetrics(List<EvidenceRecord> recs) {
+        Map<UUID, EvidenceRecord> byId = recs.stream().collect(Collectors.toMap(EvidenceRecord::getId, r -> r));
+        List<EvidenceLifecycleEvent> events = byId.isEmpty() ? List.of() : lifecycleEvents.findByEvidenceRecordIdIn(byId.keySet());
+        Map<UUID, List<EvidenceLifecycleEvent>> eventsByRecord = events.stream()
+                .collect(Collectors.groupingBy(EvidenceLifecycleEvent::getEvidenceRecordId));
+        List<Double> reviewDays = new ArrayList<>();
+        for (EvidenceRecord r : recs) {
+            if (r.getReviewedAt() == null) continue;
+            eventsByRecord.getOrDefault(r.getId(), List.of()).stream()
+                    .filter(e -> e.getToState() == EvidenceLifecycleState.SUBMITTED)
+                    .max(Comparator.comparing(EvidenceLifecycleEvent::getOccurredAt))
+                    .ifPresent(e -> reviewDays.add(ChronoUnit.SECONDS.between(e.getOccurredAt(), r.getReviewedAt()) / 86_400.0));
+        }
+        Double avg = reviewDays.isEmpty() ? null
+                : Math.round(reviewDays.stream().mapToDouble(Double::doubleValue).average().orElse(0) * 10.0) / 10.0;
+        return new ReviewMetrics(auditorSla(recs, eventsByRecord), pendingAging(recs), avg);
+    }
+
     private static RejectionAuditRow toRejectionRow(EvidenceLifecycleEvent e, EvidenceRecord r) {
         if (r == null) {
             return null;
@@ -85,8 +107,10 @@ public class EvidenceLifecycleSummaryService {
         int rejected = 0;
         int expired = 0;
         int superseded = 0;
+        int archived = 0;
         for (EvidenceRecord r : recs) {
             switch (r.getLifecycleState()) {
+                case ARCHIVED -> archived++;
                 case DRAFT -> draft++;
                 case SUBMITTED -> submitted++;
                 case APPROVED -> approved++;
@@ -95,7 +119,7 @@ public class EvidenceLifecycleSummaryService {
                 case SUPERSEDED -> superseded++;
             }
         }
-        return new LifecycleStateCounts(draft, submitted, approved, rejected, expired, superseded);
+        return new LifecycleStateCounts(draft, submitted, approved, rejected, expired, superseded, archived);
     }
 
     /** Computed metric: % of reviewed evidence (approved or rejected) reviewed within the configured target. */
@@ -145,7 +169,7 @@ public class EvidenceLifecycleSummaryService {
             case DRAFT -> "Draft";
             case SUBMITTED -> "Submitted";
             case REJECTED -> "Re-upload Requested";
-            case APPROVED, EXPIRED, SUPERSEDED -> "Closed";
+            case APPROVED, EXPIRED, SUPERSEDED, ARCHIVED -> "Closed";
         };
     }
 }

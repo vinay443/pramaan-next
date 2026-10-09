@@ -9,4 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface SchedulerRunRepository extends JpaRepository<SchedulerRun, UUID> {
 
     Page<SchedulerRun> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    /** A run of this schedule that is queued or running (and not an orphan older than {@code since}). */
+    java.util.Optional<SchedulerRun> findFirstByScheduleIdAndStatusInAndCreatedAtAfter(
+            UUID scheduleId, java.util.Collection<SchedulerRun.Status> statuses, java.time.Instant since);
 }

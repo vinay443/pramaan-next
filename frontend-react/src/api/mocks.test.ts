@@ -4,6 +4,7 @@ import {
   mockBulkIngest,
   mockCompleteness,
   mockCompliance,
+  mockEvidenceSummaryReport,
   mockEvidencePage,
   mockNlQuery,
   mockQuery,
@@ -62,16 +63,51 @@ describe('Phase 2 mock adapters', () => {
     expect(r.answer).not.toHaveProperty('counts')
   })
 
-  it('mock AI output is flagged as a prompt digest, not model-generated', () => {
+  it('NL query output is flagged as a prompt digest, not model-generated', () => {
     expect(mockNlQuery('which controls are missing?').modelGenerated).toBe(false)
-    expect(mockSummary('ev-001').modelGenerated).toBe(false)
   })
 
-  it('summary is grounded only in the evidence record', () => {
-    const s = mockSummary('ev-001')
-    expect(s.simulated).toBe(true)
-    expect(s.summary).toContain('[mock-ai]')
-    expect(s.groundedOn).toContain('control: OS-SSH-ROOT-LOGIN')
+  it('evidence summaries are deterministic, rule-based and derived from the mock check results', () => {
+    const expected: Record<string, string> = {
+      'ev-001': 'PASS',
+      'ev-002': 'WARNING',
+      'ev-003': 'WARNING',
+      'ev-004': 'FAIL',
+      'ev-005': 'FAIL',
+      'ev-006': 'NOT_APPLICABLE',
+      'ev-008': 'NOT_ASSESSED',
+    }
+    for (const [id, verdict] of Object.entries(expected)) {
+      const s = mockSummary(id)
+      expect(s.verdict, id).toBe(verdict)
+      expect(s.method).toBe('DETERMINISTIC_RULES')
+      expect(s.model).toBe('deterministic-rules/v1')
+      expect(s.modelGenerated).toBe(false)
+      expect(s.facts.length).toBeGreaterThan(0)
+      expect(s.facts.every((f) => f.pointer.length > 0)).toBe(true)
+      expect(s.groundedOn).toHaveLength(s.facts.length)
+      expect(JSON.stringify(s)).not.toMatch(/mock-ai|prompt digest|null|undefined/)
+      expect(mockSummary(id)).toEqual(s) // same input, same output
+    }
+    const fail = mockSummary('ev-004')
+    expect(fail.contentKind).toBe('CHECK_BUNDLE')
+    expect(fail.headline).toContain('1 of 2 checks passed, 1 failed.')
+    expect(fail.findings[0]).toMatchObject({ severity: 'FAIL', pointer: '/findings/0' })
+    expect(mockSummary('ev-008').checks).toEqual([])
+    expect(mockSummary('ev-008').contentKind).toBe('DOCUMENT')
+  })
+
+  it('summary health covers stale and mismatch cases, control descriptions and versions', () => {
+    const tampered = mockSummary('ev-006')
+    expect(tampered.health).toMatchObject({ integrity: 'MISMATCH', freshness: 'STALE' })
+    expect(tampered.headline).toContain('does not match the recorded SHA-256')
+    expect(mockSummary('ev-001').health).toMatchObject({ integrity: 'INTACT', freshness: 'CURRENT', versionCount: 2 })
+    expect(mockSummary('ev-002').control).toMatchObject({ source: 'LIBRARY', description: expect.any(String) })
+    expect(mockSummary('ev-003').control.description).toBe('Only approved TLS versions may be enabled.')
+
+    const older = mockSummary('ev-001', 1)
+    expect(older).toMatchObject({ version: 1, verdict: 'NOT_ASSESSED' })
+    expect(() => mockSummary('ev-001', 9)).toThrow(/no version 9/)
   })
 
   it('reuse-by-text returns scored matches highest first', () => {
@@ -113,5 +149,37 @@ describe('mock data', () => {
   it('freshness query returns numeric buckets', () => {
     const q = mockQuery('freshness')
     expect(q.counts).toMatchObject({ fresh: 3, aging: 1, stale: 2 })
+  })
+})
+
+describe('evidence-summary report (offline)', () => {
+  it('lists expected controls incl. MISSING ones, worst-of verdicts and consistent totals', () => {
+    const r = mockEvidenceSummaryReport()
+    expect(r.controls.length).toBe(r.totals.controlsExpected)
+    expect(r.totals.controlsMissing).toBeGreaterThan(0)
+    expect(r.totals.controlsWithEvidence + r.totals.controlsMissing).toBe(r.totals.controlsExpected)
+    const missing = r.controls.find((c) => c.status === 'MISSING')
+    expect(missing?.verdict).toBeNull()
+    expect(missing?.evidence).toEqual([])
+
+    const tls = r.controls.find((c) => c.application === 'payments' && c.controlId === 'TLS-CERT-EXPIRY')
+    expect(tls?.verdict).toBe('FAIL')
+    expect(tls?.evidence[0].evidenceId).toBe('ev-004')
+    expect(tls?.evidence[0].headline).toBe(mockSummary('ev-004').headline)
+
+    const byVerdict = r.totals.byVerdict
+    expect(Object.values(byVerdict).reduce((a, b) => a + b, 0)).toBe(r.totals.evidenceRecords)
+    expect(byVerdict.FAIL).toBeGreaterThan(0)
+    expect(JSON.stringify(r)).not.toMatch(/mock-ai|prompt digest/)
+  })
+
+  it('filters by application and framework and is ordered deterministically', () => {
+    const p = mockEvidenceSummaryReport('payments', 'C-SITE')
+    expect(p.controls.every((c) => c.application === 'payments' && c.framework === 'C-SITE')).toBe(true)
+    expect(p.scope).toEqual({ applicationSlug: 'payments', framework: 'C-SITE' })
+    const all = mockEvidenceSummaryReport()
+    const apps = all.controls.map((c) => c.application)
+    expect(apps).toEqual([...apps].sort())
+    expect(mockEvidenceSummaryReport()).toEqual(all)
   })
 })

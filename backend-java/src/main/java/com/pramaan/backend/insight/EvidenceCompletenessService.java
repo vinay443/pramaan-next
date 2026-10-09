@@ -86,6 +86,21 @@ public class EvidenceCompletenessService {
         this.staleAfterDays = props.scheduler() != null ? props.scheduler().staleAfterDays() : 90;
     }
 
+    /** The app-wide stale-after threshold (days) that decides "current" vs "stale". */
+    public int staleAfterDays() {
+        return staleAfterDays;
+    }
+
+    /** Whole days between collection and now — the age this service scores freshness on. */
+    public int ageDays(Instant collectedAt, Instant now) {
+        return (int) ChronoUnit.DAYS.between(collectedAt, now);
+    }
+
+    /** Freshness definition shared with evidence summaries: current while age <= the stale-after threshold. */
+    public boolean isCurrent(int ageDays) {
+        return ageDays <= staleAfterDays;
+    }
+
     public EvidenceCompletenessReport forScope(String applicationSlug, String framework) {
         Instant now = clock.instant();
         List<EvidenceRecord> records = evidence.recordsMatching(new EvidenceFilter(
@@ -221,8 +236,8 @@ public class EvidenceCompletenessService {
 
         Integer ageDays = null;
         if (v != null && r.getLatestCollectedAt() != null) {
-            ageDays = (int) ChronoUnit.DAYS.between(r.getLatestCollectedAt(), now);
-            if (ageDays <= staleAfterDays) {
+            ageDays = ageDays(r.getLatestCollectedAt(), now);
+            if (isCurrent(ageDays)) {
                 score += WEIGHT_FRESHNESS;
                 factors.add(ok("Freshness", "Last collected " + ageDays + " day(s) ago."));
             } else {

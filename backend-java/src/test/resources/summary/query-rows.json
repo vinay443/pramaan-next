@@ -1,0 +1,17 @@
+{
+  "collector": "predefined-query",
+  "technology": "PostgreSQL",
+  "application": "payments",
+  "controlId": "DBBL-C4",
+  "controlName": "Password Policy",
+  "controlFamily": "Authentication",
+  "asOf": "2026-09-01",
+  "live": true,
+  "command": "SELECT role, method, compliant FROM audit_password_methods",
+  "rowCount": 3,
+  "rows": [
+    {"role": "app", "method": "scram-sha-256", "compliant": true},
+    {"role": "legacy", "method": "md5", "compliant": false},
+    {"role": "batch", "method": "scram-sha-256", "compliant": true}
+  ]
+}

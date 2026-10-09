@@ -113,6 +113,7 @@ export type EvidenceLifecycleState =
   | 'REJECTED'
   | 'EXPIRED'
   | 'SUPERSEDED'
+  | 'ARCHIVED'
 
 export interface EvidenceView {
   evidenceId: string
@@ -161,6 +162,8 @@ export interface EvidenceLifecycleView {
   expiresAt?: string | null
   currentVersion: number
   history: LifecycleEventView[]
+  /** Set only while the state is ARCHIVED (retention). */
+  archivedAt?: string | null
 }
 
 // ---- outbound GRC sync (evidence + control-status summary) --------------
@@ -419,6 +422,8 @@ export interface LifecycleStateCounts {
   rejected: number
   expired: number
   superseded: number
+  /** Retention-archived evidence; the seven values sum to the total. */
+  archived?: number
 }
 
 export interface RejectionAuditRow {
@@ -529,6 +534,49 @@ export interface ReportInfo {
   params: string[]
 }
 
+/** One evidence item in the "evidence-summary" report (from the same code path as the per-evidence summary). */
+export interface EvidenceSummaryReportEvidence {
+  evidenceId: string
+  version: number
+  headline: string
+  verdict: SummaryVerdict
+  collectedAt: string | null
+  integrity: SummaryHealth['integrity']
+  freshness: SummaryHealth['freshness']
+}
+
+export interface EvidenceSummaryReportControl {
+  application: string
+  framework: string
+  controlId: string
+  controlName: string
+  description: string | null
+  status: Coverage
+  /** Worst-of over the control's evidence; null for MISSING controls. */
+  verdict: SummaryVerdict | null
+  evidenceCount: number
+  latestCollectedAt: string | null
+  evidence: EvidenceSummaryReportEvidence[]
+}
+
+/** Body of GET /api/v1/reports/evidence-summary ("Evidence summary — audit documentation"). */
+export interface EvidenceSummaryReport {
+  generatedAt: string
+  scope: { applicationSlug: string | null; framework: string | null }
+  totals: {
+    controlsExpected: number
+    controlsWithEvidence: number
+    controlsMissing: number
+    evidenceRecords: number
+    byVerdict: Record<SummaryVerdict, number>
+    stale: number
+    integrityMismatch: number
+  }
+  truncated: boolean
+  limits: string[]
+  controls: EvidenceSummaryReportControl[]
+}
+
 export interface IntegrityReport {
   evidenceId: string
   version: number
@@ -603,7 +651,7 @@ export interface Page<T> {
 }
 
 export type RunTrigger = 'MANUAL' | 'SCHEDULED' | 'BULK'
-export type RunStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+export type RunStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED'
 
 export interface RunRequest {
   applications?: string[]
@@ -626,6 +674,19 @@ export interface RunView {
   failed: number
   message?: string
   perSource: Record<string, string>
+  sourceStatus?: Record<string, string>
+  scheduleId?: string | null
+  scheduleName?: string | null
+  retryOfRunId?: string | null
+  triggeredBy?: string | null
+  scheduleFrequency?: string | null
+  scheduleCreatedBy?: string | null
+  durationMs?: number | null
+  slaSeconds?: number
+  queuedMs?: number | null
+  slaStatus?: 'WITHIN_SLA' | 'BREACHED' | 'RUNNING' | string
+  sourceResults?: Array<{ source: string; status: string; evidenceCount: number; errorCode?: string | null; errorMessage?: string | null }>
+  sourceErrors?: Record<string, { errorCode: string; errorMessage?: string | null }>
   createdAt: string
   startedAt?: string | null
   finishedAt?: string | null
@@ -874,18 +935,93 @@ export interface ControlReuseResult {
   evidence: ControlReuseEvidence[]
 }
 
+/** Worst-of over persisted check results; NOT_ASSESSED when none exist. */
+export type SummaryVerdict = 'PASS' | 'WARNING' | 'FAIL' | 'NOT_APPLICABLE' | 'NOT_ASSESSED'
+export type SummaryContentKind =
+  | 'CHECK_BUNDLE'
+  | 'INTEGRATION_OBJECT'
+  | 'QUERY_RESULT'
+  | 'STRUCTURED_DATA'
+  | 'TEXT'
+  | 'DOCUMENT'
+  | 'IMAGE'
+  | 'BINARY'
+  | 'UNAVAILABLE'
+
+export interface SummaryAlsoSatisfies {
+  framework: string
+  controlId: string
+  name: string
+}
+
+export interface SummaryControl {
+  controlId: string
+  name: string
+  /** Verbatim ECS Control Library text; legacy controls fall back to their title; null when unknown. */
+  description: string | null
+  framework: string
+  source: 'LEGACY' | 'LIBRARY' | 'UNKNOWN'
+  alsoSatisfies: SummaryAlsoSatisfies[]
+}
+
+export interface SummaryCheck {
+  checkId: string
+  status: 'PASS' | 'WARNING' | 'FAIL' | 'NOT_APPLICABLE'
+  observed?: string | null
+  expected?: string | null
+  detail?: string | null
+}
+
+/** pointer: JSON Pointer, "line N", "row N", "page N", or "record". */
+export interface SummaryFact {
+  label: string
+  value: string
+  pointer: string
+}
+
+export interface SummaryFinding {
+  severity: 'INFO' | 'WARNING' | 'FAIL'
+  message: string
+  pointer: string
+}
+
+export interface SummaryHealth {
+  integrity: 'INTACT' | 'MISMATCH' | 'UNVERIFIABLE'
+  collectedAt?: string | null
+  ageDays?: number | null
+  freshness: 'CURRENT' | 'STALE'
+  lifecycleState: string
+  versionCount: number
+  missingTags: string[]
+}
+
+/** Deterministic, rule-based summary of one evidence version (no AI model). See the OpenAPI EvidenceSummary schema. */
 export interface EvidenceSummary {
   evidenceId: string
   applicationSlug: string
   framework: string
   controlId: string
+  /** Always `deterministic-rules/v1`. */
   model: string
+  /** True iff the evidence version's metadata says simulated=true. */
   simulated: boolean
-  /** False when the text is a deterministic prompt digest rather than model output. */
+  /** Always false — kept for backward compatibility. */
   modelGenerated: boolean
   summary: string
   groundedOn: string[]
   generatedAt: string
+  method: 'DETERMINISTIC_RULES'
+  version: number
+  sha256: string
+  contentKind: SummaryContentKind
+  verdict: SummaryVerdict
+  headline: string
+  control: SummaryControl
+  checks: SummaryCheck[]
+  facts: SummaryFact[]
+  findings: SummaryFinding[]
+  health: SummaryHealth
+  limits: string[]
 }
 
 export interface NlQueryResult {
@@ -917,6 +1053,22 @@ export interface ControlPosture {
   controlId: string
   status: ControlStatus | string
   detail: string
+  /** Open audit observations on this control (UC01-FT014 follow-up). */
+  openObservations?: number
+}
+
+export interface ObservationView {
+  id: string
+  evidenceId: string
+  controlId: string
+  framework: string
+  application: string
+  text: string
+  status: 'OPEN' | 'CLOSED' | string
+  raisedByRole: string
+  raisedBy?: string | null
+  createdAt: string
+  closedAt?: string | null
 }
 
 export interface FrameworkPosture {
@@ -969,4 +1121,193 @@ export interface LeadershipDashboard {
   checkVerdicts: Record<string, number>
   byApplication: AppPosture[]
   byFramework: FrameworkPosture[]
+}
+
+// ---- scheduled collection jobs (UC01-FT001) — contract ScheduleView / ScheduleOptions
+export type ScheduleFrequency = 'HOURLY' | 'DAILY' | 'WEEKLY' | 'MINUTELY'
+
+export interface ScheduleView {
+  id: string
+  name: string
+  sourceSystem: string
+  application: string
+  evidenceType: string
+  frequency: ScheduleFrequency | string
+  active: boolean
+  createdBy?: string
+  createdAt: string
+  nextRunAt?: string | null
+  lastRunAt?: string | null
+  /** Optimistic-lock version; sent back so a stale toggle is rejected with 409. */
+  version?: number | null
+}
+
+export interface CreateScheduleRequest {
+  name: string
+  sourceSystem: string
+  application: string
+  evidenceType: string
+  frequency: string
+  createdBy?: string
+}
+
+export interface ScheduleOptions {
+  sources: string[]
+  applications: string[]
+  evidenceTypes: string[]
+  frequencies: string[]
+}
+
+export interface SourceConnectionView {
+  sourceSystem: string
+  status: 'VALID' | 'INVALID' | 'DISABLED' | string
+  updatedAt?: string | null
+  updatedBy?: string | null
+}
+
+export interface SystemStatus {
+  serverStartedAt: string
+  now: string
+  activeSchedules: number
+  slaSeconds?: number
+}
+
+// ---- run notifications (UC01-FT011) — contract NotificationView / NotificationSettings
+export interface NotificationView {
+  id: string
+  createdAt: string
+  type: 'RUN_COMPLETED' | 'RUN_PARTIAL' | 'RUN_FAILED' | string
+  severity: 'INFO' | 'WARNING' | 'ERROR' | string
+  title: string
+  message: string
+  runId?: string | null
+  scheduleName?: string | null
+  recipientRole: string
+  channel: 'IN_APP' | 'EMAIL_SIMULATED' | string
+  readAt?: string | null
+}
+
+export interface NotificationList {
+  items: NotificationView[]
+  unreadCount: number
+}
+
+export interface NotificationSettings {
+  enabled: boolean
+  notifyOnSuccess: boolean
+  notifyOnFailure: boolean
+  recipientRoles: string[]
+  emailSimulated: boolean
+  version?: number | null
+}
+
+// ---- security events (UC01-FT012) — contract SecurityEventView
+export interface SecurityEventView {
+  id: string
+  occurredAt: string
+  eventType: 'ACCESS_DENIED' | 'UNKNOWN_ROLE' | 'INPUT_REJECTED' | 'INVALID_IDENTIFIER' | string
+  outcome: 'BLOCKED' | string
+  role?: string | null
+  actor?: string | null
+  method?: string | null
+  path?: string | null
+  detail?: string | null
+  remoteAddr?: string | null
+}
+
+// ---- dashboard KPIs (UC01-FT016) — contract DashboardKpis; every value is computed from stored data
+export interface DashboardFilterParams {
+  application?: string
+  framework?: string
+  collectionMethod?: string
+  /** yyyy-MM-dd */
+  from?: string
+  /** yyyy-MM-dd, inclusive */
+  to?: string
+}
+
+export interface DashboardEvidenceKpis {
+  total: number
+  counts: LifecycleStateCounts
+  closed: number
+  closureRatePct: number | null
+  rejected: number
+  expiringSoon: number
+  expired: number
+  retentionDays: number
+  avgReviewTimeDays: number | null
+  auditorSla: AuditorSla | null
+  pendingAging: PendingAging | null
+}
+
+export interface DashboardAutomatedKpis {
+  totalRuns: number
+  scheduledRuns: number
+  manualRuns: number
+  bulkRuns: number
+  completed: number
+  partial: number
+  failed: number
+  inProgress: number
+  successRatePct: number | null
+  evidenceIngested: number
+  duplicatesSkipped: number
+  lastRun: { runId: string; status: string; at: string; scheduleName?: string | null } | null
+  activeSchedules: number
+  nextDueAt: string | null
+  runsWithinSla: number
+  runsBreached: number
+  slaSeconds: number
+  openObservations: number
+  unreadNotifications: number
+}
+
+export interface DashboardKpis {
+  generatedAt: string
+  filters: Record<string, string | null>
+  evidence: DashboardEvidenceKpis
+  automated: DashboardAutomatedKpis
+}
+
+// ---- retention policy & archival (UC01-FT017) — contract RetentionPolicy / ArchiveResult / RetentionRun
+export interface RetentionPolicy {
+  retentionDays: number
+  updatedBy?: string | null
+  updatedAt?: string | null
+  /** null until a policy has been saved; send it back on PUT to detect a concurrent change. */
+  version?: number | null
+}
+
+export interface EligibleEvidence {
+  evidenceId: string
+  applicationSlug: string
+  controlId: string
+  framework: string
+  collectedAt: string
+  expiresAt: string
+}
+
+export interface ArchiveResult {
+  runId: string
+  mode: 'PREVIEW' | 'EXECUTE' | string
+  retentionDays: number
+  application?: string | null
+  scanned: number
+  eligible: number
+  archived: number
+  skipped: number
+  items: EligibleEvidence[]
+}
+
+export interface RetentionRun {
+  id: string
+  mode: 'PREVIEW' | 'EXECUTE' | string
+  triggeredBy?: string | null
+  startedAt: string
+  finishedAt?: string | null
+  retentionDays: number
+  application?: string | null
+  scanned: number
+  archived: number
+  skipped: number
 }

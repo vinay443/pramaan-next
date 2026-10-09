@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { Dashboard } from './Dashboard'
 import { renderOffline } from '../test/render'
 import { PERSONA_STORAGE_KEY } from './PersonaLogin'
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  cleanup()
+})
 
 describe('Dashboard', () => {
   it('renders repository totals, hash integrity and recent runs from mock data', async () => {
@@ -30,10 +34,10 @@ describe('Dashboard', () => {
 })
 
 describe('Dashboard — CIO', () => {
-  afterEach(() => localStorage.removeItem(PERSONA_STORAGE_KEY))
+  afterEach(() => sessionStorage.removeItem(PERSONA_STORAGE_KEY))
 
   it('National & Enterprise tab shows the org compliance trend, region RAG, cuts and top risks (mock)', async () => {
-    localStorage.setItem(PERSONA_STORAGE_KEY, 'CIO')
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'CIO')
     renderOffline(<Dashboard />)
 
     fireEvent.click(await screen.findByRole('tab', { name: 'National & Enterprise' }))
@@ -48,10 +52,10 @@ describe('Dashboard — CIO', () => {
 })
 
 describe('Dashboard — Auditor', () => {
-  afterEach(() => localStorage.removeItem(PERSONA_STORAGE_KEY))
+  afterEach(() => sessionStorage.removeItem(PERSONA_STORAGE_KEY))
 
   it('Closure & Trend tab shows closure metrics and the org compliance trend, no business cuts (mock)', async () => {
-    localStorage.setItem(PERSONA_STORAGE_KEY, 'AUDITOR')
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'AUDITOR')
     renderOffline(<Dashboard />)
 
     fireEvent.click(await screen.findByRole('tab', { name: 'Closure & Trend' }))
@@ -65,10 +69,10 @@ describe('Dashboard — Auditor', () => {
 })
 
 describe('Dashboard — App Owner', () => {
-  afterEach(() => localStorage.removeItem(PERSONA_STORAGE_KEY))
+  afterEach(() => sessionStorage.removeItem(PERSONA_STORAGE_KEY))
 
   it('renders the four App Owner tabs with the POC-matched header (mock)', async () => {
-    localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
     renderOffline(<Dashboard />)
 
     expect(await screen.findByRole('heading', { name: 'Application Owner Dashboard' })).toBeInTheDocument()
@@ -83,41 +87,115 @@ describe('Dashboard — App Owner', () => {
     ])
   })
 
-  it('Evidence tab shows the POC-matched KPIs, highlight cards, rejections table and Needs Resubmission cards (mock)', async () => {
-    localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
-    renderOffline(<Dashboard />)
+  const kpis = (over: Record<string, unknown> = {}, auto: Record<string, unknown> = {}) => ({
+    generatedAt: '2026-10-09T10:00:00Z',
+    filters: {},
+    evidence: {
+      total: 7,
+      counts: { draft: 3, submitted: 2, approved: 1, rejected: 1, expired: 0, superseded: 0 },
+      closed: 3,
+      closureRatePct: 42.9,
+      rejected: 1,
+      expiringSoon: 1,
+      expired: 0,
+      retentionDays: 365,
+      avgReviewTimeDays: null, // no reviewed evidence: this tile must not appear
+      auditorSla: null,
+      pendingAging: { count: 5, avgDaysInQueue: 1.5 },
+      ...over,
+    },
+    automated: {
+      totalRuns: 5, scheduledRuns: 3, manualRuns: 2, bulkRuns: 0, completed: 3, partial: 0, failed: 2, inProgress: 0,
+      successRatePct: 60, evidenceIngested: 12, duplicatesSkipped: 4,
+      lastRun: { runId: 'run-9', status: 'FAILED', at: '2026-10-09T09:00:00Z', scheduleName: 'Jira pull' },
+      activeSchedules: 1, nextDueAt: null, runsWithinSla: 5, runsBreached: 0, slaSeconds: 60,
+      openObservations: 2, unreadNotifications: 1,
+      ...auto,
+    },
+  })
 
-    // Evidence is the default tab
-    expect(await screen.findByText('Draft')).toBeInTheDocument()
-    expect(screen.getAllByText('78').length).toBeGreaterThanOrEqual(2) // Draft + Submitted KPI cards
-    expect(screen.getByText('51.6%')).toBeInTheDocument() // Closure rate
-    expect(screen.getByText('3.2d')).toBeInTheDocument() // Avg review time
-    expect(screen.getByText('↓ 12%')).toBeInTheDocument() // Rejection trend
-    expect(screen.getByText('94.5%')).toBeInTheDocument() // Auditor SLA
-    expect(screen.getByText('Within 5-day target')).toBeInTheDocument()
-    expect(screen.getByText('12')).toBeInTheDocument() // Rejected Evidence highlight
-    expect(screen.getByText('36')).toBeInTheDocument() // Expiring / Stale highlight
-    expect(screen.queryByText('Pending Actions')).not.toBeInTheDocument() // dropped from the highlight row
-    expect(screen.getByText('83')).toBeInTheDocument() // Closed chip
-
-    // rejections table (moved from the old standalone Evidence tab)
-    expect(screen.getByText('Evidence Rejections (12)')).toBeInTheDocument()
-    expect(screen.getByText('Biometric Data Minimization')).toBeInTheDocument()
-    expect(screen.getAllByText('S. Nair (Auditor)').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Owner Review').length).toBeGreaterThan(0)
-
-    // Needs Resubmission (moved from the old standalone Remediation tab)
-    expect(screen.getByText('Needs Resubmission')).toBeInTheDocument()
-    const resubmitLinks = screen.getAllByRole('link', { name: 'Resubmit Evidence' })
-    expect(resubmitLinks).toHaveLength(5)
-    expect(resubmitLinks[0]).toHaveAttribute(
-      'href',
-      expect.stringContaining('applicationSlug=upi&framework=DPSC&controlId=DPS-C19'),
+  /** Only the KPI endpoint is 'live'; everything else is offline and falls back to mock data. */
+  function stubKpiBackend(respond: (url: string) => unknown) {
+    const calls: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (String(url).includes('/api/v1/dashboard/kpis')) {
+          calls.push(String(url))
+          return Promise.resolve({ ok: true, status: 200, statusText: 'OK', text: async () => JSON.stringify(respond(String(url))) })
+        }
+        return Promise.reject(new TypeError('offline in test'))
+      }),
     )
+    return calls
+  }
+
+  it('Evidence tab renders the API KPIs, hides metrics it cannot compute and shows no demo-data note', async () => {
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    stubKpiBackend(() => kpis())
+    render(<MemoryRouter><Dashboard /></MemoryRouter>)
+
+    expect(await screen.findByLabelText('Evidence in scope')).toHaveTextContent('7 evidence records in scope')
+    expect(screen.getByText('Total evidence')).toBeInTheDocument()
+    expect(screen.getByText('42.9%')).toBeInTheDocument() // closure rate
+    expect(screen.getByText('Avg 1.5 days in queue')).toBeInTheDocument()
+    expect(screen.getByText(/1 within 30 days · 0 past the 365-day retention/)).toBeInTheDocument()
+    // not computable -> not rendered (never a placeholder number)
+    expect(screen.queryByText('Avg review time')).not.toBeInTheDocument()
+    expect(screen.queryByText('Auditor SLA')).not.toBeInTheDocument()
+    expect(screen.queryByText('Rejection trend')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Demo data/)).not.toBeInTheDocument()
+    expect(screen.queryByText('51.6%')).not.toBeInTheDocument()
+
+    // Automated collection section
+    expect(await screen.findByRole('heading', { name: 'Automated collection' })).toBeInTheDocument()
+    expect(screen.getByText('Total runs')).toBeInTheDocument()
+    expect(screen.getByText('60%')).toBeInTheDocument() // success rate
+    expect(screen.getByRole('link', { name: 'open run' })).toHaveAttribute('href', '/scheduler?run=run-9')
+    expect(screen.getByRole('link', { name: /Open Scheduler/ })).toHaveAttribute('href', '/scheduler')
+  })
+
+  it('changing a filter refetches with those params, empty results show zeros and Reset restores everything', async () => {
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    const calls = stubKpiBackend((url) =>
+      url.includes('collectionMethod=scheduled')
+        ? kpis(
+            { total: 0, counts: { draft: 0, submitted: 0, approved: 0, rejected: 0, expired: 0, superseded: 0 }, closed: 0, closureRatePct: null, rejected: 0, expiringSoon: 0, pendingAging: { count: 0, avgDaysInQueue: null } },
+            { totalRuns: 0, scheduledRuns: 0, manualRuns: 0, completed: 0, failed: 0, successRatePct: null, evidenceIngested: 0, duplicatesSkipped: 0, lastRun: null, runsWithinSla: 0 },
+          )
+        : kpis(),
+    )
+    render(<MemoryRouter><Dashboard /></MemoryRouter>)
+    expect(await screen.findByLabelText('Evidence in scope')).toHaveTextContent('7 evidence records')
+
+    const app = screen.getByLabelText('Application') as HTMLSelectElement
+    await waitFor(() => expect(app.options.length).toBeGreaterThan(1))
+    fireEvent.change(app, { target: { value: app.options[1].value } })
+    await waitFor(() => expect(calls.some((c) => c.includes(`application=${app.options[1].value}`))).toBe(true))
+
+    fireEvent.change(screen.getByLabelText('Collection method'), { target: { value: 'scheduled' } })
+    await waitFor(() => expect(calls[calls.length - 1]).toContain('collectionMethod=scheduled'))
+    expect(calls[calls.length - 1]).toContain(`application=${app.options[1].value}`)
+    // zeros, not the previous numbers
+    expect(await screen.findByLabelText('Evidence in scope')).toHaveTextContent('0 evidence records')
+    expect(screen.queryByText('42.9%')).not.toBeInTheDocument()
+    expect(screen.getByText(/no runs match these filters/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Active filters')).toHaveTextContent('collectionMethod = scheduled')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }))
+    await waitFor(() => expect(calls[calls.length - 1]).not.toContain('?'))
+    expect(await screen.findByLabelText('Evidence in scope')).toHaveTextContent('7 evidence records')
+  })
+
+  it('labels the page as offline sample data when the backend is unreachable', async () => {
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    renderOffline(<Dashboard />)
+    expect(await screen.findByText(/Offline sample data/)).toBeInTheDocument()
+    expect(screen.queryByText(/Demo data/)).not.toBeInTheDocument()
   })
 
   it('Frameworks tab shows Framework Compliance, the Pending Actions Work Queue and Critical Findings (mock)', async () => {
-    localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
     renderOffline(<Dashboard />)
 
     fireEvent.click(await screen.findByRole('tab', { name: 'Frameworks' }))
@@ -142,7 +220,7 @@ describe('Dashboard — App Owner', () => {
   })
 
   it('Applications tab shows the profile card and Upcoming Audits for this app (mock)', async () => {
-    localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
     renderOffline(<Dashboard />)
 
     fireEvent.click(await screen.findByRole('tab', { name: 'Applications' }))
@@ -155,7 +233,7 @@ describe('Dashboard — App Owner', () => {
   })
 
   it('Audit Readiness tab shows the composite score, Ready/At Risk band and Coverage by Framework table (mock)', async () => {
-    localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
     renderOffline(<Dashboard />)
 
     fireEvent.click(await screen.findByRole('tab', { name: 'Audit Readiness' }))
@@ -172,7 +250,7 @@ describe('Dashboard — App Owner', () => {
   })
 
   it('no longer offers the old Overview/Controls/Findings/Remediation/Compliance tabs', async () => {
-    localStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
     renderOffline(<Dashboard />)
 
     await screen.findByRole('tablist', { name: 'Dashboard sections' })
@@ -183,10 +261,10 @@ describe('Dashboard — App Owner', () => {
 })
 
 describe('Dashboard — Admin (platform-ops only)', () => {
-  afterEach(() => localStorage.removeItem(PERSONA_STORAGE_KEY))
+  afterEach(() => sessionStorage.removeItem(PERSONA_STORAGE_KEY))
 
   it('offers exactly the three ops tabs and no compliance, trend or leadership content', async () => {
-    localStorage.setItem(PERSONA_STORAGE_KEY, 'ADMIN')
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'ADMIN')
     renderOffline(<Dashboard />)
 
     const tablist = await screen.findByRole('tablist', { name: 'Dashboard sections' })

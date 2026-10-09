@@ -150,15 +150,18 @@ class InsightServicesTest {
     }
 
     @Test
-    void aiSummaryIsGroundedAndDeterministic() {
+    void evidenceSummaryIsDeterministicAndGroundedInTheStoredContent() {
         UUID id = UUID.fromString(ingestExisting("net-banking", "OS-AUDIT-LOGGING"));
         EvidenceSummary s1 = summaries.summarize(id);
         EvidenceSummary s2 = summaries.summarize(id);
-        assertThat(s1.simulated()).isTrue();
-        assertThat(s1.summary()).isEqualTo(s2.summary()).contains("[mock-ai]");
-        assertThat(s1.groundedOn()).anyMatch(g -> g.contains("control: OS-AUDIT-LOGGING"));
-        // UC-P2-3: the mock is a prompt digest, and the DTO must say so.
+        assertThat(s1.method()).isEqualTo("DETERMINISTIC_RULES");
+        assertThat(s1.model()).isEqualTo("deterministic-rules/v1");
         assertThat(s1.modelGenerated()).isFalse();
+        assertThat(s1.simulated()).isFalse(); // the evidence metadata does not say simulated=true
+        assertThat(s1.headline()).isEqualTo("Host audit logging enabled (OS-AUDIT-LOGGING, PCI DSS) — "
+                + "meets the automated checks. 1 of 1 check passed.");
+        assertThat(s1.summary()).isEqualTo(s2.summary()).startsWith(s1.headline());
+        assertThat(s1.groundedOn()).contains("check X: PASS [/findings/0]");
         assertThat(s1.evidenceId()).isEqualTo(id.toString());
     }
 

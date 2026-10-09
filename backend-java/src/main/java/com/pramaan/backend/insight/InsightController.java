@@ -217,9 +217,10 @@ public class InsightController {
         return auditSchedule.upcoming();
     }
 
+    /** Deterministic, rule-based summary of the stored content. {@code version} defaults to the current one. */
     @GetMapping("/evidence/{id}/summary")
-    public EvidenceSummary summary(@PathVariable UUID id) {
-        return summaries.summarize(id);
+    public EvidenceSummary summary(@PathVariable UUID id, @RequestParam(required = false) Integer version) {
+        return summaries.summarize(id, version);
     }
 
     @GetMapping("/evidence/{id}/context")

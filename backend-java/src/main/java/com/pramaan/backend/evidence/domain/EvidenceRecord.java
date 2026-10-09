@@ -73,6 +73,9 @@ public class EvidenceRecord {
     @Column(name = "reviewed_at")
     private Instant reviewedAt;
 
+    @jakarta.persistence.Column(name = "archived_at")
+    private Instant archivedAt;
+
     @Column(name = "lifecycle_note", length = 2000)
     private String lifecycleNote;
 
@@ -165,7 +168,15 @@ public class EvidenceRecord {
     public void setLifecycleState(EvidenceLifecycleState s) { this.lifecycleState = s; }
     public String getReviewedBy() { return reviewedBy; }
     public Instant getReviewedAt() { return reviewedAt; }
+    public Instant getArchivedAt() { return archivedAt; }
     public String getLifecycleNote() { return lifecycleNote; }
+
+    /** Retention archival: lifecycle state only - versions, objects and hashes are not touched. */
+    public void markArchived(Instant now) {
+        this.lifecycleState = EvidenceLifecycleState.ARCHIVED;
+        this.archivedAt = now;
+        this.updatedAt = now;
+    }
 
     /** Apply a lifecycle transition (validation happens in the service). */
     public void applyLifecycle(EvidenceLifecycleState to, String actor, String note, Instant now) {

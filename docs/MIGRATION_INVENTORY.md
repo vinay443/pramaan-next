@@ -40,7 +40,7 @@ Catalogued in `docs/01-product/product/ECS_MASTER_USE_CASE_REGISTRY.md` (150+ en
 - **AI/CP — AI assistant & copilots:** RAG Q&A + refusal, retrieval, drafting, classification, mapping; Audit / Governance / Executive / Ops copilots (local-LLM-first).
 - **OB / W — Observations & workflow:** observation raise/track/persist/auto-close (durable behind flag); workflow engine for onboarding, approval, mock audit, exception, report.
 
-Phase-2 AI dependency reality: only NL audit queries + AI evidence summaries touch the LLM; completeness detection, quality scoring, evidence similarity/reuse, and leadership dashboards are deterministic.
+Phase-2 AI dependency reality: in the ECS, only NL audit queries + AI evidence summaries touched the LLM; completeness detection, quality scoring, evidence similarity/reuse, and leadership dashboards were deterministic. In Pramaan Next evidence summaries are also deterministic and rule-based (no LLM — see `docs/evidence-summary.md`); only NL audit queries and the audit-prep narrative use the chat model.
 
 ## APIs
 
