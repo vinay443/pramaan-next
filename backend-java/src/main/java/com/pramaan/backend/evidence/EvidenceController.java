@@ -199,6 +199,24 @@ public class EvidenceController {
 
     // ---- Use Case 13 — lifecycle -----------------------------------------
 
+    /** Download the stored bytes of the latest (or the given) version. */
+    @GetMapping("/{id}/content")
+    public org.springframework.http.ResponseEntity<byte[]> content(@PathVariable UUID id,
+                                                                   @RequestParam(required = false) Integer version) {
+        EvidenceQueryService.EvidenceContent c = queries.content(id, version);
+        org.springframework.http.MediaType type;
+        try {
+            type = org.springframework.http.MediaType.parseMediaType(c.contentType());
+        } catch (RuntimeException e) {
+            type = org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
+        }
+        return org.springframework.http.ResponseEntity.ok()
+                .contentType(type)
+                .header("Content-Disposition", "attachment; filename=\"" + c.filename() + "\"")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(c.bytes());
+    }
+
     @GetMapping("/{id}/lifecycle")
     public EvidenceLifecycleView lifecycle(@PathVariable UUID id) {
         return lifecycle.get(id);

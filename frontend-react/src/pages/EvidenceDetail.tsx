@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import {
   getEvidence,
   getEvidenceLifecycle,
+  evidenceContentUrl,
   getEvidenceVersions,
   transitionEvidenceLifecycle,
   verifyEvidence,
@@ -108,7 +109,12 @@ export function EvidenceDetail() {
           <dt>Source system</dt>
           <dd>{ev.sourceSystem}</dd>
           <dt>Current version</dt>
-          <dd>{ev.currentVersion}</dd>
+          <dd>
+            {ev.currentVersion}{' '}
+            <a href={evidenceContentUrl(ev.evidenceId)} download>
+              Download latest
+            </a>
+          </dd>
           <dt>Lifecycle</dt>
           <dd>{ev.lifecycleState ?? '—'}</dd>
           <dt>Updated</dt>
@@ -210,7 +216,17 @@ export function EvidenceDetail() {
               { header: 'Type', cell: (v) => v.contentType },
               { header: 'Size', cell: (v) => `${v.sizeBytes} B` },
               { header: 'Collected', cell: (v) => new Date(v.collectedAt).toLocaleString() },
-              { header: '', cell: (v) => <button onClick={() => runVerify(v.version)}>Verify</button> },
+              {
+                header: '',
+                cell: (v) => (
+                  <>
+                    <button onClick={() => runVerify(v.version)}>Verify</button>{' '}
+                    <a href={evidenceContentUrl(ev.evidenceId, v.version)} download aria-label={`Download version ${v.version}`}>
+                      Download
+                    </a>
+                  </>
+                ),
+              },
             ]}
           />
         ) : null}

@@ -884,6 +884,11 @@ export function reportUrl(name: string, format: 'json' | 'csv', applicationSlug?
   return `${apiBaseUrl()}/api/v1/reports/${encodeURIComponent(name)}${buildQuery({ format, applicationSlug, framework })}`
 }
 
+/** Download URL for the stored bytes of an evidence record (latest version unless `version` is given). */
+export function evidenceContentUrl(id: string, version?: number): string {
+  return `${apiBaseUrl()}/api/v1/evidence/${encodeURIComponent(id)}/content${buildQuery({ version })}`
+}
+
 /** UC17 — regulator-ready filing (fixed cover-page schema), rendered inline as a preview. */
 export function getRegulatoryFiling(applicationSlug?: string, framework?: string): Promise<RegulatoryFiling> {
   return withFallback(

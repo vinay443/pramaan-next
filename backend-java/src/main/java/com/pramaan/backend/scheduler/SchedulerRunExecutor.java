@@ -77,10 +77,35 @@ public class SchedulerRunExecutor {
 
     @Async
     public void executeAsync(UUID runId) {
+        executeGuarded(runId);
+    }
+
+    /**
+     * Runs {@link #execute} and guarantees the run never stays PENDING / RUNNING: an unexpected exception
+     * marks it FAILED (with the reason), so it shows in history and stops blocking its schedule.
+     */
+    void executeGuarded(UUID runId) {
         try {
             execute(runId);
         } catch (RuntimeException ex) {
             log.error("scheduler run {} failed", runId, ex);
+            markFailed(runId, ex);
+        }
+    }
+
+    private void markFailed(UUID runId, RuntimeException ex) {
+        try {
+            runs.findById(runId).ifPresent(run -> {
+                if (run.getStatus() != SchedulerRun.Status.PENDING && run.getStatus() != SchedulerRun.Status.RUNNING) {
+                    return; // already finished; the exception came after completion
+                }
+                String reason = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
+                run.fail(clock.instant(), "run aborted: " + (reason.length() > 1800 ? reason.substring(0, 1800) : reason));
+                runs.save(run);
+                notifications.onRunFinished(run); // best effort, idempotent per run
+            });
+        } catch (RuntimeException inner) {
+            log.error("could not mark scheduler run {} as FAILED", runId, inner);
         }
     }
 

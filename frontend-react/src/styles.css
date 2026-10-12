@@ -255,6 +255,8 @@ code {
 .content {
   padding: 28px 36px 80px;
   max-width: 1200px;
+  /* grid item: let wide tables scroll inside .table-wrap instead of stretching the page */
+  min-width: 0;
 }
 
 .page > h1 {
@@ -1719,6 +1721,15 @@ pre.json {
 .dash-capped-table {
   max-height: 340px;
   overflow-y: auto;
+}
+
+.cell-ellipsis {
+  display: inline-block;
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 .dash-truncate {

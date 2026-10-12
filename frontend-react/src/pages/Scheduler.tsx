@@ -26,6 +26,7 @@ import type { NotificationSettings, RunView, ScheduleView } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
 import { DataTable, Empty, ErrorNote, Loading, Section, StatCard, StatusPill } from '../components/ui'
 
+const RUNS_PAGE_SIZE = 25
 const TERMINAL = new Set(['COMPLETED', 'PARTIAL', 'FAILED'])
 const isTerminal = (s: string | undefined) => s !== undefined && TERMINAL.has(s)
 const isActive = (s: string) => s === 'RUNNING' || s === 'PENDING'
@@ -150,17 +151,17 @@ function SlaBadge({ run }: { run: RunView }) {
   return <span className="muted">{isActive(run.status) ? 'In progress' : '—'}</span>
 }
 
-/** Roll-up of the runs currently listed: how many met the SLA, slowest and average duration. */
-function RunSummary({ runs }: { runs: RunView[] }) {
+/** Roll-up of the audit trails on this page: total, how many met the SLA, slowest and average duration. */
+function RunSummary({ runs, page, size, totalItems }: { runs: RunView[]; page: number; size: number; totalItems: number }) {
   const finished = runs.filter((r) => r.slaStatus === 'WITHIN_SLA' || r.slaStatus === 'BREACHED')
   const within = finished.filter((r) => r.slaStatus === 'WITHIN_SLA').length
   const durations = runs.map((r) => r.durationMs).filter((d): d is number => typeof d === 'number')
   const slowest = durations.length ? Math.max(...durations) : null
   const average = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null
   return (
-    <p className="muted" aria-label="Run summary">
-      {runs.length} runs · {within} of {finished.length} finished within SLA · slowest {fmtDuration(slowest)} · average{' '}
-      {fmtDuration(average)}
+    <p className="muted" aria-label="Audit trail summary">
+      Showing {page * size + 1}–{page * size + runs.length} of {totalItems} runs · on this page: {within} of{' '}
+      {finished.length} finished within SLA · slowest {fmtDuration(slowest)} · average {fmtDuration(average)}
     </p>
   )
 }
@@ -219,7 +220,7 @@ function Schedules({
 }) {
   const [inProgress, setInProgress] = useState<{ schedule: string; runId: string }>()
   const options = useAsync(() => listScheduleOptions(), [])
-  const schedules = useAsync(() => listSchedules(), [])
+  const schedules = useAsync(() => listSchedules(), [], { pollWhile: () => true, pollMs: 5000 })
   // Always fetched from the backend (no client cache) so a schedule lost in a restart is visible.
   const status = useAsync(() => getSystemStatus(), [schedules.data])
   const [form, setForm] = useState<ScheduleForm>(EMPTY_FORM)
@@ -372,7 +373,7 @@ function Schedules({
   )
 }
 
-const countOf = (text: string, key: string) => text.match(new RegExp(`${key}=(\d+)`))?.[1] ?? '—'
+const countOf = (text: string, key: string) => text.match(new RegExp(String.raw`${key}=(\d+)`))?.[1] ?? '—'
 
 /** Per-source connectivity (CONNECTED/FAILED) beside the counts the executor reports. */
 function SourceTable({ run }: { run: RunView }) {
@@ -619,9 +620,13 @@ export function Scheduler() {
 
   const applications = useAsync(() => listApplications(), [])
   const onboardedApps = (applications.data ?? []).filter((a) => a.active)
-  const runs = useAsync(() => listRuns(0, 25), [], {
-    pollWhile: (d) => (d?.items ?? []).some((r) => isActive(r.status)),
-  })
+  const [page, setPage] = useState(0)
+  const runs = useAsync(() => listRuns(page, RUNS_PAGE_SIZE), [page], { pollWhile: () => true, pollMs: 5000 })
+  // Out-of-range page (e.g. stale page after runs were removed): fall back to the last real page.
+  const lastPage = runs.data ? Math.max(0, runs.data.totalPages - 1) : 0
+  useEffect(() => {
+    if (runs.data && page > lastPage) setPage(lastPage)
+  }, [runs.data, page, lastPage])
   const selected = useAsync<RunView | undefined>(
     () => (selectedRunId ? getRun(selectedRunId) : Promise.resolve(undefined)),
     [selectedRunId, runs.data?.items.length],
@@ -657,6 +662,7 @@ export function Scheduler() {
       // application and every configured source. Omitting applications/sources
       // makes the backend default to all active apps + its default source set.
       const run = await startRun({ requestedBy: 'ui' })
+      setPage(0)
       runs.reload()
       setParams({ run: run.runId })
     } catch (e) {
@@ -671,6 +677,7 @@ export function Scheduler() {
     setError(undefined)
     try {
       const run = await retryRun(runId)
+      setPage(0)
       runs.reload()
       setParams({ run: run.runId })
     } catch (e) {
@@ -713,6 +720,7 @@ export function Scheduler() {
         canManage={canManage}
         onOpenRun={(runId) => setParams({ run: runId })}
         onRunStarted={(run) => {
+          setPage(0)
           runs.reload()
           setParams({ run: run.runId })
         }}
@@ -724,9 +732,28 @@ export function Scheduler() {
 
       {persona && SECURITY_VIEW_ROLES.includes(persona.code) ? <SecurityEventsPanel /> : null}
 
-      <Section title="Runs">
-        {runs.data && runs.data.items.length > 0 ? <RunSummary runs={runs.data.items} /> : null}
-        {runs.loading ? <Loading what="runs" /> : null}
+      <Section
+        title="Audit trails"
+        actions={
+          runs.data && runs.data.totalPages > 1 ? (
+            <div className="pager">
+              <button disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                Prev
+              </button>
+              <span>
+                Page {page + 1} / {runs.data.totalPages}
+              </span>
+              <button disabled={page + 1 >= runs.data.totalPages} onClick={() => setPage((p) => p + 1)}>
+                Next
+              </button>
+            </div>
+          ) : undefined
+        }
+      >
+        {runs.data && runs.data.items.length > 0 ? (
+          <RunSummary runs={runs.data.items} page={runs.data.page} size={runs.data.size} totalItems={runs.data.totalItems} />
+        ) : null}
+        {runs.loading ? <Loading what="audit trails" /> : null}
         {runs.error ? <ErrorNote message={runs.error} /> : null}
         {runs.data ? (
           <DataTable
@@ -745,7 +772,14 @@ export function Scheduler() {
               { header: 'Duration', cell: (r) => fmtDuration(r.durationMs) },
               { header: 'Queue wait', cell: (r) => fmtDuration(r.queuedMs) },
               { header: 'SLA', cell: (r) => <SlaBadge run={r} /> },
-              { header: 'Error', cell: (r) => errorSummary(r) },
+              {
+                header: 'Error',
+                cell: (r) => (
+                  <span className="cell-ellipsis" title={errorSummary(r)}>
+                    {errorSummary(r)}
+                  </span>
+                ),
+              },
               {
                 header: '',
                 cell: (r) => (

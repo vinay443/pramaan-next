@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { Scheduler } from './Scheduler'
@@ -87,7 +87,7 @@ describe('Scheduler', () => {
     expect(await screen.findByLabelText('Credential state for MOCK_JIRA')).toBeDisabled()
     // read-only data is still shown
     expect(screen.getByRole('heading', { name: 'Schedules' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Runs' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Audit trails' })).toBeInTheDocument()
     for (const b of screen.queryAllByRole('button', { name: /^(Retry|Run now|Activate|Deactivate)$/ })) {
       expect(b).toBeDisabled()
     }
@@ -97,10 +97,72 @@ describe('Scheduler', () => {
     renderOffline(<Scheduler />)
 
     expect(await screen.findByText(/SLA 60s per run/)).toBeInTheDocument()
-    const summary = await screen.findByLabelText('Run summary')
-    expect(summary.textContent).toMatch(/[0-9]+ runs · [0-9]+ of [0-9]+ finished within SLA · slowest .* · average/)
+    const summary = await screen.findByLabelText('Audit trail summary')
+    expect(summary.textContent).toMatch(/Showing 1–[0-9]+ of [0-9]+ runs · on this page: [0-9]+ of [0-9]+ finished within SLA · slowest .* · average/)
     expect(screen.getByRole('columnheader', { name: 'Queue wait' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'SLA' })).toBeInTheDocument()
+  })
+
+  it('per-source table shows the received / evidence / duplicates / failed numbers, and — when a source has no counts', async () => {
+    const { unmount } = renderOffline(<Scheduler />, '/?run=run-002')
+    const heading = await screen.findByRole('heading', { name: 'Per source' })
+    const table = await waitFor(() => {
+      const t = heading.parentElement?.querySelector('table')
+      if (!t) throw new Error('per-source table not rendered')
+      return t as HTMLElement
+    })
+    // run-002 / AGENT_OS_LINUX: received=4 ingested=3 duplicates=1 failed=0
+    const row = within(table).getByText('AGENT_OS_LINUX').closest('tr') as HTMLElement
+    const cells = within(row).getAllByRole('cell').map((c) => c.textContent)
+    expect(cells.slice(2, 6)).toEqual(['4', '3', '1', '0'])
+    unmount()
+
+    // run-003: "error: connector unavailable" — no counts to show
+    renderOffline(<Scheduler />, '/?run=run-003')
+    const h2 = await screen.findByRole('heading', { name: 'Per source' })
+    const t2 = await waitFor(() => {
+      const t = h2.parentElement?.querySelector('table')
+      if (!t) throw new Error('per-source table not rendered')
+      return t as HTMLElement
+    })
+    const row2 = within(t2).getByText('MOCK_SERVICENOW').closest('tr') as HTMLElement
+    expect(within(row2).getAllByRole('cell').map((c) => c.textContent).slice(2, 6)).toEqual(['—', '—', '—', '—'])
+  })
+
+  it('paginates the audit trails: shows the backend total and loads the next page', async () => {
+    const total = 30
+    const mk = (n: number) => ({
+      runId: 'pg-' + n, trigger: 'MANUAL', status: 'COMPLETED', applications: [], frameworks: [], sources: [],
+      received: 1, ingested: 1, duplicates: 0, failed: 0, perSource: {}, createdAt: '2026-10-09T10:00:00Z',
+    })
+    const reply = (body: unknown) =>
+      Promise.resolve({ ok: true, status: 200, statusText: 'OK', text: async () => JSON.stringify(body) })
+    const fetchMock = vi.fn((url: string) => {
+      const u = String(url)
+      if (u.includes('/api/v1/scheduler/runs?')) {
+        const page = Number(new URL(u, 'http://x').searchParams.get('page'))
+        const count = page === 0 ? 25 : total - 25
+        return reply({
+          items: Array.from({ length: count }, (_, i) => mk(page * 25 + i)),
+          page, size: 25, totalItems: total, totalPages: 2,
+        })
+      }
+      return Promise.reject(new TypeError('offline in test'))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<MemoryRouter><Scheduler /></MemoryRouter>)
+
+    const summary = await screen.findByLabelText('Audit trail summary')
+    expect(summary.textContent).toMatch(/Showing 1–25 of 30 runs/)
+    expect(screen.getByText('Page 1 / 2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Prev' })).toBeDisabled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+    expect(await screen.findByText('Page 2 / 2')).toBeInTheDocument()
+    expect((await screen.findByLabelText('Audit trail summary')).textContent).toMatch(/Showing 26–30 of 30 runs/)
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes('page=1&size=25'))).toBe(true)
   })
 
   it('shows Security events (rows as plain text) to an Auditor only', async () => {

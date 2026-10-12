@@ -3,6 +3,8 @@ package com.pramaan.backend.evidence;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -276,5 +278,46 @@ class EvidenceControllerWebTest {
                         .param("controlId", "ITPP-DOC-09"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalItems").value(2));
+    }
+
+    private String ingestText(String text) throws Exception {
+        String body = """
+                {"applicationSlug":"payments","controlId":"ITPP-DOC-03","framework":"ITPP",
+                 "sourceSystem":"SHAREPOINT","sourceObjectId":"dl-1","contentText":"%s"}
+                """.formatted(text);
+        String created = mvc.perform(post("/api/v1/evidence/ingest")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().is2xxSuccessful())
+                .andReturn().getResponse().getContentAsString();
+        return com.jayway.jsonpath.JsonPath.read(created, "$.evidenceId");
+    }
+
+    @Test
+    void contentDownloadReturnsStoredBytesForLatestAndOlderVersion() throws Exception {
+        String id = ingestText("policy v1");
+        ingestText("policy v2");
+
+        mvc.perform(get("/api/v1/evidence/{id}/content", id))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.allOf(org.hamcrest.Matchers.startsWith("attachment; filename=\""),
+                                org.hamcrest.Matchers.containsString("_v2."),
+                                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("|")))))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(content().bytes("policy v2".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+
+        mvc.perform(get("/api/v1/evidence/{id}/content", id).param("version", "1"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("_v1.")))
+                .andExpect(content().bytes("policy v1".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    }
+
+    @Test
+    void contentDownloadIs404ForUnknownEvidenceOrVersion() throws Exception {
+        String id = ingestText("policy v1");
+        mvc.perform(get("/api/v1/evidence/{id}/content", java.util.UUID.randomUUID()))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/evidence/{id}/content", id).param("version", "99"))
+                .andExpect(status().isNotFound());
     }
 }

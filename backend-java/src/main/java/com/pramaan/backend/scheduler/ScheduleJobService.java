@@ -66,6 +66,22 @@ public class ScheduleJobService {
                 jobs.countByActiveTrue(), jobs.findByActiveTrueAndNextRunAtLessThanEqual(clock.instant()).size());
     }
 
+    /**
+     * Runs execute on this JVM's async executor, so a PENDING / RUNNING run found at startup was cut off by the
+     * restart and will never finish. Mark it FAILED (kept in history) so it stops blocking its schedule.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    void failRunsOrphanedByRestart() {
+        List<SchedulerRun> orphaned = runs.findByStatusIn(List.of(SchedulerRun.Status.PENDING, SchedulerRun.Status.RUNNING));
+        for (SchedulerRun run : orphaned) {
+            run.fail(clock.instant(), "run aborted: backend restarted while this run was in progress");
+            runs.save(run);
+        }
+        if (!orphaned.isEmpty()) {
+            log.warn("marked {} run(s) left PENDING/RUNNING by a restart as FAILED", orphaned.size());
+        }
+    }
+
     public ScheduleOptions options() {
         return new ScheduleOptions(integrations.available(),
                 applications.findByActiveTrueOrderBySlugAsc().stream().map(ApplicationEntity::getSlug).toList(),
@@ -148,7 +164,11 @@ public class ScheduleJobService {
                 startRun(job, null);
                 started++;
             } catch (RunInProgressException e) {
-                log.info("scheduled job '{}' skipped: run {} still in progress", job.getName(), e.runId());
+                // Leave nextRunAt due: the slot is retried on the next tick once the active run finishes,
+                // instead of being silently skipped to the following interval.
+                log.warn("scheduled job '{}' skipped this tick: run {} still in progress; will retry next tick",
+                        job.getName(), e.runId());
+                continue;
             } catch (RuntimeException e) {
                 // Still advance below so a failing job retries on its next slot, not on every tick.
                 log.warn("scheduled job '{}' could not start a run: {}", job.getName(), e.getMessage());

@@ -534,6 +534,21 @@ paths:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceView" } } } }
         "404": { $ref: "#/components/responses/Error" }
 
+  /api/v1/evidence/{id}/content:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: version, in: query, required: false, description: "Version number; defaults to the latest", schema: { type: integer } }
+    get:
+      tags: [evidence]
+      summary: "UC01-FT003 — download the stored bytes of an evidence version (attachment)"
+      responses:
+        "200":
+          description: The evidence content, with its stored Content-Type and a Content-Disposition attachment filename
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "404": { $ref: "#/components/responses/Error" }
+
   /api/v1/evidence/{id}/lifecycle:
     parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
     get:

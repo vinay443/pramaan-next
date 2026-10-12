@@ -55,3 +55,16 @@ describe('EvidenceDetail evidence summary', () => {
     expect(screen.queryByText(/AI summary|prompt digest|model-generated/i)).not.toBeInTheDocument()
   })
 })
+
+describe('EvidenceDetail download (UC01-FT003)', () => {
+  it('links to the content endpoint for the latest version and for each version row', async () => {
+    renderAtEvidenceId('ev-001')
+
+    const latest = await screen.findByRole('link', { name: 'Download latest' })
+    expect(latest.getAttribute('href')?.endsWith('/api/v1/evidence/ev-001/content')).toBe(true)
+
+    const v = await screen.findByRole('link', { name: /^Download version [0-9]+$/ })
+    const n = v.getAttribute('aria-label')?.replace('Download version ', '')
+    expect(v.getAttribute('href')?.endsWith('/api/v1/evidence/ev-001/content?version=' + n)).toBe(true)
+  })
+})

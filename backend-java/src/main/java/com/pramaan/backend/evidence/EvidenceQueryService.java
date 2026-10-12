@@ -140,6 +140,39 @@ public class EvidenceQueryService {
                         "Evidence %s has no version %d".formatted(id, versionNumber)));
     }
 
+    /** Downloadable bytes of one version (latest when {@code versionNumber} is null); the object key is never exposed. */
+    public record EvidenceContent(String filename, String contentType, byte[] bytes) {}
+
+    public EvidenceContent content(UUID id, Integer versionNumber) {
+        EvidenceRecord r = require(id);
+        EvidenceVersion v = versionNumber == null ? r.latestVersion()
+                : r.getVersions().stream().filter(x -> x.getVersionNumber() == versionNumber)
+                        .findFirst().orElseThrow(() -> ApiException.notFound(
+                                "Evidence %s has no version %d".formatted(id, versionNumber)));
+        if (v == null) {
+            throw ApiException.notFound("Evidence " + id + " has no versions");
+        }
+        byte[] bytes = objectStore.get(v.getObjectKey())
+                .orElseThrow(() -> ApiException.notFound("Content for evidence " + id + " is not in the object store"));
+        String type = v.getContentType() == null || v.getContentType().isBlank()
+                ? "application/octet-stream" : v.getContentType();
+        String base = r.getEvidenceKey().replaceAll("[^A-Za-z0-9._-]+", "_");
+        if (base.length() > 100) {
+            base = base.substring(0, 100);
+        }
+        return new EvidenceContent(base + "_v" + v.getVersionNumber() + extensionOf(type), type, bytes);
+    }
+
+    private static String extensionOf(String contentType) {
+        String t = contentType.toLowerCase(java.util.Locale.ROOT);
+        if (t.contains("json")) return ".json";
+        if (t.contains("pdf")) return ".pdf";
+        if (t.contains("csv")) return ".csv";
+        if (t.contains("xml")) return ".xml";
+        if (t.startsWith("text/")) return ".txt";
+        return ".bin";
+    }
+
     public IntegrityReport verify(UUID id, Integer versionNumber) {
         EvidenceRecord r = require(id);
         EvidenceVersion v = versionNumber == null ? r.latestVersion()
