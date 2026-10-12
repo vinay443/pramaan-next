@@ -6,10 +6,14 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SourceConnectionService {
+
+    private static final Logger log = LoggerFactory.getLogger(SourceConnectionService.class);
 
     public record ConnectionView(String sourceSystem, String status, Instant updatedAt, String updatedBy) {}
 
@@ -56,6 +60,23 @@ public class SourceConnectionService {
         }
         connections.save(c);
         return view(source);
+    }
+
+    /**
+     * INVALID is a transient credential failure: after a run has recorded the failure, connectivity is
+     * simulated as restored so the next run succeeds with no manual repair. DISABLED is never touched.
+     * Returns true when the source was INVALID and is now VALID.
+     */
+    public boolean restoreAfterAuthFailure(String sourceSystem) {
+        SourceConnection c = connections.findById(key(sourceSystem)).orElse(null);
+        if (c == null || c.getStatus() != Status.INVALID) {
+            return false;
+        }
+        c.update(Status.VALID, "system:auto-restore", clock.instant());
+        connections.save(c);
+        log.info("source {} credential was INVALID; connectivity restored automatically for the next run",
+                c.getSourceSystem());
+        return true;
     }
 
     private ConnectionView view(String source) {

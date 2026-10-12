@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Runs a scheduler collection: pull from each integration, ingest, tally.
@@ -55,6 +56,7 @@ public class SchedulerRunExecutor {
     private final EvidenceRecordRepository records;
     private final EvidenceEmbeddingIndexer embeddingIndexer;
     private final Clock clock;
+    private final TransactionTemplate tx;
 
     public SchedulerRunExecutor(SchedulerRunRepository runs, ApplicationRepository applications,
                                 IntegrationRegistry integrations, EvidenceIngestionService ingestion,
@@ -62,7 +64,8 @@ public class SchedulerRunExecutor {
                                 SourceConnectionService connections,
                                 NotificationService notifications,
                                 EvidenceRecordRepository records, EvidenceEmbeddingIndexer embeddingIndexer,
-                                Clock clock) {
+                                Clock clock, TransactionTemplate tx) {
+        this.tx = tx;
         this.runs = runs;
         this.applications = applications;
         this.integrations = integrations;
@@ -141,15 +144,18 @@ public class SchedulerRunExecutor {
             perSource.put("_skipped", "not onboarded: " + String.join(",", skippedApps));
         }
 
+        List<String> authFailed = new java.util.ArrayList<>();
         for (String source : sources) {
             int sRecv = 0, sIng = 0, sDup = 0, sFail = 0;
             // Simulated credential state: a blocked source is neither polled nor ingested.
             Status connection = connectionStatus(source);
             if (connection != Status.VALID) {
                 boolean disabled = connection == Status.DISABLED;
+                if (!disabled) authFailed.add(source);
                 perSource.put(source, failure(disabled ? "CONNECTION_DISABLED" : "AUTH_FAILED", disabled
                         ? "Connection for " + source + " is disabled"
-                        : "Authentication failed for " + source + ": credential invalid or expired (HTTP 401)"));
+                        : "Authentication failed for " + source + ": credential invalid or expired (HTTP 401)."
+                                + " Connectivity restored automatically for the next run."));
                 failed++;
                 sourcesFailed++;
                 continue;
@@ -202,7 +208,12 @@ public class SchedulerRunExecutor {
         }
 
         run.complete(clock.instant(), received, ingested, duplicates, failed, perSource, sourcesFailed, sources.size());
-        runs.save(run);
+        // One step: the failed run is saved and the INVALID source restored together, and only for sources
+        // this run actually polled (a run that never touched it leaves the flag alone).
+        tx.executeWithoutResult(status -> {
+            runs.save(run);
+            authFailed.forEach(connections::restoreAfterAuthFailure);
+        });
         notifications.onRunFinished(run); // best effort, idempotent per run
         log.info("scheduler run {} complete: {}", runId, run.getMessage());
     }

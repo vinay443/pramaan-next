@@ -417,7 +417,7 @@ function SourceTable({ run }: { run: RunView }) {
 
 /** Simulated credential state per source: Invalid / Disabled sources are not polled and their runs fail. */
 function SourceConnections({ canManage }: { canManage: boolean }) {
-  const conns = useAsync(() => listSourceConnections(), [])
+  const conns = useAsync(() => listSourceConnections(), [], { pollWhile: () => true, pollMs: 5000 })
   const [error, setError] = useState<string>()
 
   async function change(source: string, status: string) {
@@ -433,7 +433,7 @@ function SourceConnections({ canManage }: { canManage: boolean }) {
   return (
     <Section title="Source connections">
       <p className="muted">
-        Simulate source credential state. An Invalid or Disabled source is not polled and its runs fail.
+        Simulate source credential state. Invalid fails the next run once, then recovers automatically (status returns to Valid). Disabled keeps failing until it is re-enabled.
       </p>
       {conns.loading ? <Loading what="connections" /> : null}
       {conns.error ? <ErrorNote message={conns.error} /> : null}

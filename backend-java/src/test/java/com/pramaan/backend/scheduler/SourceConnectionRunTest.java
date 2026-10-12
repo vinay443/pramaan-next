@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.pramaan.backend.application.OnboardingService;
 import com.pramaan.backend.evidence.EvidenceQueryService;
 import com.pramaan.backend.evidence.EvidenceQueryService.EvidenceFilter;
+import com.pramaan.backend.integrations.SourceConnection.Status;
 import com.pramaan.backend.integrations.SourceConnectionService;
 import com.pramaan.backend.integrations.SourceConnectionService.SetConnectionRequest;
 import com.pramaan.backend.scheduler.SchedulerDtos.RunRequest;
@@ -63,8 +64,10 @@ class SourceConnectionRunTest {
         assertThat(failed.sourceStatus()).containsEntry("MOCK_JIRA", "FAILED");
         assertThat(failed.sourceErrors().get("MOCK_JIRA").errorCode()).isEqualTo("AUTH_FAILED");
         assertThat(failed.sourceErrors().get("MOCK_JIRA").errorMessage())
-                .isEqualTo("Authentication failed for MOCK_JIRA: credential invalid or expired (HTTP 401)");
+                .startsWith("Authentication failed for MOCK_JIRA: credential invalid or expired (HTTP 401)")
+                .contains("Connectivity restored automatically for the next run");
         assertThat(evidenceFrom("MOCK_JIRA")).isZero();
+        assertThat(connections.statusOf("MOCK_JIRA")).isEqualTo(Status.VALID); // INVALID is transient
 
         set("MOCK_JIRA", "DISABLED");
         RunView disabled = run(List.of("MOCK_JIRA"));
@@ -91,8 +94,11 @@ class SourceConnectionRunTest {
     void restoringTheConnectionRecoversOnTheNextRunAndBothRunsRemainInHistory() {
         set("MOCK_JIRA", "INVALID");
         RunView failed = run(List.of("MOCK_JIRA"));
+        assertThat(failed.status()).isEqualTo("FAILED");
+        assertThat(failed.sourceErrors().get("MOCK_JIRA").errorCode()).isEqualTo("AUTH_FAILED");
+        assertThat(evidenceFrom("MOCK_JIRA")).isZero(); // no false-success evidence
 
-        set("MOCK_JIRA", "VALID");
+        // no manual set(VALID): connectivity is restored automatically after the failure was recorded
         RunView recovered = run(List.of("MOCK_JIRA"));
 
         assertThat(recovered.status()).isEqualTo("COMPLETED");
@@ -111,7 +117,6 @@ class SourceConnectionRunTest {
         RunView failed = run(List.of("MOCK_JIRA"));
         assertThat(failed.retryOfRunId()).isNull();
 
-        set("MOCK_JIRA", "VALID");
         RunView retry = scheduler.retry(UUID.fromString(failed.runId()));
         assertThat(retry.runId()).isNotEqualTo(failed.runId());
         assertThat(retry.retryOfRunId()).isEqualTo(failed.runId());
@@ -119,6 +124,30 @@ class SourceConnectionRunTest {
 
         executor.execute(UUID.fromString(retry.runId()));
         assertThat(scheduler.get(UUID.fromString(retry.runId())).status()).isEqualTo("COMPLETED");
+    }
+
+    @Test
+    void disabledStaysManualAndKeepsFailingUntilReEnabled() {
+        set("MOCK_JIRA", "DISABLED");
+        assertThat(run(List.of("MOCK_JIRA")).status()).isEqualTo("FAILED");
+        RunView again = run(List.of("MOCK_JIRA"));
+        assertThat(again.status()).isEqualTo("FAILED");
+        assertThat(again.sourceErrors().get("MOCK_JIRA").errorCode()).isEqualTo("CONNECTION_DISABLED");
+        assertThat(connections.statusOf("MOCK_JIRA")).isEqualTo(Status.DISABLED);
+
+        set("MOCK_JIRA", "VALID");
+        assertThat(run(List.of("MOCK_JIRA")).status()).isEqualTo("COMPLETED");
+    }
+
+    @Test
+    void aRunThatNeverPollsTheInvalidSourceLeavesItInvalid() {
+        set("MOCK_JIRA", "INVALID");
+        RunView other = run(List.of("MOCK_GITHUB"));
+
+        assertThat(other.status()).isEqualTo("COMPLETED");
+        assertThat(connections.statusOf("MOCK_JIRA")).isEqualTo(Status.INVALID);
+        assertThat(run(List.of("MOCK_JIRA")).status()).isEqualTo("FAILED"); // first poll still fails once
+        assertThat(connections.statusOf("MOCK_JIRA")).isEqualTo(Status.VALID);
     }
 
     @Test

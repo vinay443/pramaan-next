@@ -1526,6 +1526,10 @@ function applyMockConnectionFailures(run: RunView) {
         errorCode: disabled ? 'CONNECTION_DISABLED' : 'AUTH_FAILED',
         errorMessage: disabled ? `Connection for ${s} is disabled` : `Authentication failed for ${s}: credential invalid or expired (HTTP 401)`,
       }
+      if (!disabled) {
+        run.sourceErrors[s].errorMessage += '. Connectivity restored automatically for the next run.'
+        mockConnectionState.set(s, 'VALID') // INVALID is transient: the failure is recorded, then it recovers
+      }
       run.perSource[s] = 'error: ' + run.sourceErrors[s].errorMessage
     } else {
       run.sourceStatus[s] = 'CONNECTED'

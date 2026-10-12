@@ -115,6 +115,7 @@ class NotificationTest {
         notifications.saveSettings(settings(true, false, true));
         run("MOCK_GITHUB");
         assertThat(notifications.list("APP", false).items()).isEmpty(); // success muted
+        invalidateJira(); // INVALID recovers after one failed run, so fail it again
         run("MOCK_JIRA");
         assertThat(inApp("APP")).singleElement().satisfies(n -> assertThat(n.type()).isEqualTo("RUN_FAILED"));
     }
