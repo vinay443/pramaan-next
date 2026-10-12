@@ -10,6 +10,8 @@ public interface SchedulerRunRepository extends JpaRepository<SchedulerRun, UUID
 
     Page<SchedulerRun> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
+    Page<SchedulerRun> findByTriggerOrderByCreatedAtDesc(SchedulerRun.Trigger trigger, Pageable pageable);
+
     java.util.List<SchedulerRun> findByStatusIn(java.util.Collection<SchedulerRun.Status> statuses);
 
     /** A run of this schedule that is queued or running (and not an orphan older than {@code since}). */

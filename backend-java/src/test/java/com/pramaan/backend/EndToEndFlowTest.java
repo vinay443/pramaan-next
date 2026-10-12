@@ -54,7 +54,7 @@ class EndToEndFlowTest {
         // 3. UPLOAD — bulk file upload for the same app/control
         MockMultipartFile f = new MockMultipartFile("files", "hsts.conf", "text/plain",
                 "add_header Strict-Transport-Security max-age=63072000; HSTS enabled on nginx".getBytes());
-        String upJson = mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(f)
+        String upJson = mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(f).header("X-Pramaan-Role", "APP")
                         .param("applicationSlug", "net-banking").param("framework", "NGINX_BASELINING")
                         .param("controlId", "NGBL-C8").param("technology", "nginx")
                         .param("collectedBy", "app-owner"))

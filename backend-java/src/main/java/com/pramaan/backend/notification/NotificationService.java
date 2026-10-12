@@ -79,7 +79,8 @@ public class NotificationService {
 
             Severity severity = type == Type.RUN_COMPLETED ? Severity.INFO
                     : type == Type.RUN_PARTIAL ? Severity.WARNING : Severity.ERROR;
-            String what = run.getScheduleName() != null ? run.getScheduleName() : "manual run";
+            String what = run.getScheduleName() != null ? run.getScheduleName()
+                    : run.getTrigger() == SchedulerRun.Trigger.BULK ? "bulk upload" : "manual run";
             String title = switch (type) {
                 case RUN_COMPLETED -> "Run completed: " + what;
                 case RUN_PARTIAL -> "Run partially failed: " + what;

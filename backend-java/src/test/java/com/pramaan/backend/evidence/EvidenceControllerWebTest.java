@@ -172,7 +172,7 @@ class EvidenceControllerWebTest {
         MockMultipartFile f2 = new MockMultipartFile("files", "tls.txt", "text/plain",
                 "ssl_protocols TLSv1.2 TLSv1.3;".getBytes());
 
-        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(f1).file(f2)
+        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(f1).file(f2).header("X-Pramaan-Role", "APP")
                         .param("applicationSlug", "net-banking")
                         .param("framework", "PCI_DSS")
                         .param("controlId", "MW-TLS-VERSION")
@@ -200,7 +200,7 @@ class EvidenceControllerWebTest {
     void bulkFileUploadWithoutTechnologyFallsBackGracefully() throws Exception {
         MockMultipartFile f = new MockMultipartFile("files", "note.txt", "text/plain",
                 "manual evidence note".getBytes());
-        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(f)
+        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(f).header("X-Pramaan-Role", "APP")
                         .param("applicationSlug", "payments")
                         .param("framework", "ITPP")
                         .param("controlId", "ITPP-DOC-03"))
@@ -228,7 +228,7 @@ class EvidenceControllerWebTest {
         }
         MockMultipartFile zip = new MockMultipartFile("files", "evidence.zip", "application/zip", buf.toByteArray());
 
-        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(zip)
+        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(zip).header("X-Pramaan-Role", "APP")
                         .param("applicationSlug", "net-banking")
                         .param("framework", "PCI_DSS")
                         .param("controlId", "MW-TLS-VERSION"))
@@ -241,7 +241,7 @@ class EvidenceControllerWebTest {
     void bulkFileUploadReportsAPartialDuplicateDistinctlyFromFailuresAndSuccesses() throws Exception {
         MockMultipartFile original = new MockMultipartFile("files", "existing.txt", "text/plain",
                 "unchanged policy text".getBytes());
-        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(original)
+        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(original).header("X-Pramaan-Role", "APP")
                         .param("applicationSlug", "payments")
                         .param("framework", "ITPP")
                         .param("controlId", "ITPP-DOC-09"))
@@ -256,7 +256,7 @@ class EvidenceControllerWebTest {
         MockMultipartFile fresh = new MockMultipartFile("files", "new-evidence.txt", "text/plain",
                 "brand new content".getBytes());
 
-        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(duplicate).file(fresh)
+        mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(duplicate).file(fresh).header("X-Pramaan-Role", "APP")
                         .param("applicationSlug", "payments")
                         .param("framework", "ITPP")
                         .param("controlId", "ITPP-DOC-09"))

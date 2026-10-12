@@ -56,8 +56,17 @@ public class SchedulerController {
 
     @GetMapping("/runs")
     public PageResponse<RunView> list(@RequestParam(defaultValue = "0") int page,
-                                      @RequestParam(defaultValue = "20") int size) {
-        return service.list(page, size);
+                                      @RequestParam(defaultValue = "20") int size,
+                                      @RequestParam(required = false) String trigger) {
+        Trigger t = null;
+        if (trigger != null && !trigger.isBlank()) {
+            try {
+                t = Trigger.valueOf(trigger.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw com.pramaan.backend.common.ApiException.badRequest("trigger must be one of MANUAL, SCHEDULED, BULK");
+            }
+        }
+        return service.list(page, size, t);
     }
 
     @GetMapping("/runs/{runId}")

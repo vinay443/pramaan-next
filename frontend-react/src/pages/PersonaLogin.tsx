@@ -63,6 +63,9 @@ export function clearPersona(): void {
 /** Mirrors the backend SchedulerAccessPolicy: only these personas may change schedules, runs and source connections. */
 export const SCHEDULER_MANAGE_ROLES: PersonaCode[] = ['APP', 'ADMIN']
 
+/** Mirrors the backend SchedulerAccessPolicy: only these personas may upload evidence in bulk. */
+export const BULK_UPLOAD_ROLES: PersonaCode[] = ['APP', 'ADMIN']
+
 /** Mirrors the backend: only these personas may raise or close audit observations. */
 export const OBSERVATION_WRITE_ROLES: PersonaCode[] = ['AUDITOR', 'ADMIN']
 

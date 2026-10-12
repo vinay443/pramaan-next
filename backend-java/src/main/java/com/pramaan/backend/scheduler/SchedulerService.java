@@ -108,6 +108,10 @@ public class SchedulerService {
     public RunView retry(UUID runId, String actor) {
         SchedulerRun previous = runs.findById(runId)
                 .orElseThrow(() -> ApiException.notFound("unknown run: " + runId));
+        if (previous.getTrigger() == Trigger.BULK) {
+            throw ApiException.badRequest("run " + runId + " is a bulk-upload batch; retry it from Bulk Upload "
+                    + "by re-submitting the failed files (the originals are not stored until they ingest)");
+        }
         if (previous.getStatus() == Status.RUNNING || previous.getStatus() == Status.PENDING) {
             throw ApiException.conflict("run " + runId + " is still " + previous.getStatus());
         }
@@ -126,9 +130,15 @@ public class SchedulerService {
 
     @Transactional(readOnly = true)
     public PageResponse<RunView> list(int page, int size) {
-        return PageResponse.of(runs.findAllByOrderByCreatedAtDesc(
-                PageRequest.of(Math.max(page, 0), size <= 0 ? 20 : Math.min(size, 200)))
-                .map(this::view));
+        return list(page, size, null);
+    }
+
+    /** {@code trigger} optional: e.g. BULK lists only bulk-upload batches. */
+    @Transactional(readOnly = true)
+    public PageResponse<RunView> list(int page, int size, Trigger trigger) {
+        PageRequest pr = PageRequest.of(Math.max(page, 0), size <= 0 ? 20 : Math.min(size, 200));
+        return PageResponse.of((trigger == null ? runs.findAllByOrderByCreatedAtDesc(pr)
+                : runs.findByTriggerOrderByCreatedAtDesc(trigger, pr)).map(this::view));
     }
 
     private RunView view(SchedulerRun r) {

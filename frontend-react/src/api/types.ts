@@ -84,6 +84,22 @@ export interface BulkError {
   message: string
 }
 
+/** One file of a UC02 bulk-upload batch. status: CREATED | NEW_VERSION | DUPLICATE | REJECTED | FAILED. */
+export interface BulkFileOutcome {
+  index: number
+  filename: string
+  archive?: string | null
+  status: string
+  code?: string | null
+  message?: string | null
+  evidenceId?: string | null
+  version?: number | null
+  sha256?: string | null
+  sizeBytes?: number | null
+  /** FAILED (storage / processing) files can be re-submitted; REJECTED ones must be fixed first. */
+  retryable?: boolean
+}
+
 export interface BulkIngestResponse {
   received: number
   created: number
@@ -92,6 +108,11 @@ export interface BulkIngestResponse {
   failed: number
   results: IngestResult[]
   errors: BulkError[]
+  /** Present on /bulk/upload: the batch (a BULK scheduler run) and its per-file outcomes. */
+  batchId?: string
+  status?: string
+  uploadedBy?: string
+  files?: BulkFileOutcome[]
 }
 
 export interface EvidenceVersionView {

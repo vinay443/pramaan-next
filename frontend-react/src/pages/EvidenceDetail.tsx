@@ -212,7 +212,7 @@ export function EvidenceDetail() {
             rowKey={(v) => String(v.version)}
             columns={[
               { header: 'Ver', cell: (v) => v.version },
-              { header: 'SHA-256', cell: (v) => <code>{v.sha256.slice(0, 20)}…</code> },
+              { header: 'SHA-256', cell: (v) => <code className="hash-full" title={v.sha256}>{v.sha256}</code> },
               { header: 'Type', cell: (v) => v.contentType },
               { header: 'Size', cell: (v) => `${v.sizeBytes} B` },
               { header: 'Collected', cell: (v) => new Date(v.collectedAt).toLocaleString() },

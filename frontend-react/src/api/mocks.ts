@@ -16,6 +16,7 @@ import type {
   AdminUserView,
   AgentDescriptor,
   ApplicationView,
+  BulkFileOutcome,
   BulkIngestResponse,
   CheckDefView,
   CheckResultParams,
@@ -1304,14 +1305,36 @@ export function mockLifecycleTransition(
   return next
 }
 
-/** Mock for the multipart bulk-upload endpoint: builds one `IngestRequest` per selected
+/** Mock for the multipart bulk-upload endpoint: builds one `IngestRequest` per accepted
  *  file (a real .zip is not expanded client-side — that's server-only behavior — so in
- *  mock mode a .zip is just ingested as a single opaque item, same as any other file). */
+ *  mock mode a .zip is just ingested as a single opaque item, same as any other file).
+ *  Mirrors the real endpoint's shape: a batch id, a status, per-file outcomes (disallowed
+ *  types are REJECTED individually) and a persisted batch row for the "Recent batches" list. */
+const MOCK_BULK_ALLOWED = new Set([
+  'pdf', 'txt', 'csv', 'tsv', 'json', 'xml', 'yaml', 'yml', 'log', 'conf', 'cfg', 'ini', 'properties', 'md',
+  'xlsx', 'xls', 'docx', 'doc', 'pptx', 'png', 'jpg', 'jpeg', 'zip',
+])
+const mockBulkBatchRows: RunView[] = []
+let mockBulkSeq = 0
+
+export function mockBulkBatches(): RunView[] {
+  return mockBulkBatchRows
+}
+
 export function mockBulkIngestFiles(
   files: File[],
-  meta: { applicationSlug: string; framework: string; controlId: string; sourceSystem?: string },
+  meta: {
+    applicationSlug: string
+    framework: string
+    controlId: string
+    sourceSystem?: string
+    collectedBy?: string
+    retryOfBatchId?: string
+  },
 ): BulkIngestResponse {
-  const items: IngestRequest[] = files.map((f) => ({
+  const ext = (n: string) => (n.includes('.') ? n.slice(n.lastIndexOf('.') + 1).toLowerCase() : '')
+  const accepted = files.filter((f) => MOCK_BULK_ALLOWED.has(ext(f.name)))
+  const items: IngestRequest[] = accepted.map((f) => ({
     applicationSlug: meta.applicationSlug,
     controlId: meta.controlId,
     framework: meta.framework,
@@ -1320,7 +1343,76 @@ export function mockBulkIngestFiles(
     title: f.name,
     contentText: f.name,
   }))
-  return mockBulkIngest(items)
+  const base = mockBulkIngest(items)
+
+  let next = 0
+  const outcomes: BulkFileOutcome[] = files.map((f, index) => {
+    if (!MOCK_BULK_ALLOWED.has(ext(f.name))) {
+      return {
+        index,
+        filename: f.name,
+        status: 'REJECTED',
+        code: 'TYPE_NOT_ALLOWED',
+        message: `.${ext(f.name) || '(none)'} files are not accepted`,
+        retryable: false,
+      }
+    }
+    const r = base.results[next++]
+    return {
+      index,
+      filename: f.name,
+      status: String(r.outcome),
+      evidenceId: r.evidenceId,
+      version: r.version,
+      sha256: r.sha256,
+      sizeBytes: r.sizeBytes,
+      retryable: false,
+    }
+  })
+  const rejected = outcomes.filter((o) => o.status === 'REJECTED')
+  const status = rejected.length === 0 ? 'COMPLETED' : rejected.length === outcomes.length ? 'FAILED' : 'PARTIAL'
+  const uploadedBy = meta.collectedBy || currentPersona()?.name || 'App Owner'
+  mockBulkSeq += 1
+  const batchId = `bulk-batch-${String(mockBulkSeq).padStart(4, '0')}`
+  const now = new Date().toISOString()
+
+  const perSource: Record<string, string> = {}
+  outcomes.forEach((o) => {
+    perSource[o.filename] =
+      o.status === 'REJECTED'
+        ? `error: ${o.message} connectivity=FAILED errorCode=${o.code}`
+        : `outcome=${o.status} version=${o.version} sha256=${o.sha256} connectivity=CONNECTED`
+  })
+  mockBulkBatchRows.unshift({
+    runId: batchId,
+    trigger: 'BULK',
+    status,
+    requestedBy: uploadedBy,
+    applications: [meta.applicationSlug],
+    frameworks: [meta.framework],
+    sources: [meta.sourceSystem || 'BULK_UPLOAD'],
+    received: outcomes.length,
+    ingested: base.created + base.newVersions,
+    duplicates: base.duplicates,
+    failed: rejected.length,
+    perSource,
+    retryOfRunId: meta.retryOfBatchId ?? null,
+    triggeredBy: uploadedBy,
+    createdAt: now,
+    startedAt: now,
+    finishedAt: now,
+  })
+
+  return {
+    ...base,
+    received: outcomes.length,
+    failed: rejected.length,
+    errors: rejected.map((o) => ({ index: o.index, message: `${o.filename}: ${o.message}` })),
+    batchId,
+    status,
+    uploadedBy,
+    files: outcomes,
+  }
 }
 
 export function mockBulkIngest(items: IngestRequest[]): BulkIngestResponse {

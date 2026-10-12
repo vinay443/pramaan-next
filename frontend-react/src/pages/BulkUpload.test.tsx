@@ -3,8 +3,12 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BulkUpload } from './BulkUpload'
 import { renderOffline } from '../test/render'
+import { PERSONA_STORAGE_KEY } from './PersonaLogin'
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  sessionStorage.removeItem(PERSONA_STORAGE_KEY)
+})
 
 function makeFile(name: string, content: string, type = 'text/plain') {
   return new File([content], name, { type })
@@ -112,5 +116,76 @@ describe('BulkUpload', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Submit bulk' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/controlId must not be blank/i)
+  })
+
+  it('UC02: reports a disallowed file individually, keeps the rest of the batch and shows the batch id (mock)', async () => {
+    renderOffline(<BulkUpload />)
+    await userEvent.type(screen.getByLabelText('Control ID'), 'C-1')
+    await userEvent.selectOptions(screen.getByLabelText('Environment'), 'UAT')
+    const input = screen.getByLabelText('Choose files') as HTMLInputElement
+    await userEvent.upload(input, [makeFile('good.txt', 'a'), makeFile('tool.exe', 'MZ')])
+    await userEvent.click(screen.getByRole('button', { name: 'Submit bulk' }))
+
+    expect(await screen.findByText('Result')).toBeInTheDocument()
+    expect(screen.getByText(/^Batch$/)).toBeInTheDocument()
+    expect(screen.getByText('1 added successfully, 1 failed.')).toBeInTheDocument()
+    expect(screen.getByText('REJECTED')).toBeInTheDocument()
+    expect(screen.getByText('Not stored (1):', { exact: false })).toBeInTheDocument()
+    expect(screen.getAllByText(/files are not accepted/).length).toBeGreaterThan(0)
+    // a rejected file cannot be retried as-is; no retry button for it
+    expect(screen.queryByRole('button', { name: /Retry/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open this batch in the Repository' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/evidence?tag=batchId'),
+    )
+  })
+
+  it('UC02: sends the persona headers, uploader, environment and retry link; retries only the failed files', async () => {
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    const batch1 = {
+      batchId: 'b1', status: 'PARTIAL', uploadedBy: 'App Owner', received: 2, created: 1, newVersions: 0, duplicates: 0, failed: 1,
+      results: [{ evidenceId: 'e1', evidenceKey: 'k', applicationSlug: 'net-banking', controlId: 'C-1', framework: 'PCI_DSS', sourceSystem: 'BULK_UPLOAD', outcome: 'CREATED', version: 1, sha256: 'a'.repeat(64), sizeBytes: 1, sourceObjectId: 'ok.txt' }],
+      errors: [{ index: 1, message: 'flaky.txt: could not be stored' }],
+      files: [
+        { index: 0, filename: 'ok.txt', status: 'CREATED', evidenceId: 'e1', version: 1, sha256: 'a'.repeat(64), sizeBytes: 1, retryable: false },
+        { index: 1, filename: 'flaky.txt', status: 'FAILED', code: 'PROCESSING_ERROR', message: 'could not be stored (storage down) - retry this file', retryable: true },
+      ],
+    }
+    const batch2 = { ...batch1, batchId: 'b2', status: 'COMPLETED', received: 1, failed: 0, errors: [], results: [], files: [{ index: 0, filename: 'flaky.txt', status: 'CREATED', evidenceId: 'e2', version: 1, sha256: 'b'.repeat(64), sizeBytes: 1, retryable: false }] }
+    const calls: Array<{ url: string; init: RequestInit }> = []
+    const ok = (body: unknown) => ({ ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(JSON.stringify(body)) })
+    renderOffline(<BulkUpload />)
+    vi.stubGlobal('fetch', vi.fn((url: string, init: RequestInit) => {
+      calls.push({ url, init })
+      if (url.includes('/bulk/upload')) return Promise.resolve(ok(calls.filter((c) => c.url.includes('/bulk/upload')).length === 1 ? batch1 : batch2))
+      return Promise.resolve(ok({ items: [], page: 0, size: 10, totalItems: 0, totalPages: 1 }))
+    }))
+
+    await userEvent.type(screen.getByLabelText('Control ID'), 'C-1')
+    await userEvent.selectOptions(screen.getByLabelText('Environment'), 'PROD')
+    await userEvent.upload(screen.getByLabelText('Choose files') as HTMLInputElement, [makeFile('ok.txt', 'a'), makeFile('flaky.txt', 'b')])
+    await userEvent.click(screen.getByRole('button', { name: 'Submit bulk' }))
+
+    expect(await screen.findByText('Not stored (1):', { exact: false })).toBeInTheDocument()
+    const first = calls.find((c) => c.url.includes('/bulk/upload'))!
+    expect(first.init.headers).toMatchObject({ 'X-Pramaan-Role': 'APP', 'X-Pramaan-User': 'App Owner' })
+    const form1 = first.init.body as FormData
+    expect(form1.get('environment')).toBe('PROD')
+    expect(form1.get('collectedBy')).toBe('App Owner')
+    expect(form1.getAll('files')).toHaveLength(2)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Retry 1 failed file' }))
+    await screen.findByText('b2')
+    const retryCall = calls.filter((c) => c.url.includes('/bulk/upload'))[1]
+    const form2 = retryCall.init.body as FormData
+    expect(form2.get('retryOfBatchId')).toBe('b1')
+    expect((form2.getAll('files') as File[]).map((f) => f.name)).toEqual(['flaky.txt'])
+  })
+
+  it('UC02: a role that may not upload sees the reason and cannot submit', async () => {
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'AUDITOR')
+    renderOffline(<BulkUpload />)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/cannot upload evidence/i)
+    expect(screen.getByRole('button', { name: 'Submit bulk' })).toBeDisabled()
   })
 })

@@ -39,6 +39,9 @@ public class SchedulerAccessPolicy implements HandlerInterceptor {
     /** Canonical persona codes (frontend PersonaLogin.tsx). */
     public static final Set<String> KNOWN_ROLES = Set.of("APP", "AUDITOR", "FH", "VH", "CIO", "ADMIN");
     static final Set<String> MANAGE_ROLES = Set.of("APP", "ADMIN");
+    /** Bulk evidence upload (POST /api/v1/evidence/bulk/upload): same writers as the scheduler. */
+    static final Set<String> UPLOAD_ROLES = Set.of("APP", "ADMIN");
+    static final String BULK_UPLOAD_PATH = "/api/v1/evidence/bulk/upload";
     static final Set<String> SECURITY_ROLES = Set.of("ADMIN", "AUDITOR");
     /** Retention: everyone reads the policy and runs, only these change the policy or archive. */
     static final Set<String> RETENTION_ROLES = Set.of("ADMIN");
@@ -77,6 +80,12 @@ public class SchedulerAccessPolicy implements HandlerInterceptor {
                 security.record(Type.ACCESS_DENIED, "refused: change retention policy or archive (" + req.getMethod() + ")", req);
                 return reject(res, HttpServletResponse.SC_FORBIDDEN, "FORBIDDEN",
                         "Role " + role + " is not permitted to change the retention policy or run archival");
+            }
+        } else if (uri.equals(BULK_UPLOAD_PATH)) {
+            if (!UPLOAD_ROLES.contains(role)) {
+                security.record(Type.ACCESS_DENIED, "refused: bulk evidence upload (" + req.getMethod() + ")", req);
+                return reject(res, HttpServletResponse.SC_FORBIDDEN, "FORBIDDEN",
+                        "Role " + role + " is not permitted to upload evidence");
             }
         } else if (isObservation(uri)) {
             boolean read = HttpMethod.GET.matches(req.getMethod()) || HttpMethod.HEAD.matches(req.getMethod());
@@ -124,7 +133,7 @@ public class SchedulerAccessPolicy implements HandlerInterceptor {
             case "scheduler" -> s[4].equals("runs") && s.length >= 6 ? s[5] : null;
             case "schedules" -> s[4].equals("options") ? null : s[4];
             case "notifications" -> s[4].equals("settings") || s[4].equals("read-all") ? null : s[4];
-            case "evidence", "observations" -> s[4];
+            case "evidence", "observations" -> s[4].equals("bulk") ? null : s[4];
             default -> null;
         };
         if (id == null) return null;
@@ -160,7 +169,7 @@ public class SchedulerAccessPolicy implements HandlerInterceptor {
                     "/api/v1/sources/**", "/api/v1/system/**",
                     "/api/v1/notifications", "/api/v1/notifications/**", "/api/v1/security/**",
                     "/api/v1/evidence/*/observations", "/api/v1/observations", "/api/v1/observations/**",
-                    "/api/v1/dashboard/**", "/api/v1/retention/**");
+                    "/api/v1/dashboard/**", "/api/v1/retention/**", BULK_UPLOAD_PATH);
         }
     }
 }

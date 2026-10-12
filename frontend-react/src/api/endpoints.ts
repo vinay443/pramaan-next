@@ -407,6 +407,12 @@ export interface BulkUploadMeta {
   sourceSystem?: string
   technology?: string
   collectedBy?: string
+  /** PROD | UAT | DR | DEV … — stored as the `environment` tag. */
+  environment?: string
+  /** Links a re-submission of failed files to the batch they came from. */
+  retryOfBatchId?: string
+  /** Browser-computed SHA-256 per file name; the server rejects a file whose received bytes hash differently. */
+  checksums?: Record<string, string>
 }
 
 /** Uploads files (or a single .zip, expanded server-side into one item per entry) via
@@ -422,6 +428,9 @@ export function ingestBulkUpload(files: File[], meta: BulkUploadMeta): Promise<B
       if (meta.sourceSystem) form.set('sourceSystem', meta.sourceSystem)
       if (meta.technology) form.set('technology', meta.technology)
       if (meta.collectedBy) form.set('collectedBy', meta.collectedBy)
+      if (meta.environment) form.set('environment', meta.environment)
+      if (meta.retryOfBatchId) form.set('retryOfBatchId', meta.retryOfBatchId)
+      if (meta.checksums && Object.keys(meta.checksums).length > 0) form.set('checksums', JSON.stringify(meta.checksums))
       files.forEach((f) => form.append('files', f))
       return apiFetchMultipart<BulkIngestResponse>('/api/v1/evidence/bulk/upload', form)
     },
@@ -456,6 +465,17 @@ export function listRuns(page = 0, size = 20): Promise<Page<RunView>> {
     () => {
       const all = mock.mockRunsList()
       return { items: all.slice(page * size, page * size + size), page, size, totalItems: all.length, totalPages: Math.max(1, Math.ceil(all.length / size)) }
+    },
+  )
+}
+
+/** Recent UC02 bulk-upload batches (BULK scheduler runs), newest first. */
+export function listBulkBatches(size = 10): Promise<Page<RunView>> {
+  return withFallback(
+    () => apiFetch<Page<RunView>>(`/api/v1/scheduler/runs${buildQuery({ trigger: 'BULK', size })}`),
+    () => {
+      const all = mock.mockBulkBatches()
+      return { items: all.slice(0, size), page: 0, size, totalItems: all.length, totalPages: 1 }
     },
   )
 }

@@ -14,7 +14,7 @@ export function EvidenceRepository() {
   const [searchParams] = useSearchParams()
   const [filters, setFilters] = useState<EvidenceQueryParams>(() => {
     const seed: EvidenceQueryParams = {}
-    for (const k of ['applicationSlug', 'framework', 'collectionMethod', 'collectedAfter', 'collectedBefore'] as const) {
+    for (const k of ['applicationSlug', 'framework', 'collectionMethod', 'collectedAfter', 'collectedBefore', 'tag'] as const) {
       const v = searchParams.get(k)
       if (v) seed[k] = v
     }

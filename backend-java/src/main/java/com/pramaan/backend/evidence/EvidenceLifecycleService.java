@@ -70,18 +70,25 @@ public class EvidenceLifecycleService {
     /** Called by the ingestion path (the only writer of evidence). No new state machine outside this. */
     @Transactional
     public void recordIngestion(EvidenceRecord record, boolean created, Instant now) {
+        recordIngestion(record, created, now, null);
+    }
+
+    /** As above, attributing the event to the uploader/collector ({@code actor}; null keeps the old behaviour). */
+    @Transactional
+    public void recordIngestion(EvidenceRecord record, boolean created, Instant now, String actor) {
+        String who = actor == null || actor.isBlank() ? null : actor.trim();
         if (created) {
-            append(record, null, EvidenceLifecycleState.DRAFT, "INGESTED", record.getReviewedBy(),
+            append(record, null, EvidenceLifecycleState.DRAFT, "INGESTED", who != null ? who : record.getReviewedBy(),
                     "evidence ingested", now);
             return;
         }
         EvidenceLifecycleState from = record.getLifecycleState();
         if (from == EvidenceLifecycleState.DRAFT || from == EvidenceLifecycleState.SUBMITTED) {
-            append(record, from, from, "NEW_VERSION", null, "new version ingested", now);
+            append(record, from, from, "NEW_VERSION", who, "new version ingested", now);
         } else {
             record.applyLifecycle(EvidenceLifecycleState.SUBMITTED, null, "superseding version ingested", now);
             append(record, from, EvidenceLifecycleState.SUBMITTED, "RE_SUBMITTED",
-                    null, "new version ingested — re-review required", now);
+                    who, "new version ingested — re-review required", now);
         }
     }
 

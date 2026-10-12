@@ -15,16 +15,11 @@ import com.pramaan.backend.evidence.EvidenceQueryService.EvidenceFilter;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.URLConnection;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,9 +39,11 @@ public class EvidenceController {
     private final EvidenceIngestionService ingestion;
     private final EvidenceQueryService queries;
     private final EvidenceLifecycleService lifecycle;
+    private final BulkUploadService bulkUploads;
 
     public EvidenceController(EvidenceIngestionService ingestion, EvidenceQueryService queries,
-                              EvidenceLifecycleService lifecycle) {
+                              EvidenceLifecycleService lifecycle, BulkUploadService bulkUploads) {
+        this.bulkUploads = bulkUploads;
         this.ingestion = ingestion;
         this.queries = queries;
         this.lifecycle = lifecycle;
@@ -80,80 +77,55 @@ public class EvidenceController {
     }
 
     /**
-     * Bulk file upload: each file becomes one evidence item under the given app/framework/control.
-     * A file named/typed as a zip archive is expanded server-side and each entry inside it becomes
-     * its own evidence item instead of being ingested as a single opaque blob.
+     * UC02 bulk file upload: one batch (a BULK scheduler run, id returned as {@code batchId}) of files under the
+     * given app/framework/control. Role (APP / ADMIN) and header hygiene are enforced by SchedulerAccessPolicy.
+     * Batch-level problems (missing or unsafe metadata, no files) are a clear 400; per-file problems (type, size,
+     * malware signature, hash mismatch, storage failure) are reported per file while the rest of the batch is
+     * still processed. A zip is expanded server-side, each entry becoming its own evidence item.
+     *
+     * <p>{@code checksums} is an optional JSON object {@code {"file.pdf":"<sha256 hex>"}}: when a client supplies
+     * the hash it computed, the server rejects the file if the received bytes hash differently.
+     * {@code retryOfBatchId} links a re-submission of failed files to the batch they came from.
      */
     @PostMapping(path = "/bulk/upload", consumes = "multipart/form-data")
-    public BulkIngestResponse bulkUpload(
-            @RequestParam String applicationSlug,
-            @RequestParam String framework,
-            @RequestParam String controlId,
+    public BulkUploadService.BulkUploadResponse bulkUpload(
+            @RequestParam(required = false) String applicationSlug,
+            @RequestParam(required = false) String framework,
+            @RequestParam(required = false) String controlId,
             @RequestParam(defaultValue = "BULK_UPLOAD") String sourceSystem,
             @RequestParam(required = false) String collectedBy,
             @RequestParam(required = false) String technology,
-            @RequestParam("files") List<MultipartFile> files) {
-        List<IngestRequest> requests = new ArrayList<>();
-        Map<String, String> tags = technology == null || technology.isBlank()
-                ? Map.of("ingest.channel", "bulk-upload")
-                : Map.of("ingest.channel", "bulk-upload", "technology", technology.trim());
-        for (MultipartFile file : files) {
-            if (isZip(file)) {
-                requests.addAll(expandZip(file, applicationSlug, controlId, framework, sourceSystem, collectedBy, tags));
-            } else {
-                requests.add(toIngestRequest(file, applicationSlug, controlId, framework, sourceSystem, collectedBy, tags));
+            @RequestParam(required = false) String environment,
+            @RequestParam(required = false) String retryOfBatchId,
+            @RequestParam(required = false) String checksums,
+            @RequestHeader(value = "X-Pramaan-User", required = false) String user,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files) {
+        List<BulkUploadService.UploadedFile> parts = new ArrayList<>();
+        for (MultipartFile file : files == null ? List.<MultipartFile>of() : files) {
+            try {
+                parts.add(new BulkUploadService.UploadedFile(file.getOriginalFilename(), file.getContentType(),
+                        file.getBytes()));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
             }
         }
-        return ingestion.ingestBulk(requests);
+        String uploader = collectedBy != null && !collectedBy.isBlank() ? collectedBy : user;
+        return bulkUploads.upload(new BulkUploadService.BatchMeta(applicationSlug, framework, controlId, sourceSystem,
+                technology, environment, uploader, retryOfBatchId, parseChecksums(checksums)), parts);
     }
 
-    private static boolean isZip(MultipartFile file) {
-        String name = file.getOriginalFilename();
-        return (name != null && name.toLowerCase(Locale.ROOT).endsWith(".zip"))
-                || "application/zip".equals(file.getContentType())
-                || "application/x-zip-compressed".equals(file.getContentType());
-    }
-
-    private static IngestRequest toIngestRequest(MultipartFile file, String applicationSlug, String controlId,
-            String framework, String sourceSystem, String collectedBy, Map<String, String> tags) {
+    private Map<String, String> parseChecksums(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
         try {
-            return new IngestRequest(applicationSlug, controlId, framework, sourceSystem,
-                    file.getOriginalFilename(), file.getOriginalFilename(), file.getContentType(),
-                    Base64.getEncoder().encodeToString(file.getBytes()), null,
-                    Instant.now(), collectedBy,
-                    Map.of("upload.filename", String.valueOf(file.getOriginalFilename())),
-                    tags);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+            Map<String, String> out = new java.util.LinkedHashMap<>();
+            new com.fasterxml.jackson.databind.ObjectMapper().readTree(json).fields()
+                    .forEachRemaining(e -> out.put(e.getKey(), e.getValue().asText()));
+            return out;
+        } catch (IOException | RuntimeException e) {
+            throw com.pramaan.backend.common.ApiException.badRequest("checksums must be a JSON object {\"file\":\"sha256\"}");
         }
-    }
-
-    private static List<IngestRequest> expandZip(MultipartFile zip, String applicationSlug, String controlId,
-            String framework, String sourceSystem, String collectedBy, Map<String, String> tags) {
-        List<IngestRequest> requests = new ArrayList<>();
-        try (ZipInputStream zis = new ZipInputStream(zip.getInputStream())) {
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                if (entry.isDirectory()) {
-                    continue;
-                }
-                String entryName = entry.getName();
-                String fileName = entryName.contains("/") ? entryName.substring(entryName.lastIndexOf('/') + 1) : entryName;
-                if (fileName.isBlank()) {
-                    continue;
-                }
-                byte[] bytes = zis.readAllBytes();
-                requests.add(new IngestRequest(applicationSlug, controlId, framework, sourceSystem,
-                        entryName, fileName, URLConnection.guessContentTypeFromName(fileName),
-                        Base64.getEncoder().encodeToString(bytes), null,
-                        Instant.now(), collectedBy,
-                        Map.of("upload.filename", fileName, "upload.archive", String.valueOf(zip.getOriginalFilename())),
-                        tags));
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        return requests;
     }
 
     // ---- repository reads --------------------------------------------------

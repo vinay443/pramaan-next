@@ -15,6 +15,10 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /** Optional so the handler still works if built without the security module (e.g. slice tests). */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.pramaan.backend.security.SecurityEventService security;
+
     public record ErrorBody(Instant timestamp, int status, String error, String message) {
         static ErrorBody of(HttpStatus s, String msg) {
             return new ErrorBody(Instant.now(), s.value(), s.getReasonPhrase(), msg);
@@ -53,6 +57,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
     ResponseEntity<ErrorBody> handleValidation(Exception ex) {
         return ResponseEntity.badRequest().body(ErrorBody.of(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
+    /** A file bigger than spring.servlet.multipart limits: a clear 413 (and an audit event), not a 500. */
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    ResponseEntity<ErrorBody> handleUploadTooLarge(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        if (security != null) {
+            security.record(com.pramaan.backend.security.SecurityEvent.Type.UPLOAD_REJECTED,
+                    "upload exceeds the server size limit");
+        }
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(ErrorBody.of(HttpStatus.PAYLOAD_TOO_LARGE,
+                "Upload rejected: a file or the whole request exceeds the server size limit (25 MB per file, 100 MB per request). "
+                        + "Nothing was stored; remove the oversized file and submit again."));
     }
 
     /** A schedule already has a queued / running run. */

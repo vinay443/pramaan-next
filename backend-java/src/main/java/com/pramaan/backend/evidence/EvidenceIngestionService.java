@@ -37,6 +37,9 @@ public class EvidenceIngestionService {
 
     private static final Logger log = LoggerFactory.getLogger(EvidenceIngestionService.class);
 
+    /** Tags that describe the batch which created a version (see BulkUploadService); never moved by a duplicate. */
+    private static final java.util.Set<String> BATCH_SCOPED_TAGS = java.util.Set.of("batchId", "uploadedBy");
+
     private final EvidenceRecordRepository records;
     private final ApplicationService applications;
     private final ObjectStore objectStore;
@@ -150,8 +153,11 @@ public class EvidenceIngestionService {
             String dupName = EvidenceNaming.standardName(record.getApplicationSlug(),
                     record.getControlId(), evidenceType, collectedAt, record.getCurrentVersion());
             record.setTitle(dupName);
-            applyTags(record, standardTags(req, technology, frameworks, evidenceType, dupName,
-                    collectionMethod, record.getCurrentVersion()));
+            Map<String, String> dupTags = new LinkedHashMap<>(standardTags(req, technology, frameworks, evidenceType,
+                    dupName, collectionMethod, record.getCurrentVersion()));
+            // a duplicate re-upload adds no version, so it must not re-home the record to the newer batch/uploader
+            dupTags.keySet().removeAll(BATCH_SCOPED_TAGS);
+            applyTags(record, dupTags);
             records.save(record);
             return result(record, IngestOutcome.DUPLICATE, latest);
         }
@@ -172,7 +178,7 @@ public class EvidenceIngestionService {
         applyTags(record, standardTags(req, technology, frameworks, evidenceType, standardName,
                 collectionMethod, nextVersion));
         records.save(record);
-        lifecycle.recordIngestion(record, created, now);
+        lifecycle.recordIngestion(record, created, now, req.collectedBy());
         autoEvaluate(record);
 
         return result(record, created ? IngestOutcome.CREATED : IngestOutcome.NEW_VERSION, version);

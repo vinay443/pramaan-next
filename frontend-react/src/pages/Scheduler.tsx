@@ -561,7 +561,7 @@ function NotificationSettingsPanel({ canManage }: { canManage: boolean }) {
 }
 
 const SECURITY_VIEW_ROLES: PersonaCode[] = ['ADMIN', 'AUDITOR']
-const EVENT_TYPES = ['ACCESS_DENIED', 'UNKNOWN_ROLE', 'INPUT_REJECTED', 'INVALID_IDENTIFIER']
+const EVENT_TYPES = ['ACCESS_DENIED', 'UNKNOWN_ROLE', 'INPUT_REJECTED', 'INVALID_IDENTIFIER', 'UPLOAD_REJECTED']
 
 /** Blocked-request audit trail (Admin / Auditor). All fields render as plain text. */
 function SecurityEventsPanel() {
@@ -784,7 +784,8 @@ export function Scheduler() {
                 header: '',
                 cell: (r) => (
                   <button
-                    disabled={!canManage || busy || r.status === 'RUNNING' || r.status === 'PENDING'}
+                    disabled={!canManage || busy || r.status === 'RUNNING' || r.status === 'PENDING' || r.trigger === 'BULK'}
+                    title={r.trigger === 'BULK' ? 'Bulk-upload batches are retried from Bulk Upload (re-submit the failed files)' : undefined}
                     onClick={(e) => {
                       e.stopPropagation()
                       retry(r.runId)

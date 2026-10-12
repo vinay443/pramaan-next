@@ -14,7 +14,7 @@ import java.util.UUID;
 @Table(name = "security_event")
 public class SecurityEvent {
 
-    public enum Type { ACCESS_DENIED, UNKNOWN_ROLE, INPUT_REJECTED, INVALID_IDENTIFIER }
+    public enum Type { ACCESS_DENIED, UNKNOWN_ROLE, INPUT_REJECTED, INVALID_IDENTIFIER, UPLOAD_REJECTED }
 
     @Id
     private UUID id;
