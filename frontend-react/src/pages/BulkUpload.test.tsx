@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BulkUpload } from './BulkUpload'
 import { renderOffline } from '../test/render'
@@ -187,5 +187,44 @@ describe('BulkUpload', () => {
     renderOffline(<BulkUpload />)
     expect(await screen.findByRole('alert')).toHaveTextContent(/cannot upload evidence/i)
     expect(screen.getByRole('button', { name: 'Submit bulk' })).toBeDisabled()
+  })
+
+  it('browse dialog: files chosen via the input appear in the list and are submitted (input is reset after the change)', async () => {
+    renderOffline(<BulkUpload />)
+    await userEvent.type(screen.getByLabelText('Control ID'), 'C-1')
+    const input = screen.getByLabelText('Choose files') as HTMLInputElement
+    const a = makeFile('browse-a.txt', 'a')
+    const b = makeFile('browse-b.txt', 'b')
+    // emulate a real browser: the handler's reset empties the live FileList before React runs the state updater
+    Object.defineProperty(input, 'files', { configurable: true, value: [a, b] })
+    fireEvent.change(input)
+    expect(screen.getByText('browse-a.txt')).toBeInTheDocument()
+    expect(screen.getByText('browse-b.txt')).toBeInTheDocument()
+    expect(screen.queryByText('No files selected.')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Submit bulk' }))
+    expect(await screen.findByText('Result')).toBeInTheDocument()
+    expect(screen.getAllByText('browse-a.txt').length).toBeGreaterThan(0)
+    expect(screen.getByText('Received').closest('.card')?.textContent).toContain('2')
+  })
+
+  it('browse dialog: re-selecting the same file after the reset still shows it', async () => {
+    renderOffline(<BulkUpload />)
+    await userEvent.upload(screen.getByLabelText('Choose files') as HTMLInputElement, makeFile('again.txt', 'x'))
+    expect(screen.getByText('again.txt')).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText('Remove again.txt'))
+    expect(screen.queryByText('again.txt')).not.toBeInTheDocument()
+    await userEvent.upload(screen.getByLabelText('Choose files') as HTMLInputElement, makeFile('again.txt', 'x'))
+    expect(screen.getByText('again.txt')).toBeInTheDocument()
+  })
+
+  it('drop zone opens the file input with Enter and Space', async () => {
+    renderOffline(<BulkUpload />)
+    const input = screen.getByLabelText('Choose files') as HTMLInputElement
+    const click = vi.spyOn(input, 'click')
+    screen.getByRole('button', { name: 'File drop zone' }).focus()
+    await userEvent.keyboard('{Enter}')
+    await userEvent.keyboard(' ')
+    expect(click).toHaveBeenCalledTimes(2)
   })
 })

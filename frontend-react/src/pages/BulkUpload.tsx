@@ -78,14 +78,16 @@ export function BulkUpload() {
     if (error) errorRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
   }, [error])
 
-  function addFiles(list: FileList | null) {
-    if (!list || list.length === 0) return
+  /** The single path for adding files (browse and drop). Takes an already-copied File[]: a FileList is live and is
+   *  emptied when the input is reset, so it must never be read inside the state updater. */
+  function addFiles(picked: File[]) {
+    if (picked.length === 0) return
     setFiles((fs) => {
       // Dedup is scoped to the currently-selected files only (`fs`, the live state),
       // never a separately-tracked "ever seen" set — so a file removed via removeFile
       // is no longer in `fs` and is free to be re-added.
       const existing = new Set(fs.map((f) => `${f.name}|${f.size}`))
-      const next = Array.from(list).filter((f) => !existing.has(`${f.name}|${f.size}`))
+      const next = picked.filter((f) => !existing.has(`${f.name}|${f.size}`))
       return [...fs, ...next]
     })
     setInputKey((k) => k + 1)
@@ -243,6 +245,12 @@ export function BulkUpload() {
         <div
           className={`dropzone${dragOver ? ' dropzone-active' : ''}`}
           onClick={() => inputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault()
+              inputRef.current?.click()
+            }
+          }}
           onDragOver={(e) => {
             e.preventDefault()
             setDragOver(true)
@@ -251,7 +259,7 @@ export function BulkUpload() {
           onDrop={(e) => {
             e.preventDefault()
             setDragOver(false)
-            addFiles(e.dataTransfer.files)
+            addFiles(Array.from(e.dataTransfer.files))
           }}
           role="button"
           tabIndex={0}
@@ -269,9 +277,11 @@ export function BulkUpload() {
             multiple
             aria-label="Choose files"
             className="visually-hidden"
+            onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
-              addFiles(e.target.files)
+              const picked = Array.from(e.target.files ?? []) // copy first: resetting the input empties the live FileList
               e.target.value = ''
+              addFiles(picked)
             }}
           />
         </div>
