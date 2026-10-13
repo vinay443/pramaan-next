@@ -25,6 +25,14 @@ import org.springframework.transaction.annotation.Transactional;
 class EvidenceControllerWebTest {
 
     @Autowired MockMvc mvc;
+    @Autowired com.pramaan.backend.application.ApplicationService applications;
+
+    @org.junit.jupiter.api.BeforeEach
+    void seedApplications() {
+        for (String slug : new String[] {"net-banking", "payments"}) {
+            applications.upsert(new com.pramaan.backend.application.ApplicationDtos.UpsertRequest(slug, slug, null, null, null, null));
+        }
+    }
 
     @Test
     void ingestThenQueryAndRunDeterministicQuery() throws Exception {
@@ -58,7 +66,7 @@ class EvidenceControllerWebTest {
     @Test
     void evidenceLifecycleTransitionsAndAuditTrailOverRest() throws Exception {
         String body = """
-                {"applicationSlug":"payments","controlId":"ITPP-DOC-03","framework":"ITPP",
+                {"applicationSlug":"payments","controlId":"ITPP-C3","framework":"ITPP",
                  "sourceSystem":"SHAREPOINT","contentText":"policy document v1"}
                 """;
         String created = mvc.perform(post("/api/v1/evidence/ingest")
@@ -203,7 +211,7 @@ class EvidenceControllerWebTest {
         mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(f).header("X-Pramaan-Role", "APP")
                         .param("applicationSlug", "payments")
                         .param("framework", "ITPP")
-                        .param("controlId", "ITPP-DOC-03"))
+                        .param("controlId", "ITPP-C3"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.created").value(1));
 
@@ -244,7 +252,7 @@ class EvidenceControllerWebTest {
         mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(original).header("X-Pramaan-Role", "APP")
                         .param("applicationSlug", "payments")
                         .param("framework", "ITPP")
-                        .param("controlId", "ITPP-DOC-09"))
+                        .param("controlId", "ITPP-C9"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.created").value(1));
 
@@ -259,7 +267,7 @@ class EvidenceControllerWebTest {
         mvc.perform(multipart("/api/v1/evidence/bulk/upload").file(duplicate).file(fresh).header("X-Pramaan-Role", "APP")
                         .param("applicationSlug", "payments")
                         .param("framework", "ITPP")
-                        .param("controlId", "ITPP-DOC-09"))
+                        .param("controlId", "ITPP-C9"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.received").value(2))
                 .andExpect(jsonPath("$.created").value(1))
@@ -275,14 +283,14 @@ class EvidenceControllerWebTest {
         // evidence record didn't gain a spurious new version from the duplicate re-upload
         mvc.perform(get("/api/v1/evidence")
                         .param("applicationSlug", "payments")
-                        .param("controlId", "ITPP-DOC-09"))
+                        .param("controlId", "ITPP-C9"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalItems").value(2));
     }
 
     private String ingestText(String text) throws Exception {
         String body = """
-                {"applicationSlug":"payments","controlId":"ITPP-DOC-03","framework":"ITPP",
+                {"applicationSlug":"payments","controlId":"ITPP-C3","framework":"ITPP",
                  "sourceSystem":"SHAREPOINT","sourceObjectId":"dl-1","contentText":"%s"}
                 """.formatted(text);
         String created = mvc.perform(post("/api/v1/evidence/ingest")

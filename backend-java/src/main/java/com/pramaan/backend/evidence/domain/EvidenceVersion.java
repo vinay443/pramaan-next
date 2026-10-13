@@ -17,7 +17,9 @@ import java.util.UUID;
 
 /** One immutable revision of an evidence record. */
 @Entity
-@Table(name = "evidence_version")
+// mirrors V1__init.sql so create-drop schemas (H2 tests) enforce the same one-row-per-version rule as Postgres
+@Table(name = "evidence_version", uniqueConstraints = @jakarta.persistence.UniqueConstraint(
+        columnNames = {"evidence_record_id", "version_number"}))
 public class EvidenceVersion {
 
     @Id

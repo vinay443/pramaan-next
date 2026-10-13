@@ -90,6 +90,15 @@ public class SecurityEventService {
         return requireSafe(field, value, MAX_FIELD);
     }
 
+    /** {@link #requireSafe} for identifiers that may end up in keys/paths: also rejects "/", "\" and "..". */
+    public String requireSafePath(String field, String value) {
+        String safe = requireSafe(field, value);
+        if (safe.indexOf('/') >= 0 || safe.indexOf('\\') >= 0 || safe.contains("..")) {
+            reject(field, value, "must not contain path separators or \"..\" (/ \\ ..)");
+        }
+        return safe;
+    }
+
     /** Same character rules with a custom maximum length (e.g. free-text observations). */
     public String requireSafe(String field, String value, int max) {
         String problem = value == null || value.isBlank() ? "is required"

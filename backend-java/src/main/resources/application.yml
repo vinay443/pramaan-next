@@ -171,6 +171,11 @@ pramaan:
     stale-after-days: 90
     # Run SLA: request -> finish, in seconds (queue wait + execution). Reported per run as slaStatus.
     sla-seconds: ${PRAMAAN_SCHEDULER_SLA_SECONDS:60}
+  bulk-upload:
+    # TEST-ONLY: a file whose name contains this text fails once with PROCESSING_ERROR (outage simulation for the
+    # UC02 retry flow). Must stay empty (= off) in every real deployment; set it only via a test property or a manual
+    # -Dpramaan.bulk-upload.simulate-failure-marker=... / PRAMAAN_BULK_UPLOAD_SIMULATE_FAILURE_MARKER=... run.
+    simulate-failure-marker:
   seed:
     # Insert demo applications on startup if the table is empty.
     applications-enabled: ${PRAMAAN_SEED_APPS:true}

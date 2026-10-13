@@ -73,6 +73,23 @@ public class ControlFrameworkCatalog {
                 && byControl.containsKey(controlId.trim().toUpperCase(Locale.ROOT));
     }
 
+    /** Every framework any control maps to (upper-case, sorted). */
+    public java.util.SortedSet<String> frameworks() {
+        java.util.SortedSet<String> out = new java.util.TreeSet<>();
+        byControl.values().forEach(v -> v.forEach(f -> out.add(f.trim().toUpperCase(Locale.ROOT))));
+        return out;
+    }
+
+    /** Whether the control is catalogued as satisfying the framework. */
+    public boolean maps(String controlId, String framework) {
+        if (controlId == null || framework == null) {
+            return false;
+        }
+        String fw = framework.trim().toUpperCase(Locale.ROOT);
+        return byControl.getOrDefault(controlId.trim().toUpperCase(Locale.ROOT), List.of()).stream()
+                .anyMatch(f -> f.trim().equalsIgnoreCase(fw));
+    }
+
     /** The whole catalogue — every control code and its framework list, control-id order. */
     public List<ControlFrameworks> all() {
         return byControl.entrySet().stream()

@@ -37,8 +37,10 @@ public class EvidenceIngestionService {
 
     private static final Logger log = LoggerFactory.getLogger(EvidenceIngestionService.class);
 
-    /** Tags that describe the batch which created a version (see BulkUploadService); never moved by a duplicate. */
-    private static final java.util.Set<String> BATCH_SCOPED_TAGS = java.util.Set.of("batchId", "uploadedBy");
+    /** Tags that describe the batch which created a version (see BulkUploadService); never moved by a duplicate.
+     *  {@code environment} is here so re-uploading identical content from another environment (UAT then PROD) does not
+     *  overwrite the environment the evidence was first stored under. */
+    private static final java.util.Set<String> BATCH_SCOPED_TAGS = java.util.Set.of("batchId", "uploadedBy", "environment");
 
     private final EvidenceRecordRepository records;
     private final ApplicationService applications;
@@ -140,6 +142,14 @@ public class EvidenceIngestionService {
         }
 
         String technology = EvidenceNaming.resolveTechnology(req.tags(), req.metadata(), req.sourceSystem());
+        if (!created && "unknown".equals(technology)) {
+            // nothing was supplied: a new version must not replace a known technology with the "unknown" placeholder
+            technology = record.getTags().stream()
+                    .filter(t -> EvidenceNaming.TAG_TECHNOLOGY.equals(t.getTagKey()))
+                    .map(EvidenceTag::getTagValue)
+                    .filter(v -> v != null && !v.isBlank())
+                    .findFirst().orElse(technology);
+        }
         String collectionMethod = EvidenceNaming.resolveCollectionMethod(req.tags(), req.metadata());
         List<String> frameworks = normalizeFrameworks(frameworkOverride);
         if (frameworks.isEmpty()) {

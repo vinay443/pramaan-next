@@ -57,6 +57,7 @@ class BulkUploadUc02Test {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired EmbeddingStore embeddings;
+    @Autowired com.pramaan.backend.application.ApplicationService applications;
     @SpyBean ObjectStore objectStore;
 
     private static MockMultipartFile file(String name, String content) {
@@ -74,6 +75,14 @@ class BulkUploadUc02Test {
         return b.header(USER, "App Owner")
                 .param("applicationSlug", "net-banking").param("framework", "PCI_DSS")
                 .param("controlId", "MW-TLS-VERSION");
+    }
+
+    /** Like req() but with its own application/framework/control (param() would append a second value). */
+    private MockHttpServletRequestBuilder reqAs(String app, String framework, String control, MockMultipartFile... files) {
+        MockMultipartHttpServletRequestBuilder b = multipart(UPLOAD);
+        for (MockMultipartFile f : files) b.file(f);
+        return b.header(ROLE, "APP").header(USER, "App Owner").param("applicationSlug", app)
+                .param("framework", framework).param("controlId", control);
     }
 
     private JsonNode upload(MockHttpServletRequestBuilder b) throws Exception {
@@ -117,6 +126,136 @@ class BulkUploadUc02Test {
         mvc.perform(get("/api/v1/evidence").param("applicationSlug", "net-banking"))
                 .andExpect(jsonPath("$.totalItems").value(0));
         assertThat(getJson("/api/v1/security/events?type=INPUT_REJECTED", "ADMIN").size()).isGreaterThanOrEqualTo(2);
+    }
+
+    @org.junit.jupiter.api.BeforeEach
+    void seedApplication() {
+        applications.upsert(new com.pramaan.backend.application.ApplicationDtos.UpsertRequest(
+                "net-banking", "Net Banking", null, null, null, null));
+    }
+
+    private void assertRejectedBeforeAnyFileIsProcessed(MockHttpServletRequestBuilder b, String message) throws Exception {
+        mvc.perform(b).andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(message));
+        mvc.perform(get("/api/v1/evidence").param("applicationSlug", "net-banking"))
+                .andExpect(jsonPath("$.totalItems").value(0));
+        mvc.perform(get("/api/v1/scheduler/runs").header(ROLE, "ADMIN").param("trigger", "BULK"))
+                .andExpect(jsonPath("$.totalItems").value(0));
+    }
+
+    @Test
+    void ft002_unknownApplicationIsRejectedAndNeverAutoCreated() throws Exception {
+        mvc.perform(reqAs("no-such-app", "PCI_DSS", "MW-TLS-VERSION", file("a.txt", "alpha")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("applicationSlug 'no-such-app' is not a known application - "
+                        + "choose an existing application (bulk upload never creates one)"));
+        assertThat(applications.exists("no-such-app")).isFalse();
+        mvc.perform(get("/api/v1/applications")).andExpect(jsonPath("$[?(@.slug=='no-such-app')]").isEmpty());
+        mvc.perform(get("/api/v1/evidence").param("applicationSlug", "no-such-app"))
+                .andExpect(jsonPath("$.totalItems").value(0));
+    }
+
+    @Test
+    void ft002_unknownFrameworkControlAndEnvironmentAreRejectedBeforeAnyFileIsProcessed() throws Exception {
+        assertRejectedBeforeAnyFileIsProcessed(reqAs("net-banking", "NOT_A_FW", "MW-TLS-VERSION", file("a.txt", "alpha")),
+                "framework 'NOT_A_FW' is not a known framework; choose one of [C-SITE, DB_BASELINING, DPSC, "
+                        + "INTERNAL_AUDIT, IS, ISG, ISO27001, ITDRM, ITPP, NGINX_BASELINING, OS_BASELINING, PCI_DSS, VAPT]");
+        assertRejectedBeforeAnyFileIsProcessed(reqAs("net-banking", "PCI_DSS", "ZZZ-999", file("a.txt", "alpha")),
+                "controlId 'ZZZ-999' is not a valid control for framework PCI_DSS in the control catalog");
+        // a real control, but not one of this framework's
+        assertRejectedBeforeAnyFileIsProcessed(reqAs("net-banking", "PCI_DSS", "NGBL-C8", file("a.txt", "alpha")),
+                "controlId 'NGBL-C8' is not a valid control for framework PCI_DSS in the control catalog");
+        assertRejectedBeforeAnyFileIsProcessed(req("APP", file("a.txt", "alpha")).param("environment", "MARS"),
+                "environment 'MARS' is not valid; choose one of [PROD, UAT, DR, DEV]");
+        assertThat(getJson("/api/v1/security/events?type=INPUT_REJECTED", "ADMIN").size()).isGreaterThanOrEqualTo(5);
+    }
+
+    @Test
+    void ft004_newVersionWithBlankTechnologyKeepsTheExistingTechnology() throws Exception {
+        JsonNode v1 = upload(req("APP", file("tech.txt", "first")).param("technology", "nginx"));
+        String id = v1.get("files").get(0).get("evidenceId").asText();
+        assertThat(evidence(id).get("tags").get("technology").asText()).isEqualTo("nginx");
+
+        JsonNode v2 = upload(req("APP", file("tech.txt", "second, different")));
+        assertThat(v2.get("files").get(0).get("status").asText()).isEqualTo("NEW_VERSION");
+        assertThat(evidence(id).get("tags").get("technology").asText()).isEqualTo("nginx");
+
+        // an explicit technology on a later version still wins
+        upload(req("APP", file("tech.txt", "third, different again")).param("technology", "tomcat"));
+        assertThat(evidence(id).get("tags").get("technology").asText()).isEqualTo("tomcat");
+    }
+
+    @Test
+    void ft005_checksumsAreMatchedByFilePositionSoTheSameNameTwiceInOneBatchIsNotAFalseMismatch() throws Exception {
+        String first = "first bytes";
+        String second = "second, different bytes";
+        String byIndex = "{\"#0\":\"" + Hashing.sha256Hex(first.getBytes(StandardCharsets.UTF_8))
+                + "\",\"#1\":\"" + Hashing.sha256Hex(second.getBytes(StandardCharsets.UTF_8)) + "\"}";
+        JsonNode r = upload(req("APP", file("same.txt", first), file("same.txt", second)).param("checksums", byIndex));
+        assertThat(r.get("failed").asInt()).isZero();
+        assertThat(r.get("files").get(0).get("status").asText()).isEqualTo("CREATED");
+        assertThat(r.get("files").get(1).get("status").asText()).isEqualTo("NEW_VERSION");
+
+        // an older client's name-keyed map is ambiguous when a name repeats: it is ignored, not applied to both
+        String byName = "{\"same.txt\":\"" + Hashing.sha256Hex(first.getBytes(StandardCharsets.UTF_8)) + "\"}";
+        JsonNode legacy = upload(req("APP", file("dup.txt", first), file("dup.txt", second)).param("checksums", byName));
+        assertThat(legacy.get("files").toString()).doesNotContain("INTEGRITY_MISMATCH");
+
+        // a wrong hash at a position still rejects exactly that file
+        String wrong = "{\"#0\":\"" + Hashing.sha256Hex(first.getBytes(StandardCharsets.UTF_8)) + "\",\"#1\":\"" + "0".repeat(64) + "\"}";
+        JsonNode bad = upload(req("APP", file("other.txt", first), file("other.txt", second)).param("checksums", wrong));
+        assertThat(bad.get("files").get(0).get("status").asText()).isEqualTo("CREATED");
+        assertThat(bad.get("files").get(1).get("code").asText()).isEqualTo("INTEGRITY_MISMATCH");
+    }
+
+    @Test
+    void aNonZipNamedZipIsReportedAsNotAValidArchive() throws Exception {
+        JsonNode r = upload(req("APP", bytes("fake.zip", "this is not a zip".getBytes(StandardCharsets.UTF_8))));
+        assertThat(r.get("files").get(0).get("code").asText()).isEqualTo("BAD_ARCHIVE");
+        assertThat(r.get("files").get(0).get("message").asText()).isEqualTo("not a valid zip archive");
+    }
+
+    @Test
+    void aZipTogetherWithOtherFilesIsRejectedWithAClearMessage() throws Exception {
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        try (ZipOutputStream z = new ZipOutputStream(buf)) {
+            z.putNextEntry(new ZipEntry("in.txt"));
+            z.write("x".getBytes(StandardCharsets.UTF_8));
+            z.closeEntry();
+        }
+        assertRejectedBeforeAnyFileIsProcessed(req("APP", bytes("a.zip", buf.toByteArray()), file("b.txt", "beta")),
+                "upload either individual files or a single .zip archive, not a .zip together with other files");
+    }
+
+    @Test
+    void duplicateUploadFromAnotherEnvironmentKeepsTheRecordsOriginalEnvironment() throws Exception {
+        JsonNode first = upload(req("APP", file("env.txt", "same bytes")).param("environment", "PROD"));
+        String id = first.get("files").get(0).get("evidenceId").asText();
+        assertThat(evidence(id).get("tags").get("environment").asText()).isEqualTo("PROD");
+
+        JsonNode again = upload(req("APP", file("env.txt", "same bytes")).param("environment", "UAT"));
+        assertThat(again.get("files").get(0).get("status").asText()).isEqualTo("DUPLICATE");
+        assertThat(again.get("files").get(0).get("evidenceId").asText()).isEqualTo(id);
+        assertThat(again.get("batchId").asText()).isNotEqualTo(first.get("batchId").asText());
+
+        JsonNode tags = evidence(id).get("tags");
+        assertThat(tags.get("environment").asText()).isEqualTo("PROD");
+        assertThat(tags.get("batchId").asText()).isEqualTo(first.get("batchId").asText());
+    }
+
+    @Test
+    void ft002_pathSeparatorsAndDotDotInIdentifiersAreRejectedAndRecorded() throws Exception {
+        String[][] bad = {{"controlId", "../../etc/passwd"}, {"controlId", "a/b"}, {"controlId", "a\\b"},
+                {"controlId", "a..b"}, {"applicationSlug", "net/banking"}, {"framework", "..\\PCI"}};
+        for (String[] p : bad) {
+            mvc.perform(req("APP", file("a.txt", "alpha")).param(p[0], p[1]))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value(
+                            p[0] + " must not contain path separators or \"..\" (/ \\ ..)"));
+        }
+        mvc.perform(get("/api/v1/evidence").param("applicationSlug", "net-banking"))
+                .andExpect(jsonPath("$.totalItems").value(0));
+        assertThat(getJson("/api/v1/security/events?type=INPUT_REJECTED", "ADMIN").size())
+                .isGreaterThanOrEqualTo(bad.length);
     }
 
     @Test
@@ -188,7 +327,7 @@ class BulkUploadUc02Test {
         assertThat(changed.get("files").get(0).get("version").asInt()).isEqualTo(2);
 
         // different context (control) is a different record, not a duplicate
-        JsonNode otherCtx = upload(req("APP", file("policy.txt", "v1 text")).param("controlId", "MW-OTHER"));
+        JsonNode otherCtx = upload(reqAs("net-banking", "PCI_DSS", "OS-SSH-ROOT-LOGIN", file("policy.txt", "v1 text")));
         assertThat(otherCtx.get("files").get(0).get("status").asText()).isEqualTo("CREATED");
     }
 

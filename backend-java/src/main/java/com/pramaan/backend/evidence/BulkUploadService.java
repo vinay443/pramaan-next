@@ -1,5 +1,6 @@
 package com.pramaan.backend.evidence;
 
+import com.pramaan.backend.application.ApplicationService;
 import com.pramaan.backend.common.ApiException;
 import com.pramaan.backend.evidence.EvidenceDtos.BulkIngestResponse.BulkError;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestOutcome;
@@ -30,11 +31,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -54,6 +57,9 @@ public class BulkUploadService {
 
     public static final String CHANNEL = "bulk-upload";
     private static final int MAX_NAME = 200;
+    static final List<String> ENVIRONMENTS = List.of("PROD", "UAT", "DR", "DEV");
+    /** Enough for a burst of ~20 writers on one record: every lost race means someone else committed. */
+    private static final int MAX_INGEST_ATTEMPTS = 12;
     private static final String EICAR = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
 
     static final Set<String> DEFAULT_EXTENSIONS = Set.of("pdf", "txt", "csv", "tsv", "json", "xml", "yaml", "yml",
@@ -78,8 +84,18 @@ public class BulkUploadService {
                                      int newVersions, int duplicates, int failed, List<IngestResult> results,
                                      List<BulkError> errors, List<FileOutcome> files) {}
 
+    /** {@code fileIndex}: position of the uploaded part this item came from (every entry of a zip shares its zip's). */
     private record Item(String name, String entryName, String archive, String contentType, byte[] bytes,
-                        String preErrorCode, String preError) {}
+                        String preErrorCode, String preError, int fileIndex) {
+        Item(String name, String entryName, String archive, String contentType, byte[] bytes, String preErrorCode,
+             String preError) {
+            this(name, entryName, archive, contentType, bytes, preErrorCode, preError, -1);
+        }
+
+        Item withIndex(int index) {
+            return new Item(name, entryName, archive, contentType, bytes, preErrorCode, preError, index);
+        }
+    }
 
     private record Reject(String code, String message) {}
 
@@ -90,6 +106,9 @@ public class BulkUploadService {
     private final SchedulerRunRepository runs;
     private final NotificationService notifications;
     private final SecurityEventService security;
+    private final ApplicationService applications;
+    private final ControlFrameworkCatalog frameworkCatalog;
+    private final EvidenceControlCatalog controlCatalog;
     private final Clock clock;
 
     private final long maxFileBytes;
@@ -104,7 +123,9 @@ public class BulkUploadService {
     public BulkUploadService(EvidenceIngestionService ingestion, EvidenceLifecycleService lifecycle,
                              EvidenceRecordRepository records, EvidenceEmbeddingIndexer indexer,
                              SchedulerRunRepository runs, NotificationService notifications,
-                             SecurityEventService security, Clock clock,
+                             SecurityEventService security, ApplicationService applications,
+                             ControlFrameworkCatalog frameworkCatalog, EvidenceControlCatalog controlCatalog,
+                             Clock clock,
                              @Value("${pramaan.bulk-upload.max-file-bytes:10485760}") long maxFileBytes,
                              @Value("${pramaan.bulk-upload.max-files:500}") int maxFiles,
                              @Value("${pramaan.bulk-upload.max-zip-entries:200}") int maxZipEntries,
@@ -118,6 +139,9 @@ public class BulkUploadService {
         this.runs = runs;
         this.notifications = notifications;
         this.security = security;
+        this.applications = applications;
+        this.frameworkCatalog = frameworkCatalog;
+        this.controlCatalog = controlCatalog;
         this.clock = clock;
         this.maxFileBytes = maxFileBytes;
         this.maxFiles = maxFiles;
@@ -130,17 +154,23 @@ public class BulkUploadService {
 
     public BulkUploadResponse upload(BatchMeta in, List<UploadedFile> files) {
         // ---- batch-level validation: blocks the whole submission with a clear message (FT002 / FT014) ----
-        String app = security.requireSafe("applicationSlug", in.applicationSlug());
-        String framework = security.requireSafe("framework", in.framework());
-        String control = security.requireSafe("controlId", in.controlId());
+        String app = security.requireSafePath("applicationSlug", in.applicationSlug());
+        String framework = security.requireSafePath("framework", in.framework());
+        String control = security.requireSafePath("controlId", in.controlId());
         String source = in.sourceSystem() == null || in.sourceSystem().isBlank() ? "BULK_UPLOAD"
                 : security.requireSafe("sourceSystem", in.sourceSystem());
         String technology = blankToNull(in.technology()) == null ? null : security.requireSafe("technology", in.technology());
         String environment = blankToNull(in.environment()) == null ? null
                 : security.requireSafe("environment", in.environment()).toUpperCase(Locale.ROOT);
         String user = blankToNull(in.uploadedBy()) == null ? "anonymous" : security.requireSafe("uploadedBy", in.uploadedBy());
+        requireKnownMetadata(app, framework, control, environment);
         if (files == null || files.isEmpty()) {
             throw ApiException.badRequest("select at least one file (or a single .zip archive)");
+        }
+        if (files.size() > 1 && files.stream().anyMatch(f -> extension(baseName(f.name())).equals("zip"))) {
+            security.record(Type.UPLOAD_REJECTED, "batch mixes a .zip archive with other files");
+            throw ApiException.badRequest("upload either individual files or a single .zip archive, not a .zip "
+                    + "together with other files");
         }
         if (files.size() > maxFiles) {
             security.record(Type.UPLOAD_REJECTED, "batch of " + files.size() + " files exceeds the limit of " + maxFiles);
@@ -164,7 +194,7 @@ public class BulkUploadService {
         } catch (RuntimeException ex) {
             // never leave a batch RUNNING: it must show as FAILED and alert the recipients
             log.error("bulk upload batch {} aborted", batchId, ex);
-            run.fail(clock.instant(), "batch aborted: " + trunc(String.valueOf(ex.getMessage()), 1800));
+            run.fail(clock.instant(), "batch aborted unexpectedly - see the server log");
             runs.save(run);
             notifications.onRunFinished(run);
             throw ex;
@@ -175,8 +205,12 @@ public class BulkUploadService {
                                        String source, String technology, String environment, String user,
                                        Map<String, String> checksums, List<UploadedFile> files) {
         List<Item> items = new ArrayList<>();
-        for (UploadedFile f : files) {
-            items.addAll(expand(f));
+        Set<String> seenNames = new java.util.HashSet<>();
+        Set<String> repeatedNames = new java.util.HashSet<>();
+        for (int fi = 0; fi < files.size(); fi++) {
+            UploadedFile f = files.get(fi);
+            if (!seenNames.add(baseName(f.name()))) repeatedNames.add(baseName(f.name()));
+            for (Item it : expand(f)) items.add(it.withIndex(fi));
         }
 
         List<FileOutcome> outcomes = new ArrayList<>();
@@ -189,7 +223,7 @@ public class BulkUploadService {
             Item it = items.get(i);
             String shown = it.entryName() != null ? it.entryName() : it.name();
             FileOutcome o = handle(i, it, run, batchId, app, framework, control, source, technology, environment,
-                    user, checksums);
+                    user, checksums, repeatedNames);
             outcomes.add(o);
             switch (o.status()) {
                 case "CREATED" -> created++;
@@ -219,7 +253,7 @@ public class BulkUploadService {
 
     private FileOutcome handle(int index, Item it, SchedulerRun run, String batchId, String app, String framework,
                                String control, String source, String technology, String environment, String user,
-                               Map<String, String> checksums) {
+                               Map<String, String> checksums, Set<String> repeatedNames) {
         String shown = it.entryName() != null ? it.entryName() : it.name();
         if (it.preError() != null) {
             return rejected(index, it, it.preErrorCode(), it.preError(), null);
@@ -229,8 +263,7 @@ public class BulkUploadService {
             return rejected(index, it, bad.code(), bad.message(), null);
         }
         String sha = Hashing.sha256Hex(it.bytes());
-        String claimed = checksums.get(it.name());
-        if (claimed == null && it.entryName() != null) claimed = checksums.get(it.entryName());
+        String claimed = claimedChecksum(it, checksums, repeatedNames);
         if (claimed != null && !claimed.isBlank() && !claimed.trim().equalsIgnoreCase(sha)) {
             return rejected(index, it, "INTEGRITY_MISMATCH", "SHA-256 supplied by the client does not match the received "
                     + "bytes (file changed in transit or the hash was tampered with)", sha);
@@ -266,11 +299,52 @@ public class BulkUploadService {
                             : null,
                     r.evidenceId(), r.version(), r.sha256(), r.sizeBytes(), false);
         } catch (RuntimeException ex) {
-            log.warn("bulk upload {}: {} failed: {}", batchId, shown, ex.getMessage());
+            // detail stays server-side: per-file messages and notifications must never carry SQL / exception text
+            log.warn("bulk upload {}: {} failed", batchId, shown, ex);
             return new FileOutcome(index, it.name(), it.archive(), "FAILED", "PROCESSING_ERROR",
-                    "could not be stored (" + trunc(String.valueOf(ex.getMessage()), 200) + ") - retry this file",
+                    "could not be stored, please retry",
                     null, null, sha, (long) it.bytes().length, true);
         }
+    }
+
+    /**
+     * The hash the client claims for this item. A plain upload is matched by its position in the request ("#0",
+     * "#1", ...), so two files that share a name never receive each other's hash. The name is only used as a
+     * fallback for older clients, and never when the name occurs more than once in the batch (ambiguous). Entries of
+     * a zip are matched by their path inside the archive, then by name.
+     */
+    private static String claimedChecksum(Item it, Map<String, String> checksums, Set<String> repeatedNames) {
+        if (it.entryName() != null) {
+            String byEntry = checksums.get(it.entryName());
+            return byEntry != null ? byEntry : checksums.get(it.name());
+        }
+        String byIndex = checksums.get("#" + it.fileIndex());
+        if (byIndex != null) return byIndex;
+        return repeatedNames.contains(it.name()) ? null : checksums.get(it.name());
+    }
+
+    private void requireKnownMetadata(String app, String framework, String control, String environment) {
+        if (!applications.exists(app)) {
+            reject("applicationSlug", app, "'" + app + "' is not a known application - choose an existing "
+                    + "application (bulk upload never creates one)");
+        }
+        String fw = framework.toUpperCase(Locale.ROOT);
+        if (!frameworkCatalog.frameworks().contains(fw)) {
+            reject("framework", framework, "'" + framework + "' is not a known framework; choose one of "
+                    + frameworkCatalog.frameworks());
+        }
+        if (!frameworkCatalog.maps(control, fw) && !controlCatalog.isConformant(fw, control)) {
+            reject("controlId", control, "'" + control + "' is not a valid control for framework " + fw
+                    + " in the control catalog");
+        }
+        if (environment != null && !ENVIRONMENTS.contains(environment)) {
+            reject("environment", environment, "'" + environment + "' is not valid; choose one of " + ENVIRONMENTS);
+        }
+    }
+
+    private void reject(String field, String value, String problem) {
+        security.record(Type.INPUT_REJECTED, field + " " + problem);
+        throw ApiException.badRequest(field + " " + problem);
     }
 
     private FileOutcome rejected(int index, Item it, String code, String message, String sha) {
@@ -334,6 +408,9 @@ public class BulkUploadService {
         if (!extension(name).equals("zip")) {
             return List.of(new Item(name, null, null, f.contentType(), f.bytes(), null, null));
         }
+        if (!startsWith(f.bytes(), 'P', 'K', 0x03, 0x04) && !startsWith(f.bytes(), 'P', 'K', 0x05, 0x06)) {
+            return List.of(new Item(name, null, name, null, null, "BAD_ARCHIVE", "not a valid zip archive"));
+        }
         List<Item> out = new ArrayList<>();
         long total = 0;
         int entries = 0;
@@ -379,8 +456,8 @@ public class BulkUploadService {
                 }
             }
         } catch (IOException | RuntimeException ex) {
-            out.add(new Item(name, null, name, null, null, "BAD_ARCHIVE",
-                    "archive could not be read (" + trunc(String.valueOf(ex.getMessage()), 120) + ")"));
+            log.warn("zip {} could not be read: {}", name, ex.getMessage());
+            out.add(new Item(name, null, name, null, null, "BAD_ARCHIVE", "not a valid zip archive"));
         }
         if (out.isEmpty()) {
             out.add(new Item(name, null, name, null, null, "EMPTY_ARCHIVE", "archive contains no files"));
@@ -390,15 +467,38 @@ public class BulkUploadService {
 
     // ---- ingest helpers (same pattern as SchedulerRunExecutor) ------------------------------------------------
 
-    /** A concurrent upload of the same new file loses the unique-key race; the retry sees the winner's row. */
+    /**
+     * A concurrent upload of the same new file (create) or of the same record's next version (new version) loses a
+     * unique-key race. Each attempt is a fresh transaction, so the retry re-reads the record's current version and
+     * recomputes the next version number. Bounded, with a small jittered backoff so racing writers spread out.
+     */
     private IngestResult ingestWithRetry(IngestRequest req, UUID runId) {
         for (int attempt = 1; ; attempt++) {
             try {
                 return ingestion.ingest(req, runId, null, CatalogGuard.LOG);
-            } catch (DataIntegrityViolationException ex) {
-                if (attempt >= 3) throw ex;
+            } catch (RuntimeException ex) {
+                if (!isRaceConflict(ex) || attempt >= MAX_INGEST_ATTEMPTS) throw ex;
+                log.debug("ingest of {} lost a write race (attempt {}), retrying", req.title(), attempt);
+                try {
+                    Thread.sleep(ThreadLocalRandom.current().nextLong(5, 15L * attempt + 10));
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw ex;
+                }
             }
         }
+    }
+
+    private static boolean isRaceConflict(Throwable ex) {
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            if (t instanceof DataIntegrityViolationException || t instanceof ConcurrencyFailureException
+                    || t instanceof org.hibernate.exception.ConstraintViolationException
+                    || t instanceof java.sql.SQLIntegrityConstraintViolationException) {
+                return true;
+            }
+            if (t.getCause() == t) break;
+        }
+        return false;
     }
 
     /** Opt-in outage simulation (pramaan.bulk-upload.simulate-failure-marker): each marked name fails once. */

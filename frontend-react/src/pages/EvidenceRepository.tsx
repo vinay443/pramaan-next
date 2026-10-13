@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { listEvidence } from '../api/endpoints'
 import { onDataEvent } from '../api/events'
@@ -139,6 +139,7 @@ export function EvidenceRepository() {
                 <tr>
                   <th aria-hidden="true" />
                   <th>Name</th>
+                  <th>File</th>
                   <th>Control</th>
                   <th>Frameworks</th>
                   <th>Collected</th>
@@ -169,6 +170,9 @@ export function EvidenceRepository() {
                         <td className="cell-truncate" title={name}>
                           <code className="small">{name}</code>
                         </td>
+                        <td className="cell-truncate" title={fileName(r)}>
+                          {fileName(r)}
+                        </td>
                         <td>{r.controlId}</td>
                         <td>
                           <div className="tag-stack">
@@ -179,14 +183,16 @@ export function EvidenceRepository() {
                             ))}
                           </div>
                         </td>
-                        <td>{r.latest ? new Date(r.latest.collectedAt).toLocaleDateString() : '—'}</td>
+                        <td title={r.latest ? formatDateTime(r.latest.collectedAt) : undefined}>
+                          {r.latest ? new Date(r.latest.collectedAt).toLocaleDateString() : '—'}
+                        </td>
                         <td>
                           <StatusPill status={r.integrityStatus ?? 'UNKNOWN'} />
                         </td>
                       </tr>
                       {isExpanded ? (
                         <tr>
-                          <td colSpan={6} className="nested-cell">
+                          <td colSpan={7} className="nested-cell">
                             <RowDetails row={r} />
                           </td>
                         </tr>
@@ -203,22 +209,91 @@ export function EvidenceRepository() {
   )
 }
 
+/** Original file name: the source title tag, else the last segment of the evidence key (the source object id). */
+function fileName(r: EvidenceView): string {
+  return r.tags.sourceTitle || r.evidenceKey.split('|').pop() || '—'
+}
+
+function formatDateTime(iso?: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+/** The full SHA-256 with a copy button; a failed clipboard write just leaves the text selectable. */
+function HashWithCopy({ hash }: { hash: string }) {
+  const [copied, setCopied] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => clearTimeout(timer.current), [])
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(hash)
+      setCopied(true)
+      clearTimeout(timer.current)
+      timer.current = setTimeout(() => setCopied(false), 1500)
+    } catch {
+      setCopied(false)
+    }
+  }
+  return (
+    <span>
+      <code className="small hash-full">{hash}</code>{' '}
+      <button type="button" aria-label="Copy SHA-256" onClick={copy}>
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+    </span>
+  )
+}
+
 /** The columns moved out of the default set (step 2): shown on expand only. */
 function RowDetails({ row }: { row: EvidenceView }) {
+  const latest = row.latest
   return (
     <dl className="kv">
       <dt>Application</dt>
       <dd>{row.applicationSlug}</dd>
+      <dt>File</dt>
+      <dd>{fileName(row)}</dd>
       <dt>Type</dt>
       <dd>{row.tags.evidenceType ?? '—'}</dd>
       <dt>Source</dt>
       <dd>{row.sourceSystem}</dd>
       <dt>Technology</dt>
       <dd>{row.tags.technology ?? '—'}</dd>
+      <dt>Environment</dt>
+      <dd>{row.tags.environment ?? '—'}</dd>
+      <dt>Framework(s)</dt>
+      <dd>{row.tags.frameworks ?? row.framework}</dd>
       <dt>Method</dt>
       <dd>{row.tags.collectionMethod ?? '—'}</dd>
+      <dt>Uploaded by</dt>
+      <dd>{row.tags.uploadedBy ?? latest?.collectedBy ?? '—'}</dd>
+      <dt>Uploaded at</dt>
+      <dd>{formatDateTime(latest?.collectedAt ?? row.createdAt)}</dd>
+      <dt>Batch ID</dt>
+      <dd>{row.tags.batchId ? <code className="small">{row.tags.batchId}</code> : '—'}</dd>
       <dt>Ver</dt>
       <dd>{row.currentVersion}</dd>
+      {latest ? (
+        <>
+          <dt>SHA-256</dt>
+          <dd>
+            <HashWithCopy hash={latest.sha256} />
+          </dd>
+          <dt>Size</dt>
+          <dd>{formatSize(latest.sizeBytes)}</dd>
+          <dt>Content type</dt>
+          <dd>{latest.contentType}</dd>
+          <dt>Collected at</dt>
+          <dd>{formatDateTime(latest.collectedAt)}</dd>
+        </>
+      ) : null}
     </dl>
   )
 }

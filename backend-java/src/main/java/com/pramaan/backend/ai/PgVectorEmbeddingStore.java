@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.StringJoiner;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * PostgreSQL + pgvector embedding store. Connects to the dedicated {@code pgvector}
@@ -19,10 +22,20 @@ public class PgVectorEmbeddingStore implements EmbeddingStore {
 
     private final JdbcTemplate jdbc;
     private final int dimension;
+    /**
+     * Writes always run in their own read-write transaction. The NL-query / reuse services are class-level
+     * {@code @Transactional(readOnly = true)} and call {@code ensureIndexed()} -> {@code clear()} / {@code upsert()}.
+     * When this store's DataSource is the one the JPA transaction is bound to (the only DataSource bean once
+     * {@code vector-store=pgvector}), those writes would otherwise join the read-only transaction and Postgres rejects
+     * them ("cannot execute DELETE in a read-only transaction"), failing the query with a 500.
+     */
+    private final TransactionTemplate writes;
 
     public PgVectorEmbeddingStore(JdbcTemplate jdbc, int dimension) {
         this.jdbc = jdbc;
         this.dimension = dimension;
+        this.writes = new TransactionTemplate(new DataSourceTransactionManager(jdbc.getDataSource()));
+        this.writes.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     /**
@@ -46,6 +59,10 @@ public class PgVectorEmbeddingStore implements EmbeddingStore {
 
     @Override
     public void upsert(Entry e) {
+        writes.executeWithoutResult(s -> upsertRow(e));
+    }
+
+    private void upsertRow(Entry e) {
         jdbc.update("""
                 INSERT INTO evidence_embedding
                     (evidence_id, application_slug, framework, control_id, sha256, embedding)
@@ -63,7 +80,7 @@ public class PgVectorEmbeddingStore implements EmbeddingStore {
 
     @Override
     public void clear() {
-        jdbc.update("DELETE FROM evidence_embedding");
+        writes.executeWithoutResult(s -> jdbc.update("DELETE FROM evidence_embedding"));
     }
 
     @Override

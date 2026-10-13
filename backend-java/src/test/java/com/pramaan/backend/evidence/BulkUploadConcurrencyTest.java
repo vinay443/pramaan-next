@@ -38,6 +38,12 @@ class BulkUploadConcurrencyTest {
 
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
+    @Autowired com.pramaan.backend.application.ApplicationService applications;
+
+    @org.junit.jupiter.api.BeforeEach
+    void seedApplication() {
+        applications.upsert(new com.pramaan.backend.application.ApplicationDtos.UpsertRequest("net-banking", "Net Banking", null, null, null, null));
+    }
 
     private JsonNode uploadAs(String user, String name, String content) throws Exception {
         MockMultipartFile f = new MockMultipartFile("files", name, "text/plain", content.getBytes(StandardCharsets.UTF_8));
@@ -91,6 +97,34 @@ class BulkUploadConcurrencyTest {
             assertThat(versions).as("round %d versions", round).hasSize(1);
         }
         assertThat(batchIds).hasSize(8 * USERS);
+    }
+
+    @Test
+    void parallelDifferentContentUploadsOfOneExistingFileGetDistinctContiguousVersionsAndNeverFail() throws Exception {
+        final int writers = 8;
+        JsonNode seed = uploadAs("Seeder", "versioned.txt", "version one");
+        assertThat(seed.get("files").get(0).get("status").asText()).isEqualTo("CREATED");
+        String evidenceId = seed.get("files").get(0).get("evidenceId").asText();
+
+        List<Callable<JsonNode>> calls = new ArrayList<>();
+        for (int u = 0; u < writers; u++) {
+            int n = u;
+            calls.add(() -> uploadAs("Writer" + n, "versioned.txt", "different content from writer " + n));
+        }
+        List<JsonNode> results = simultaneously(calls);
+
+        assertThat(results).allSatisfy(r -> {
+            assertThat(r.get("failed").asInt()).isZero();
+            assertThat(r.get("files").get(0).get("status").asText()).isEqualTo("NEW_VERSION");
+        });
+        List<Integer> reported = results.stream().map(r -> r.get("files").get(0).get("version").asInt()).sorted().toList();
+        assertThat(reported).containsExactly(2, 3, 4, 5, 6, 7, 8, 9);
+
+        JsonNode versions = json.readTree(mvc.perform(get("/api/v1/evidence/" + evidenceId + "/versions"))
+                .andReturn().getResponse().getContentAsString());
+        List<Integer> stored = new ArrayList<>();
+        versions.forEach(v -> stored.add(v.get("version").asInt()));
+        assertThat(stored.stream().sorted().toList()).containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9);
     }
 
     @Test

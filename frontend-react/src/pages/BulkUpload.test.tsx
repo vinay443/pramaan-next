@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { BulkUpload } from './BulkUpload'
 import { renderOffline } from '../test/render'
@@ -14,11 +15,39 @@ function makeFile(name: string, content: string, type = 'text/plain') {
   return new File([content], name, { type })
 }
 
+/** The control select is fed by the catalogue endpoint, so wait for its options before choosing. */
+async function chooseControl(id: string) {
+  await screen.findByRole('option', { name: id })
+  await userEvent.selectOptions(screen.getByLabelText('Control ID'), id)
+}
+
 describe('BulkUpload', () => {
+  it('Application, Framework and Control ID are selects fed by the catalogue; a control follows its framework', async () => {
+    renderOffline(<BulkUpload />)
+    const app = screen.getByLabelText('Application') as HTMLSelectElement
+    const fw = screen.getByLabelText('Framework') as HTMLSelectElement
+    const control = screen.getByLabelText('Control ID') as HTMLSelectElement
+    expect([app, fw, control].map((e) => e.tagName)).toEqual(['SELECT', 'SELECT', 'SELECT'])
+
+    expect(await screen.findByRole('option', { name: 'payments' })).toBeInTheDocument()
+    await screen.findByRole('option', { name: 'OS-SSH-ROOT-LOGIN' })
+    // only catalogue frameworks are offered, not free text
+    expect(Array.from(fw.options).map((o) => o.value)).toEqual(expect.arrayContaining(['', 'PCI_DSS', 'C-SITE']))
+    expect(Array.from(fw.options).map((o) => o.value)).not.toContain('NOT_A_FW')
+
+    await userEvent.selectOptions(control, 'OS-SSH-ROOT-LOGIN')
+    expect(control.value).toBe('OS-SSH-ROOT-LOGIN')
+    // switching to a framework the control does not map to clears the selection
+    const other = Array.from(fw.options).map((o) => o.value).find((v) => v && v !== 'PCI_DSS' && v !== 'C-SITE' && v !== 'ISO27001' && v !== 'IS')!
+    await userEvent.selectOptions(fw, other)
+    expect(control.value).toBe('')
+    expect(Array.from(control.options).map((o) => o.value)).not.toContain('OS-SSH-ROOT-LOGIN')
+  })
+
   it('submits selected files and shows the per-item outcome summary (mock)', async () => {
     renderOffline(<BulkUpload />)
 
-    await userEvent.type(screen.getByLabelText('Control ID'), 'OS-SSH-ROOT-LOGIN')
+    await chooseControl('OS-SSH-ROOT-LOGIN')
 
     const input = screen.getByLabelText('Choose files') as HTMLInputElement
     await userEvent.upload(input, [
@@ -34,14 +63,14 @@ describe('BulkUpload', () => {
     expect(await screen.findByText('Result')).toBeInTheDocument()
     const received = screen.getByText('Received').closest('.card') as HTMLElement
     expect(received.textContent).toContain('2')
-    expect(screen.getAllByText('OS-SSH-ROOT-LOGIN')).toHaveLength(2)
+    expect(screen.getAllByText('OS-SSH-ROOT-LOGIN').length).toBeGreaterThanOrEqual(2)
     expect(screen.getByText('CREATED')).toBeInTheDocument()
   })
 
   it('separates a duplicate skip from the success summary and from true failures', async () => {
     renderOffline(<BulkUpload />)
 
-    await userEvent.type(screen.getByLabelText('Control ID'), 'OS-SSH-ROOT-LOGIN')
+    await chooseControl('OS-SSH-ROOT-LOGIN')
     const input = screen.getByLabelText('Choose files') as HTMLInputElement
     // the mock backend flags the second uploaded item as a duplicate
     await userEvent.upload(input, [makeFile('first.txt', 'a'), makeFile('second.txt', 'b')])
@@ -76,7 +105,7 @@ describe('BulkUpload', () => {
 
   it('rejects an empty submission', async () => {
     renderOffline(<BulkUpload />)
-    await userEvent.type(screen.getByLabelText('Control ID'), 'C-1')
+    await chooseControl('OS-SSH-ROOT-LOGIN')
     await userEvent.click(screen.getByRole('button', { name: 'Submit bulk' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/select at least one file/i)
   })
@@ -85,7 +114,7 @@ describe('BulkUpload', () => {
     renderOffline(<BulkUpload />)
     const input = screen.getByLabelText('Choose files') as HTMLInputElement
     await userEvent.upload(input, [makeFile('one.txt', 'a')])
-    await userEvent.clear(screen.getByLabelText('Application'))
+    await userEvent.selectOptions(screen.getByLabelText('Application'), '')
 
     await userEvent.click(screen.getByRole('button', { name: 'Submit bulk' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/required/i)
@@ -110,7 +139,7 @@ describe('BulkUpload', () => {
       }),
     )
 
-    await userEvent.type(screen.getByLabelText('Control ID'), 'C-1')
+    await chooseControl('OS-SSH-ROOT-LOGIN')
     const input = screen.getByLabelText('Choose files') as HTMLInputElement
     await userEvent.upload(input, [makeFile('one.txt', 'a')])
 
@@ -120,7 +149,7 @@ describe('BulkUpload', () => {
 
   it('UC02: reports a disallowed file individually, keeps the rest of the batch and shows the batch id (mock)', async () => {
     renderOffline(<BulkUpload />)
-    await userEvent.type(screen.getByLabelText('Control ID'), 'C-1')
+    await chooseControl('OS-SSH-ROOT-LOGIN')
     await userEvent.selectOptions(screen.getByLabelText('Environment'), 'UAT')
     const input = screen.getByLabelText('Choose files') as HTMLInputElement
     await userEvent.upload(input, [makeFile('good.txt', 'a'), makeFile('tool.exe', 'MZ')])
@@ -148,7 +177,7 @@ describe('BulkUpload', () => {
       errors: [{ index: 1, message: 'flaky.txt: could not be stored' }],
       files: [
         { index: 0, filename: 'ok.txt', status: 'CREATED', evidenceId: 'e1', version: 1, sha256: 'a'.repeat(64), sizeBytes: 1, retryable: false },
-        { index: 1, filename: 'flaky.txt', status: 'FAILED', code: 'PROCESSING_ERROR', message: 'could not be stored (storage down) - retry this file', retryable: true },
+        { index: 1, filename: 'flaky.txt', status: 'FAILED', code: 'PROCESSING_ERROR', message: 'could not be stored, please retry', retryable: true },
       ],
     }
     const batch2 = { ...batch1, batchId: 'b2', status: 'COMPLETED', received: 1, failed: 0, errors: [], results: [], files: [{ index: 0, filename: 'flaky.txt', status: 'CREATED', evidenceId: 'e2', version: 1, sha256: 'b'.repeat(64), sizeBytes: 1, retryable: false }] }
@@ -161,7 +190,7 @@ describe('BulkUpload', () => {
       return Promise.resolve(ok({ items: [], page: 0, size: 10, totalItems: 0, totalPages: 1 }))
     }))
 
-    await userEvent.type(screen.getByLabelText('Control ID'), 'C-1')
+    await chooseControl('OS-SSH-ROOT-LOGIN')
     await userEvent.selectOptions(screen.getByLabelText('Environment'), 'PROD')
     await userEvent.upload(screen.getByLabelText('Choose files') as HTMLInputElement, [makeFile('ok.txt', 'a'), makeFile('flaky.txt', 'b')])
     await userEvent.click(screen.getByRole('button', { name: 'Submit bulk' }))
@@ -191,7 +220,7 @@ describe('BulkUpload', () => {
 
   it('browse dialog: files chosen via the input appear in the list and are submitted (input is reset after the change)', async () => {
     renderOffline(<BulkUpload />)
-    await userEvent.type(screen.getByLabelText('Control ID'), 'C-1')
+    await chooseControl('OS-SSH-ROOT-LOGIN')
     const input = screen.getByLabelText('Choose files') as HTMLInputElement
     const a = makeFile('browse-a.txt', 'a')
     const b = makeFile('browse-b.txt', 'b')
@@ -216,6 +245,45 @@ describe('BulkUpload', () => {
     expect(screen.queryByText('again.txt')).not.toBeInTheDocument()
     await userEvent.upload(screen.getByLabelText('Choose files') as HTMLInputElement, makeFile('again.txt', 'x'))
     expect(screen.getByText('again.txt')).toBeInTheDocument()
+  })
+
+  it('Recent batches: the Details panel opens directly under its own row, one at a time, and Hide removes it', async () => {
+    const run = (id: string, status: string) => ({
+      runId: id, trigger: 'BULK', status, applications: ['net-banking'], frameworks: ['PCI_DSS'], sources: ['BULK_UPLOAD'],
+      received: 1, ingested: 1, duplicates: 0, failed: 0, perSource: { [`${id}.txt`]: 'outcome=CREATED version=1' },
+      createdAt: '2026-10-13T05:00:00Z',
+    })
+    const items = [run('aaaaaaaa-1', 'FAILED'), run('bbbbbbbb-2', 'COMPLETED'), run('cccccccc-3', 'COMPLETED')]
+    const body = JSON.stringify({ items, page: 0, size: 10, totalItems: 3, totalPages: 1 })
+    vi.stubGlobal('fetch', vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(url.includes('/scheduler/runs') ? body : '[]') })))
+    render(<MemoryRouter><BulkUpload /></MemoryRouter>)
+
+    await screen.findByText('aaaaaaaa')
+    const rowOf = (prefix: string) => screen.getByText(prefix).closest('tr') as HTMLElement
+    const panels = () => document.querySelectorAll('tr.batch-detail-row')
+    const buttons = () => screen.getAllByRole('button', { name: /^(Details|Hide)$/ })
+    expect(panels()).toHaveLength(0)
+    buttons().forEach((b) => expect(b).toHaveAttribute('aria-expanded', 'false'))
+
+    await userEvent.click(buttons()[1])
+    expect(panels()).toHaveLength(1)
+    expect(rowOf('bbbbbbbb').nextElementSibling).toBe(panels()[0])
+    expect(rowOf('bbbbbbbb').nextElementSibling).toHaveClass('batch-detail-row')
+    // nothing is rendered after the last batch row
+    expect(rowOf('cccccccc').nextElementSibling).toBeNull()
+    expect(buttons()[1]).toHaveTextContent('Hide')
+    expect(buttons()[1]).toHaveAttribute('aria-expanded', 'true')
+
+    // opening another batch closes the first
+    await userEvent.click(buttons()[2])
+    expect(panels()).toHaveLength(1)
+    expect(rowOf('bbbbbbbb').nextElementSibling).not.toHaveClass('batch-detail-row')
+    expect(rowOf('cccccccc').nextElementSibling).toBe(panels()[0])
+    expect(buttons()[1]).toHaveAttribute('aria-expanded', 'false')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hide' }))
+    expect(panels()).toHaveLength(0)
+    expect(rowOf('cccccccc').nextElementSibling).toBeNull()
   })
 
   it('drop zone opens the file input with Enter and Space', async () => {

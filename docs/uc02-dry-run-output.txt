@@ -1,0 +1,328 @@
+BEGIN
+SELECT 70
+SELECT 97
+                  id                  |                               evidence_key                               | application_slug | framework | control_id  
+--------------------------------------+--------------------------------------------------------------------------+------------------+-----------+-------------
+ ac432d4a-0479-4a44-b750-3a0064ef768d | net-banking|NOT_A_FW|PCI-DSS-6.2|BULK_UPLOAD|ft002-badfw-mv6fudft.txt    | net-banking      | NOT_A_FW  | PCI-DSS-6.2
+ 2ff94833-61ce-41b5-a850-8d2ccb8009bd | net-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|ft001b-mv6hxlr5.json              | net-banking      | PCI_DSS   | PCI-C1
+ 00b04ae0-82f6-444a-802d-dfbd1edfba83 | net-banking|PCI_DSS|PCI-DSS-3.4|BULK_UPLOAD|ft001b-mv6fudft.json         | net-banking      | PCI_DSS   | PCI-DSS-3.4
+ d81b3722-0a43-43a5-b10d-684c1fadcfc3 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|envdup-mv6fnavs.txt          | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 70b75689-ff65-4260-8dd5-e84ce36a6b80 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft001a-mv6fudft.txt          | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 36ce501b-9130-4101-bf0f-105bb357410c | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft001a-mv6hxlr5.txt          | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ a5af720b-d8de-48d6-9fb0-cb5ab6a1ef40 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft001b-mv6fudft.json         | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 5cbf669e-4f47-4c8b-9f37-2febfd43ef1a | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft001b-mv6hxlr5.json         | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 9be73cc8-9d44-4018-a102-f5112b6f6cba | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft001c-mv6fudft.csv          | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 332cc1c1-5dd2-41b1-8f9a-dca14e95191a | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft001c-mv6hxlr5.csv          | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ d31dc12f-6ca7-4fe0-a993-c981b45b052e | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft002-badenv-mv6fudft.txt    | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 8af152ca-51df-4e79-998c-d6ab30f688b2 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft002v-lower-mv6hxlr5.txt    | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 2d5044d1-de12-4bdb-bebc-2da20b96f7f5 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft002v-ok-mv6hxlr5.txt       | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ ce78c808-d0f9-46df-b02b-0cd8754ac43c | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft003m-extra-mv6fudft.txt    | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 49d1272b-b618-4013-8fbf-4515a818d531 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft003m-in-mv6fudft.txt       | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ fe04cf96-7b74-4e78-9fd1-ff0bb4066efb | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft003-ok-mv6fudft.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ fe856780-7908-4994-bdbb-901358d48dc4 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft003-ok-mv6hxlr5.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 399aceca-7dac-4b80-8fc9-9775fcbab50d | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft003z3-a-mv6hxlr5.txt       | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 0b5f41c0-7d05-4367-9cad-73590bd9ab99 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft003z-a-mv6fudft.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ f6e90a6b-d395-433d-8f17-790c66c77b5b | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft003z-a-mv6hxlr5.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 684e513c-dc3c-46fd-af3c-5d239b53a93e | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft005-renamed-mv6fudft.txt   | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 91921744-41c5-4c55-9e70-fe4549f077b4 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft005-ren-mv6hxlr5.txt       | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 8415371d-1344-44d6-8358-d5f2eaaa035c | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft005-tw3-mv6fudft.txt       | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 9af64c6c-5cc9-434b-91f2-eec0a35d2900 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft005-tw3-mv6hxlr5.txt       | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 9fc73186-34d8-430f-b737-ddfab60441da | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft005-tw4-mv6hxlr5.txt       | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 62aaf9a5-f9ac-4e32-8de1-c7480a9695f4 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft005-twin2-mv6fudft.txt     | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 6bae71c7-e033-48dc-b674-4fb437e24522 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft005-twin-mv6fudft.txt      | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 15e8bc6f-afda-4405-8c8a-d4ff80d717d6 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft005-twin-mv6hxlr5.txt      | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ feaffef8-b033-48e1-b931-63c5f7dd92e0 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft007-ok1-mv6hxlr5.txt       | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ f3dd3c48-03f8-45d3-9b4d-311022efe9a0 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft007-ok2-mv6hxlr5.json      | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ abb3da13-dc3d-4606-9d9a-9e1d19f066c2 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft013-ok-mv6fudft.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 8d13265a-f46f-40a2-bb93-d648eec3f836 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft013-ok-mv6hxlr5.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 470ed7c5-4393-4d86-b3c7-d3494685fa65 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft013-ok-mv6ihiji.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 2104b63b-3462-4e16-b335-7bd27d52f03e | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft013-ok-mv6is84o.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 42348f55-81db-40fd-aed4-a45303f5ff80 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft013-ok-mv6izez0.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ a9581d78-9e5f-461d-b825-2de0ea79d10c | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-d0-mv6fudft.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 43f1a23e-e2ef-4689-b918-af4538f11a48 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-d0-mv6hxlr5.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ bbabdb6d-234a-4542-b951-e5d393dd1af9 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-d1-mv6fudft.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ fd36c6d9-bdda-454e-94a6-597da545e22f | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-d1-mv6hxlr5.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ cee72aff-c7c5-45b9-addb-423da1d483fa | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-d2-mv6fudft.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 207dfa1b-30fd-4f1f-acab-32bc83e126dd | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-d2-mv6hxlr5.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 3b3077bb-83ac-4fdb-bb11-da6161fb9428 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-d4-mv6fudft.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 55055709-47d9-425a-bea7-f7c33e9d55c6 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-d4-mv6hxlr5.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ faee890b-d3d3-4dc8-aaef-0129a6a83338 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-d5-mv6fudft.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ bf45ede4-57a6-48c3-be63-813feb72cb9b | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-d5-mv6hxlr5.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 1eeb7dd0-ab36-4c67-9193-df3a2f5de1ee | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-d6-mv6fudft.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 1e1042f8-ae99-4ee1-aae9-1b1b30304e46 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-d6-mv6hxlr5.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 27c61cb5-f339-4367-a0b9-ae5d0bbb80c1 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-race-mv6fudft.txt      | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 05df5d93-ad49-46c8-89d5-619e31b35bb1 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-race-mv6hxlr5.txt      | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 95a548d1-1382-4473-a08b-a2964e4d7f84 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-same-mv6fudft.txt      | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ fa231d0a-6f9d-4360-832b-0d2146b08f6a | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-same-mv6hxlr5.txt      | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ add81c0d-575c-4ed1-8ab0-ce111bd910ff | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-ui2-admin-mv6hxlr5.txt | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 09e3149e-d275-48d3-b18b-5a50604bf5f9 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-ui2-mv6hxlr5.txt       | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 06bae390-6191-48b5-abb3-2a6eb4c601ea | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-ui2-owner-mv6hxlr5.txt | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ b98c4fda-0634-4eb8-8f41-3bae412d8beb | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-ui3-admin-mv6hxlr5.txt | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ d949a650-426e-4dd9-9a85-6e29e0021793 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-ui3-mv6hxlr5.txt       | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ ca0af0e4-a6e5-4156-a136-18c850009426 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-ui3-owner-mv6hxlr5.txt | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 443f842d-10f0-4471-8a09-84eccf2b6378 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-ui-admin-mv6fudft.txt  | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 7dad0cd0-1335-44ae-9a6d-6c0c7c99518d | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-ui-mv6fudft.txt        | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 98fc1b5c-4e5e-49d3-9d90-49c09bc0aef5 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft015-ui-owner-mv6fudft.txt  | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ c4a780b5-8125-4b14-82c2-a4e0406259dd | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|simfail-ft013-mv6fudft.txt   | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 3afc1cdd-a65b-4781-8d72-f0d0a8d1b636 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|simfail-ft013-mv6hxlr5.txt   | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ e42c3408-b6ac-4d21-abaf-a26e466108cc | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|simfail-ft013-mv6ihiji.txt   | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 6b3d5166-3785-4478-bd0e-3b1e0bae0d76 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|simfail-ft013-mv6is84o.txt   | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ c24a99c6-c55e-4ce5-9844-9200b921fd7c | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|simfail-ft013-mv6izez0.txt   | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ fd8ecae1-ef65-4b97-8d0a-a49d16e498c0 | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|sub/ft003z3-b-mv6hxlr5.json  | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 9b24fe90-003e-441e-8fa4-520e603b93ed | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|sub/ft003z-b-mv6fudft.json   | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 4f60b111-71cb-4c7d-8f69-7c05c21fd40a | net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|sub/ft003z-b-mv6hxlr5.json   | net-banking      | PCI_DSS   | PCI-DSS-6.2
+ 2dfed3f9-6da8-44e4-a611-2af92b5037a5 | net-banking|PCI_DSS|ZZZ-999|BULK_UPLOAD|ft002-badctrl-mv6fudft.txt       | net-banking      | PCI_DSS   | ZZZ-999
+ 9a1d2251-eef3-47c6-9a14-b6824c2d977d | no-such-app|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|ft002-srv-mv6fudft.txt       | no-such-app      | PCI_DSS   | PCI-DSS-6.2
+(70 rows)
+
+                  id                  |  status   | applications | frameworks |          created_at           
+--------------------------------------+-----------+--------------+------------+-------------------------------
+ a3b4b77e-9181-4ad7-aeae-b0233f98349b | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:42:21.671727+00
+ 64871ddd-954e-449a-b03e-5ca8ca5b53ed | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:42:39.393417+00
+ 9737787d-df07-41c7-a890-cd0d60e99188 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:47:51.351595+00
+ ecb19419-8f72-497d-b9b9-4ce2415c4c2d | COMPLETED | no-such-app  | PCI_DSS    | 2026-10-13 08:49:25.513503+00
+ df93fe5d-83c9-4383-a7e9-e80df182bc33 | COMPLETED | net-banking  | NOT_A_FW   | 2026-10-13 08:49:36.708097+00
+ 5205afd3-4b3c-43d3-a054-d0b83b64b12d | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:49:36.87223+00
+ 3c6e792b-19b8-4b2c-b6b7-6ad9013582b3 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:49:36.989515+00
+ f780ed05-8a92-4d05-bb34-a4b48b40dfe2 | PARTIAL   | net-banking  | PCI_DSS    | 2026-10-13 08:49:49.004089+00
+ d6b66929-3b5b-4777-b59a-2fc84807e243 | PARTIAL   | net-banking  | PCI_DSS    | 2026-10-13 08:50:15.244377+00
+ 102c8277-4304-431c-9774-6633da701a21 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:50:30.084241+00
+ 7ff66d65-55c0-49e1-88a8-51d2e06b3dd2 | FAILED    | net-banking  | PCI_DSS    | 2026-10-13 08:50:34.478838+00
+ ead88f01-b87b-42cb-9723-60cb5286e02d | FAILED    | net-banking  | PCI_DSS    | 2026-10-13 08:50:38.885912+00
+ aa4090f6-6897-48ce-970c-4cf48e87a322 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:51:43.142715+00
+ c7fa9049-90ea-40d6-82e7-d2d76adbaed8 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:51:47.041322+00
+ 0e851e7e-991a-44c1-b8a2-556a38383be5 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:51:50.941433+00
+ 952301e0-416e-442c-a3c9-7560f75ea1e2 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:51:54.841535+00
+ 2de1cd13-1dd4-4a73-9998-40fa747fce61 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:51:58.941556+00
+ 5c89dcac-5d65-4c16-8449-c2fcfdd1a7ba | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:52:11.911518+00
+ 66ed68e1-713b-47f7-8df6-d85c8c29706a | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:52:15.817728+00
+ aff03a2a-731a-4807-843d-ea2c77912604 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:52:19.920114+00
+ 6f4a0ff6-3b38-4085-8bd0-5c24493d6542 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:52:36.253576+00
+ d438eec7-6122-4b7b-aab2-61a3abbc1865 | PARTIAL   | net-banking  | PCI_DSS    | 2026-10-13 08:52:40.161196+00
+ 39f82f96-7363-4e6f-a1a3-c7c44d815c14 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:56:42.022958+00
+ ae6095f2-4a5e-4af4-89a0-3bded693c7e3 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:29.522036+00
+ 5bf3b9d1-5d26-45bc-9223-6dad198cb243 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:29.522036+00
+ b72878e3-167d-41bd-8177-d46f8856e2ae | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:29.532972+00
+ b8bfc55d-d568-4d9c-b965-395c67078db6 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:29.533498+00
+ 34478083-936d-4c55-b55d-15a2bcbbbe52 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:29.533498+00
+ 43cffc08-8b44-4a36-80bd-d3cb42554ce4 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:29.557902+00
+ f3abf1ed-b8bc-4cad-b97e-1afc500169b9 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:29.925922+00
+ 92cbef5d-49e7-47f7-ba54-cb272486f451 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:29.945404+00
+ 5ff5607d-8d41-4dfb-aaa8-f47f5ae2d815 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:30.120693+00
+ 89bb7b27-ef6d-4ba0-93e7-eec91da16514 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.191413+00
+ a07c3273-038e-48c2-9fcf-fb0399ed6505 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.192701+00
+ 82eeb954-9507-4d60-b25f-66c2daf39859 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.19993+00
+ 19984a1f-9d67-4420-bff7-b1c49e07f8e3 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.203102+00
+ b7f96e56-98fd-46e1-9320-ce133d4c3d83 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.203624+00
+ 0bda4f6d-6e4f-4835-9f10-2f1c7e879355 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.234542+00
+ c3ad7950-12c1-4a1b-8a72-db5d33383374 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.436921+00
+ 64cc3249-cf9f-47fb-839f-ba06a2f4f42e | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.44226+00
+ 2d76f2fb-cb44-440e-aaf6-35f2cf4d0bb9 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.507341+00
+ 6cc6021d-4ebe-4012-a828-c5c5e28ce50b | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.521777+00
+ c82c4d0f-7bec-4f21-ab2c-3646c861eb56 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.521777+00
+ cbfec116-066c-4808-81f7-999a0be99bf9 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.522301+00
+ cc503f3d-d468-4cbc-a818-8a6e07cbb832 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.522301+00
+ b806ef85-6b0c-4668-8149-4e1afe730e68 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:57:31.541004+00
+ ad8baf35-c91d-493d-9320-03147d2851f5 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:58:43.600441+00
+ 59b1cc34-44d1-4eb2-97fa-92b4e5e056df | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 08:58:44.708133+00
+ 5a0e6d83-c7e0-40a5-b0fa-47335c2c0aad | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:46:21.057411+00
+ 3618e1e7-cdb5-4a4c-8e7e-5ed69a6ee7f3 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:46:21.473399+00
+ 92e950d0-7f27-4ffd-8276-3c1964511665 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:46:45.532073+00
+ af83eea6-1c2d-45fd-a4ad-20041e8667d5 | PARTIAL   | net-banking  | PCI_DSS    | 2026-10-13 09:47:04.006919+00
+ 65c46066-c412-43f6-ae28-9b9f3427a576 | PARTIAL   | net-banking  | PCI_DSS    | 2026-10-13 09:47:10.108999+00
+ 27032e93-e31b-4731-b3f2-9a96ff298029 | FAILED    | net-banking  | PCI_DSS    | 2026-10-13 09:47:15.816913+00
+ f4769fb3-d175-40ec-8be2-8c2de69c829c | PARTIAL   | net-banking  | PCI_DSS    | 2026-10-13 09:48:05.736956+00
+ 8bc43aa0-863b-43c3-8770-eebedb6a4286 | FAILED    | net-banking  | PCI_DSS    | 2026-10-13 09:48:11.145823+00
+ 0d300e5a-72d7-410f-8adb-b1b896f6b39f | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:48:25.608419+00
+ 8d941d4c-76de-41d2-b057-de4b8543e6a9 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:48:29.523183+00
+ 0ae952c1-507c-4a45-8d19-ff805479c0e0 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:48:33.426923+00
+ fa45bbfb-e66c-4833-bfa2-006b418e4b79 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:48:37.336346+00
+ e253fc27-9585-45ae-9964-ab61dc2c6b6d | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:48:41.227842+00
+ f5821174-e153-401a-b56c-261732cc5b8b | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:48:45.542676+00
+ fb7bd7f1-411c-4e0d-9e0d-70ec5c72289e | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:48:57.51067+00
+ 23a0ebee-c449-40fb-806f-84988e026698 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:50:04.133051+00
+ d1c788f8-50cf-4133-abb6-565d3277054c | PARTIAL   | net-banking  | PCI_DSS    | 2026-10-13 09:50:56.849895+00
+ ce5a1ee1-14ca-4b6b-85b4-3aff00c3dfb0 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:34.055714+00
+ f7b6fe02-176f-422e-8865-8fe5a4de4586 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:34.057824+00
+ e90eefac-ecbf-4aa9-805c-522f3ac80d46 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:34.057824+00
+ cec9cb79-a3c8-4ddb-8242-463da80e6006 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:34.057824+00
+ 38795ec0-d210-4bc3-bf4a-af4c61f63657 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:34.057824+00
+ 7ed6329c-8c4b-4824-b3cc-376d8b0dc4d0 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:34.420611+00
+ 3bcfa63b-2a6c-4cfe-9055-63df74ec6f2e | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:34.758875+00
+ 804f79ad-bbb3-48d8-b11e-2d28071a90cd | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:35.053353+00
+ f4cb8493-52aa-4133-9b5b-1dc8748473b0 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:35.333786+00
+ f7465eae-2f2c-4fa9-9ced-eb5628ff23c3 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:36.968449+00
+ 5d7476c1-7024-47c9-b6d6-de94a18eaab0 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:36.969502+00
+ b5550e2b-1e74-405b-9cb3-f80e93e36e96 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:36.970033+00
+ 71af133b-91df-466a-8453-7c4bc53617fa | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:36.971585+00
+ 2df212f6-f785-43be-a160-57d9a9dbb9ea | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:36.972106+00
+ 043d4be3-a54e-4c4e-add3-030bb01717d9 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:37.28218+00
+ ae78366d-12a0-4d44-9e39-9194fec65736 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:37.375548+00
+ 25579911-93a0-48c8-b387-782b1a540f05 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:37.379233+00
+ 02247abc-108b-4f7f-80e3-8a30add87370 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:37.46867+00
+ 53d3022d-85dc-4877-b7d9-1b4cdd4d9b6a | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:37.46867+00
+ 94955189-6bbd-46e2-bd6e-eb58ac15c6fb | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:37.46867+00
+ 99e9a571-9845-43d7-8ae1-a185fa5b6441 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:37.46867+00
+ e4bd0861-ac7d-44d1-8edb-b778941824dc | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:37.46867+00
+ 0ccb30f2-23de-4403-a4ab-47afb60c34a9 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:52:37.822631+00
+ f2e84d05-a596-463a-a0b9-4dbb11531b85 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:53:16.821167+00
+ eea415d2-9150-4fcb-978b-46c6367b5eaf | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:53:20.754379+00
+ 03406c7a-91fe-42ca-bf7d-76ae295f8e02 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:53:45.468399+00
+ e1412a53-062c-4269-8eec-bbe1a4dc7056 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:53:46.160656+00
+ a761918a-b339-4871-9947-781310c01016 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 09:54:04.427477+00
+ 25cfc200-19bf-42b4-a390-3b015c88ff33 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 10:01:53.024885+00
+ 3db52e04-a21c-4551-b1c1-3c7df5a1be69 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 10:10:12.739909+00
+ 14268fa5-3934-458f-b38f-b7a91c7de92a | PARTIAL   | net-banking  | PCI_DSS    | 2026-10-13 10:15:48.205296+00
+ 7b5fcc77-9dd6-4bfc-a53e-7020cfe0c7d6 | COMPLETED | net-banking  | PCI_DSS    | 2026-10-13 10:16:00.404798+00
+(97 rows)
+
+ id | status | created_at | files 
+----+--------+------------+-------
+(0 rows)
+
+             evidence_id              
+--------------------------------------
+ 00b04ae0-82f6-444a-802d-dfbd1edfba83
+ 05df5d93-ad49-46c8-89d5-619e31b35bb1
+ 06bae390-6191-48b5-abb3-2a6eb4c601ea
+ 09e3149e-d275-48d3-b18b-5a50604bf5f9
+ 0b5f41c0-7d05-4367-9cad-73590bd9ab99
+ 15e8bc6f-afda-4405-8c8a-d4ff80d717d6
+ 1e1042f8-ae99-4ee1-aae9-1b1b30304e46
+ 1eeb7dd0-ab36-4c67-9193-df3a2f5de1ee
+ 207dfa1b-30fd-4f1f-acab-32bc83e126dd
+ 2104b63b-3462-4e16-b335-7bd27d52f03e
+ 27c61cb5-f339-4367-a0b9-ae5d0bbb80c1
+ 2d5044d1-de12-4bdb-bebc-2da20b96f7f5
+ 2dfed3f9-6da8-44e4-a611-2af92b5037a5
+ 2ff94833-61ce-41b5-a850-8d2ccb8009bd
+ 332cc1c1-5dd2-41b1-8f9a-dca14e95191a
+ 36ce501b-9130-4101-bf0f-105bb357410c
+ 399aceca-7dac-4b80-8fc9-9775fcbab50d
+ 3afc1cdd-a65b-4781-8d72-f0d0a8d1b636
+ 3b3077bb-83ac-4fdb-bb11-da6161fb9428
+ 42348f55-81db-40fd-aed4-a45303f5ff80
+ 43f1a23e-e2ef-4689-b918-af4538f11a48
+ 443f842d-10f0-4471-8a09-84eccf2b6378
+ 470ed7c5-4393-4d86-b3c7-d3494685fa65
+ 49d1272b-b618-4013-8fbf-4515a818d531
+ 4f60b111-71cb-4c7d-8f69-7c05c21fd40a
+ 55055709-47d9-425a-bea7-f7c33e9d55c6
+ 5cbf669e-4f47-4c8b-9f37-2febfd43ef1a
+ 62aaf9a5-f9ac-4e32-8de1-c7480a9695f4
+ 684e513c-dc3c-46fd-af3c-5d239b53a93e
+ 6b3d5166-3785-4478-bd0e-3b1e0bae0d76
+ 6bae71c7-e033-48dc-b674-4fb437e24522
+ 70b75689-ff65-4260-8dd5-e84ce36a6b80
+ 7dad0cd0-1335-44ae-9a6d-6c0c7c99518d
+ 8415371d-1344-44d6-8358-d5f2eaaa035c
+ 8af152ca-51df-4e79-998c-d6ab30f688b2
+ 8d13265a-f46f-40a2-bb93-d648eec3f836
+ 91921744-41c5-4c55-9e70-fe4549f077b4
+ 95a548d1-1382-4473-a08b-a2964e4d7f84
+ 98fc1b5c-4e5e-49d3-9d90-49c09bc0aef5
+ 9a1d2251-eef3-47c6-9a14-b6824c2d977d
+ 9af64c6c-5cc9-434b-91f2-eec0a35d2900
+ 9b24fe90-003e-441e-8fa4-520e603b93ed
+ 9be73cc8-9d44-4018-a102-f5112b6f6cba
+ 9fc73186-34d8-430f-b737-ddfab60441da
+ a5af720b-d8de-48d6-9fb0-cb5ab6a1ef40
+ a9581d78-9e5f-461d-b825-2de0ea79d10c
+ abb3da13-dc3d-4606-9d9a-9e1d19f066c2
+ ac432d4a-0479-4a44-b750-3a0064ef768d
+ add81c0d-575c-4ed1-8ab0-ce111bd910ff
+ b98c4fda-0634-4eb8-8f41-3bae412d8beb
+ bbabdb6d-234a-4542-b951-e5d393dd1af9
+ bf45ede4-57a6-48c3-be63-813feb72cb9b
+ c24a99c6-c55e-4ce5-9844-9200b921fd7c
+ c4a780b5-8125-4b14-82c2-a4e0406259dd
+ ca0af0e4-a6e5-4156-a136-18c850009426
+ ce78c808-d0f9-46df-b02b-0cd8754ac43c
+ cee72aff-c7c5-45b9-addb-423da1d483fa
+ d31dc12f-6ca7-4fe0-a993-c981b45b052e
+ d81b3722-0a43-43a5-b10d-684c1fadcfc3
+ d949a650-426e-4dd9-9a85-6e29e0021793
+ e42c3408-b6ac-4d21-abaf-a26e466108cc
+ f3dd3c48-03f8-45d3-9b4d-311022efe9a0
+ f6e90a6b-d395-433d-8f17-790c66c77b5b
+ fa231d0a-6f9d-4360-832b-0d2146b08f6a
+ faee890b-d3d3-4dc8-aaef-0129a6a83338
+ fd36c6d9-bdda-454e-94a6-597da545e22f
+ fd8ecae1-ef65-4b97-8d0a-a49d16e498c0
+ fe04cf96-7b74-4e78-9fd1-ff0bb4066efb
+ fe856780-7908-4994-bdbb-901358d48dc4
+ feaffef8-b033-48e1-b931-63c5f7dd92e0
+(70 rows)
+
+                  id                  | application_slug | framework |     control_id      |         source_object_id         |          created_at           
+--------------------------------------+------------------+-----------+---------------------+----------------------------------+-------------------------------
+ c705572b-d99a-4aae-937d-0b0f63ba55b9 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | simfail-report.txt               | 2026-10-12 10:31:42.311659+00
+ a7b95a56-9f71-4614-9081-e85afe5113e0 | net-banking      | PCI_DSS   | MW TLS 1            | sc-0.23790952462953407.txt       | 2026-10-13 05:30:55.515688+00
+ cdb5e002-cb30-4016-ba33-5b4251a0d3f7 | net-banking      | PCI_DSS   | MW-ÜÑÏ-1            | sc-0.7026675409124891.txt        | 2026-10-13 05:30:58.519718+00
+ 0d0a0e4d-46f4-4070-afd5-42d95bc43517 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | simfail-report-1791869806963.txt | 2026-10-13 05:36:48.564244+00
+ a112b0cb-74ec-48d2-8467-a63db5169d45 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-a-1791869842033.txt           | 2026-10-13 05:37:22.053623+00
+ f33f352f-e856-403d-a5ad-749b8ea65df9 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b0-0-1791869842033.txt        | 2026-10-13 05:37:22.622391+00
+ ee640856-8130-4ebf-b9d0-d9e269fdc779 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b1-0-1791869842033.txt        | 2026-10-13 05:37:22.628835+00
+ 68cda3b1-9192-4526-bbb4-784b0e54221c | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b2-0-1791869842033.txt        | 2026-10-13 05:37:22.638467+00
+ 13267874-2811-45cc-b0b5-5ad5ddad8200 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b3-0-1791869842033.txt        | 2026-10-13 05:37:22.642869+00
+ 1219d1a6-e9ce-4a5e-85d6-08b89abcb179 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b4-0-1791869842033.txt        | 2026-10-13 05:37:22.645007+00
+ 9f860778-a10e-4eb2-a072-33ba2c85ca1d | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b5-0-1791869842033.txt        | 2026-10-13 05:37:22.959457+00
+ 245762f1-3795-4121-81a5-63fd6296550f | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b0-1-1791869842033.txt        | 2026-10-13 05:37:23.284376+00
+ 1133a9ff-5662-431c-9e50-18e5f178c745 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b1-1-1791869842033.txt        | 2026-10-13 05:37:23.559282+00
+ acabb2f4-ab23-45cf-9dca-8f9b84b25450 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b3-1-1791869842033.txt        | 2026-10-13 05:37:23.843116+00
+ 21fc8944-905c-414a-8b45-db678d432b4e | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b4-1-1791869842033.txt        | 2026-10-13 05:37:24.121134+00
+ f0aa091b-1908-466f-bc21-966712f7ece3 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b2-1-1791869842033.txt        | 2026-10-13 05:37:24.361073+00
+ 85a2f0f4-ac10-4dba-b8d9-4952ee04f671 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b5-1-1791869842033.txt        | 2026-10-13 05:37:24.632749+00
+ 8416bf9e-54f8-4c82-8f25-66e282797024 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b0-2-1791869842033.txt        | 2026-10-13 05:37:24.968208+00
+ 52aa2cc5-f0eb-4e1f-b3b4-13e39beca232 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b3-2-1791869842033.txt        | 2026-10-13 05:37:25.234657+00
+ 7639b927-01dc-42d2-9180-f5e504f1a72e | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b1-2-1791869842033.txt        | 2026-10-13 05:37:25.601183+00
+ 01577bbc-bf0c-40f1-85da-cb84e28d48ed | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b5-2-1791869842033.txt        | 2026-10-13 05:37:25.878373+00
+ 3780f61f-f4e1-4d78-8798-f03f70d56443 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b4-2-1791869842033.txt        | 2026-10-13 05:37:26.203013+00
+ 93652a5c-d5f6-4113-9d86-cb6135b7c1a8 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b0-3-1791869842033.txt        | 2026-10-13 05:37:26.539959+00
+ a6393c75-f806-45b5-8c6b-952257f64633 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b1-3-1791869842033.txt        | 2026-10-13 05:37:26.891208+00
+ 45fe428b-60b7-417c-978e-578d69ef50d0 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b3-3-1791869842033.txt        | 2026-10-13 05:37:27.205254+00
+ 68ad1838-6b72-404a-87f6-8c82a096192d | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b4-3-1791869842033.txt        | 2026-10-13 05:37:27.539698+00
+ 4b28552e-4f37-4848-8b25-4661f9e705fb | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b2-2-1791869842033.txt        | 2026-10-13 05:37:27.894295+00
+ 39c113c1-8ddb-4452-bfd3-c649a6cdef89 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b0-4-1791869842033.txt        | 2026-10-13 05:37:28.240712+00
+ c0f3f9af-57eb-4daf-87ea-651a8c0bd4b8 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b5-3-1791869842033.txt        | 2026-10-13 05:37:28.650616+00
+ b6372a85-4e15-433f-8786-aa656facb149 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b1-4-1791869842033.txt        | 2026-10-13 05:37:29.02912+00
+ 4191df78-376d-4787-ab4f-73b60dc3bec1 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b3-4-1791869842033.txt        | 2026-10-13 05:37:29.512702+00
+ bc8b2e8d-7d69-4f4b-af8f-cd456e7caf5c | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b4-4-1791869842033.txt        | 2026-10-13 05:37:29.887604+00
+ 5be9ee95-4779-4079-bca6-e5e57af9b0a1 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b2-3-1791869842033.txt        | 2026-10-13 05:37:30.264429+00
+ 7d999bc2-60c3-4b1d-b34d-b557249aa98b | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b5-4-1791869842033.txt        | 2026-10-13 05:37:30.664667+00
+ ed51c8d7-7845-4d27-9568-52828391f881 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-b2-4-1791869842033.txt        | 2026-10-13 05:37:31.608113+00
+ 97200e91-67fb-4abe-b83e-e7040c5afc02 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-c-1791869842033.txt           | 2026-10-13 05:37:32.728505+00
+ 9e06b4fe-5828-4638-826e-355156adcbd1 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | cc-d-1791869865899.txt           | 2026-10-13 05:37:45.915394+00
+ 1f8bc13f-5d5f-45d9-9ef8-92032be245c2 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | rc-1791874291250.txt             | 2026-10-13 06:51:32.424516+00
+ d17968bc-c6a1-4442-9cb8-fd0864604a2e | net-banking      | PCI_DSS   | MW-TLS-VERSION      | rs-1791874310376.txt             | 2026-10-13 06:51:50.393314+00
+ 0c6d790b-9b18-45df-b786-2aa4b0167d44 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | rs-1791874319071.txt             | 2026-10-13 06:51:59.086024+00
+ e8cd0715-6c5d-49fc-bc08-1aca336549b7 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | rs-1791874331297.txt             | 2026-10-13 06:52:11.336648+00
+ 46c48e41-2a97-42bc-ae71-582e3766e985 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | r20-1791874358904.txt            | 2026-10-13 06:52:38.923026+00
+ 84cc67a6-5410-4767-bb89-ee470d7ded6c | net-banking      | PCI_DSS   | MW-TLS-VERSION      | r20-1791874371392.txt            | 2026-10-13 06:52:51.403655+00
+ 37ddb36e-9eb6-4f16-beb4-684ef7b13c2f | net-banking      | PCI_DSS   | MW-TLS-VERSION      | r20-1791874384853.txt            | 2026-10-13 06:53:04.864912+00
+ 9b33a156-b665-4e57-a77f-a223d01b43b9 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | simfail-report-1791874412275.txt | 2026-10-13 06:53:33.024316+00
+ 5c0c13e0-63d2-4c3f-96bb-58f65e874e89 | net-banking      | PCI_DSS   | MW-TLS-VERSION      | fine-1791874412275.txt           | 2026-10-13 06:53:33.976617+00
+ 0916abf7-b5d5-4823-af7e-2cced5c11ad1 | net-banking      | PCI_DSS   | FT013-1791874925130 | simfail-report-1791874925130.txt | 2026-10-13 07:02:15.258842+00
+ d5297e19-2e26-481c-bfbb-20f0fb779451 | net-banking      | PCI_DSS   | FT013-1791874925130 | fine-1791874925130.txt           | 2026-10-13 07:02:15.449558+00
+ f7afc3fc-9aea-4ab7-9c16-20303e4a5518 | net-banking      | PCI_DSS   | FT013-1791875221697 | fine-1791875221697.txt           | 2026-10-13 07:07:02.311238+00
+ 42126af1-867b-4183-8995-8d089d06779d | net-banking      | PCI_DSS   | FT013-1791875221697 | simfail-report-1791875221697.txt | 2026-10-13 07:07:14.670059+00
+(50 rows)
+
+DELETE 0
+DELETE 70
+DELETE 117
+DELETE 977
+DELETE 93
+DELETE 70
+DELETE 388
+DELETE 97
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 1
+ apps_left | evidence_left 
+-----------+---------------
+         0 |             0
+(1 row)
+
+ROLLBACK

@@ -35,6 +35,12 @@ public class ApplicationService {
         return ApplicationView.from(require(slug));
     }
 
+    /** Read-only existence check (never creates), for paths that must not auto-create applications. */
+    @Transactional(readOnly = true)
+    public boolean exists(String slug) {
+        return slug != null && repository.findBySlug(slug).isPresent();
+    }
+
     public ApplicationEntity require(String slug) {
         return repository.findBySlug(slug)
                 .orElseThrow(() -> ApiException.notFound("Unknown application: " + slug));

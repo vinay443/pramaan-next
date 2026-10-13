@@ -10,6 +10,7 @@ import manifest from '@mockdata/manifest.json'
 import resultsRaw from '@mockdata/results.json'
 import runsRaw from '@mockdata/scheduler-runs.json'
 import { currentPersona } from '../pages/PersonaLogin'
+import { BULK_UPLOAD_EXTENSIONS } from './bulkUploadTypes'
 import type {
   AdminRole,
   AdminUserUpsert,
@@ -1310,10 +1311,7 @@ export function mockLifecycleTransition(
  *  mock mode a .zip is just ingested as a single opaque item, same as any other file).
  *  Mirrors the real endpoint's shape: a batch id, a status, per-file outcomes (disallowed
  *  types are REJECTED individually) and a persisted batch row for the "Recent batches" list. */
-const MOCK_BULK_ALLOWED = new Set([
-  'pdf', 'txt', 'csv', 'tsv', 'json', 'xml', 'yaml', 'yml', 'log', 'conf', 'cfg', 'ini', 'properties', 'md',
-  'xlsx', 'xls', 'docx', 'doc', 'pptx', 'png', 'jpg', 'jpeg', 'zip',
-])
+const MOCK_BULK_ALLOWED = new Set<string>(BULK_UPLOAD_EXTENSIONS)
 const mockBulkBatchRows: RunView[] = []
 let mockBulkSeq = 0
 

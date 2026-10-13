@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ingestBulkUpload, listBulkBatches } from '../api/endpoints'
+import { BULK_UPLOAD_EXTENSIONS } from '../api/bulkUploadTypes'
+import { ingestBulkUpload, listApplications, listBulkBatches, listReuseControls } from '../api/endpoints'
 import type { BulkFileOutcome, BulkIngestResponse, RunView } from '../api/types'
 import { DataTable, Empty, ErrorNote, Section, StatCard, StatusPill } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -17,6 +18,12 @@ function isZip(file: File): boolean {
 }
 
 const ENVIRONMENTS = ['PROD', 'UAT', 'DR', 'DEV']
+const BATCH_PAGE = 10
+
+/** Options for a catalogue-backed select, keeping a prefilled value selectable even when the catalogue lacks it. */
+function withCurrent(options: string[], current: string): string[] {
+  return current && !options.includes(current) ? [current, ...options] : options
+}
 
 /** SHA-256 of the file as the browser sees it; the server rejects the file if the bytes it receives hash differently.
  *  Best effort: where the Web Crypto API (or Blob.arrayBuffer) is unavailable the check is simply skipped. */
@@ -72,7 +79,29 @@ export function BulkUpload() {
   const [openBatch, setOpenBatch] = useState<string>()
   const inputRef = useRef<HTMLInputElement>(null)
   const errorRef = useRef<HTMLDivElement>(null)
-  const batches = useAsync(() => listBulkBatches(10), [])
+  const [batchLimit, setBatchLimit] = useState(BATCH_PAGE)
+  const batches = useAsync(() => listBulkBatches(batchLimit), [batchLimit])
+  // The selects are fed by the existing application list and control catalogue, so only real values can be chosen.
+  const apps = useAsync(() => listApplications(), [])
+  const catalog = useAsync(() => listReuseControls(), [])
+  const appList = Array.isArray(apps.data) ? apps.data : []
+  const controlList = Array.isArray(catalog.data) ? catalog.data : []
+  const appOptions = withCurrent(appList.map((a) => a.slug).sort(), applicationSlug)
+  const frameworkOptions = withCurrent(
+    Array.from(new Set(controlList.flatMap((c) => c.frameworks))).sort(),
+    framework,
+  )
+  const controlOptions = withCurrent(
+    controlList.filter((c) => c.frameworks.includes(framework)).map((c) => c.controlId).sort(),
+    controlId,
+  )
+
+  function chooseFramework(next: string) {
+    setFramework(next)
+    // a control only belongs to the frameworks it maps to; drop a selection that no longer fits
+    const stillValid = controlList.some((c) => c.controlId === controlId && c.frameworks.includes(next))
+    if (!stillValid) setControlId('')
+  }
 
   useEffect(() => {
     if (error) errorRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
@@ -103,11 +132,13 @@ export function BulkUpload() {
     setError(undefined)
     setResult(undefined)
     try {
+      // keyed by position in this submission ("#0", "#1", ...), not by name, so two files that share a name each
+      // carry their own hash
       const checksums: Record<string, string> = {}
-      for (const f of toSend) {
-        if (isZip(f)) continue // a zip is expanded server-side; its entries are hashed there
-        const h = await sha256Hex(f)
-        if (h) checksums[f.name] = h
+      for (let i = 0; i < toSend.length; i++) {
+        if (isZip(toSend[i])) continue // a zip is expanded server-side; its entries are hashed there
+        const h = await sha256Hex(toSend[i])
+        if (h) checksums[`#${i}`] = h
       }
       const res = await ingestBulkUpload(toSend, {
         ...meta,
@@ -137,6 +168,10 @@ export function BulkUpload() {
     }
     if (files.length === 0) {
       setError('Select at least one file, or a single .zip archive.')
+      return
+    }
+    if (files.length > 1 && files.some(isZip)) {
+      setError('Upload either individual files or a single .zip archive, not a .zip together with other files.')
       return
     }
     const ok = await send(files, {
@@ -186,37 +221,57 @@ export function BulkUpload() {
         <div className="filter-row">
           <label>
             Application *
-            <input
+            <select
               aria-label="Application"
               aria-required="true"
               aria-invalid={attempted && !applicationSlug.trim()}
               className={attempted && !applicationSlug.trim() ? 'input-invalid' : undefined}
               value={applicationSlug}
               onChange={(e) => setApp(e.target.value)}
-            />
+            >
+              <option value="">Select application</option>
+              {appOptions.map((slug) => (
+                <option key={slug} value={slug}>
+                  {slug}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Framework *
-            <input
+            <select
               aria-label="Framework"
               aria-required="true"
               aria-invalid={attempted && !framework.trim()}
               className={attempted && !framework.trim() ? 'input-invalid' : undefined}
               value={framework}
-              onChange={(e) => setFramework(e.target.value)}
-            />
+              onChange={(e) => chooseFramework(e.target.value)}
+            >
+              <option value="">Select framework</option>
+              {frameworkOptions.map((fw) => (
+                <option key={fw} value={fw}>
+                  {fw}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Control ID *
-            <input
+            <select
               aria-label="Control ID"
               aria-required="true"
               aria-invalid={attempted && !controlId.trim()}
               className={attempted && !controlId.trim() ? 'input-invalid' : undefined}
               value={controlId}
               onChange={(e) => setControlId(e.target.value)}
-              placeholder="e.g. PCI-DSS-6.2"
-            />
+            >
+              <option value="">Select control</option>
+              {controlOptions.map((id) => (
+                <option key={id} value={id}>
+                  {id}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Technology
@@ -267,8 +322,8 @@ export function BulkUpload() {
         >
           <p>Drag and drop files here, or click to browse.</p>
           <p className="muted">
-            Multiple individual files, or a single .zip archive. Accepted: pdf, txt, csv, json, xml, yaml, log, conf, xlsx,
-            docx, pptx, png, jpg (up to 10 MB each).
+            Multiple individual files, or a single .zip archive. Accepted: {BULK_UPLOAD_EXTENSIONS.join(', ')} (up to 10
+            MB each).
           </p>
           <input
             key={inputKey}
@@ -287,7 +342,7 @@ export function BulkUpload() {
         </div>
 
         {hasZip && files.length > 1 ? (
-          <p className="muted">Note: a .zip archive is expanded server-side; other selected files are uploaded as-is.</p>
+          <p className="muted">A .zip archive must be uploaded on its own: remove the other files or the archive.</p>
         ) : null}
 
         {files.length > 0 ? (
@@ -330,30 +385,68 @@ export function BulkUpload() {
         {batches.error ? <ErrorNote message={batches.error} /> : null}
         {batches.data && batches.data.items.length === 0 ? <Empty message="No bulk-upload batches yet." /> : null}
         {batches.data && batches.data.items.length > 0 ? (
-          <DataTable
-            rows={batches.data.items}
-            rowKey={(b) => b.runId}
-            columns={[
-              { header: 'Batch', cell: (b) => <code title={b.runId}>{b.runId.slice(0, 8)}</code> },
-              { header: 'Status', cell: (b) => <StatusPill status={b.status} /> },
-              { header: 'When', cell: (b) => (b.createdAt ? new Date(b.createdAt).toLocaleString() : '—') },
-              { header: 'By', cell: (b) => b.triggeredBy ?? b.requestedBy ?? '—' },
-              { header: 'Files', cell: (b) => b.received, align: 'right' },
-              { header: 'Added', cell: (b) => b.ingested, align: 'right' },
-              { header: 'Dup.', cell: (b) => b.duplicates, align: 'right' },
-              { header: 'Not stored', cell: (b) => b.failed, align: 'right' },
-              {
-                header: '',
-                cell: (b) => (
-                  <button type="button" onClick={() => setOpenBatch(openBatch === b.runId ? undefined : b.runId)}>
-                    {openBatch === b.runId ? 'Hide' : 'Details'}
-                  </button>
-                ),
-              },
-            ]}
-          />
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Batch</th>
+                  <th>Status</th>
+                  <th>When</th>
+                  <th>By</th>
+                  <th className="num">Files</th>
+                  <th className="num">Added</th>
+                  <th className="num">Dup.</th>
+                  <th className="num">Not stored</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {batches.data.items.map((b) => (
+                  <Fragment key={b.runId}>
+                    <tr>
+                      <td>
+                        <code title={b.runId}>{b.runId.slice(0, 8)}</code>
+                      </td>
+                      <td>
+                        <StatusPill status={b.status} />
+                      </td>
+                      <td>{b.createdAt ? new Date(b.createdAt).toLocaleString() : '—'}</td>
+                      <td>{b.triggeredBy ?? b.requestedBy ?? '—'}</td>
+                      <td className="num">{b.received}</td>
+                      <td className="num">{b.ingested}</td>
+                      <td className="num">{b.duplicates}</td>
+                      <td className="num">{b.failed}</td>
+                      <td>
+                        <button
+                          type="button"
+                          aria-expanded={openBatch === b.runId}
+                          onClick={() => setOpenBatch(openBatch === b.runId ? undefined : b.runId)}
+                        >
+                          {openBatch === b.runId ? 'Hide' : 'Details'}
+                        </button>
+                      </td>
+                    </tr>
+                    {/* the per-file detail opens directly under its own batch row */}
+                    {openBatch === b.runId ? (
+                      <tr className="batch-detail-row">
+                        <td colSpan={9}>
+                          <BatchDetail batch={b} />
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : null}
-        {openBatch && batches.data ? <BatchDetail batch={batches.data.items.find((b) => b.runId === openBatch)} /> : null}
+        {batches.data && batches.data.totalItems > batches.data.items.length ? (
+          <p>
+            <button type="button" disabled={batches.loading} onClick={() => setBatchLimit((n) => n + BATCH_PAGE)}>
+              Show more ({batches.data.items.length} of {batches.data.totalItems})
+            </button>
+          </p>
+        ) : null}
       </Section>
     </div>
   )
