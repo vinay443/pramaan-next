@@ -35,3 +35,6 @@ pramaan:
     trend-enabled: false
   # deterministic regardless of an ambient DEMO_MODE env var; DemoSeedModeTest overrides
   demo-mode: false
+  insight:
+    completeness-cache-seconds: 0
+    completeness-warmup: false

@@ -60,6 +60,25 @@ describe('RetentionPanel', () => {
     expect(JSON.parse(calls.filter((c) => c.url.endsWith('/archive')).pop()?.body ?? '{}').mode).toBe('EXECUTE')
   })
 
+  it('an unscoped run sends the explicit allApplications scope (the backend refuses an unscoped EXECUTE)', async () => {
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'ADMIN')
+    const calls: Array<{ url: string; body?: string }> = []
+    stubBackend(calls)
+    render(<RetentionPanel />)
+    await screen.findByDisplayValue('365')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Preview eligible' }))
+    expect(await screen.findByText('PCI-C6')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Archive eligible evidence' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm archive' }))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Archived 1 evidence record.'))
+    const bodies = calls.filter((c) => c.url.endsWith('/archive')).map((c) => JSON.parse(c.body ?? '{}'))
+    expect(bodies).toEqual([
+      { mode: 'PREVIEW', allApplications: true },
+      { mode: 'EXECUTE', allApplications: true },
+    ])
+  })
+
   it('is read-only for an Auditor: policy shown, no save and no archive button', async () => {
     sessionStorage.setItem(PERSONA_STORAGE_KEY, 'AUDITOR')
     stubBackend([])

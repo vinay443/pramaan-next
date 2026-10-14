@@ -175,6 +175,69 @@ async function withFallback<T>(
   }
 }
 
+// ---- dashboard widgets ----------------------------------------------------
+//
+// A dashboard widget that fails or times out must not turn the whole app to mock data: the global "showing mock
+// data" state is reserved for a backend that is actually unreachable. So a widget's failure is only swallowed into
+// mock data when a cheap reachability probe (GET /api/v1/system/status, any HTTP answer counts) also fails; when the
+// backend answers, the error is thrown and that widget shows its own "Couldn't load this widget" + Retry.
+
+let reachabilityProbe: Promise<boolean> | null = null
+
+/** True when the backend answers at all (even 403/500). Widgets failing together share the one in-flight probe. */
+function backendReachable(): Promise<boolean> {
+  if (!reachabilityProbe) {
+    reachabilityProbe = apiFetch('/api/v1/system/status', { timeoutMs: 3000 })
+      .then(
+        () => true,
+        (e) => !(e instanceof ApiError && e.offline),
+      )
+      .finally(() => {
+        reachabilityProbe = null
+      })
+  }
+  return reachabilityProbe
+}
+
+async function widgetCall<T>(live: () => Promise<T>, fallback: () => T): Promise<T> {
+  if (mocksForced()) {
+    await loadMocks()
+    setDataSource('mock')
+    return fallback()
+  }
+  try {
+    const out = await live()
+    firstProbePending = false
+    setDataSource('live')
+    return out
+  } catch (e) {
+    if (!(e instanceof ApiError) || e.aiUnavailable) {
+      firstProbePending = false
+      throw e
+    }
+    // the very first request of a session may just be racing a dev-server cold start: retry once before probing
+    if (e.offline && firstProbePending && RETRY_FIRST_PROBE) {
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      try {
+        const out = await live()
+        firstProbePending = false
+        setDataSource('live')
+        return out
+      } catch {
+        /* fall through to the reachability probe */
+      }
+    }
+    firstProbePending = false
+    if (await backendReachable()) {
+      setDataSource('live')
+      throw e
+    }
+    await loadMocks()
+    setDataSource('mock')
+    return fallback()
+  }
+}
+
 // ---- applications ---------------------------------------------------------
 
 export function listApplications(): Promise<ApplicationView[]> {
@@ -327,10 +390,9 @@ export function deleteAdminUser(username: string): Promise<void> {
 // ---- evidence -----------------------------------------------------------
 
 export function getEvidenceDashboard(): Promise<EvidenceDashboard> {
-  return withFallback(
+  return widgetCall(
     () => apiFetch<EvidenceDashboard>('/api/v1/evidence/dashboard'),
     () => mock.mockEvidenceDashboard(),
-    true,
   )
 }
 
@@ -381,6 +443,18 @@ export function transitionEvidenceLifecycle(
     () => mock.mockLifecycleTransition(id, action, actor, note),
     true,
   )
+}
+
+/**
+ * FT006 - PATCH /evidence/{id}/metadata (APP and ADMIN). A write: it never falls back to mock data, so a failure
+ * (400 reason/key/value, 403 role, 409 archived) reaches the caller as an ApiError with the backend's message.
+ */
+export function patchEvidenceMetadata(
+  id: string,
+  changes: Record<string, unknown>,
+  reason: string,
+): Promise<EvidenceView> {
+  return apiFetch<EvidenceView>(`/api/v1/evidence/${id}/metadata`, { method: 'PATCH', body: { changes, reason } })
 }
 
 export function verifyEvidence(id: string, version?: number): Promise<IntegrityReport> {
@@ -460,7 +534,7 @@ export function triggerGrcSync(): Promise<GrcSyncStatus> {
 // ---- scheduler --------------------------------------------------------
 
 export function listRuns(page = 0, size = 20): Promise<Page<RunView>> {
-  return withFallback(
+  return widgetCall(
     () => apiFetch<Page<RunView>>(`/api/v1/scheduler/runs${buildQuery({ page, size })}`),
     () => {
       const all = mock.mockRunsList()
@@ -626,8 +700,8 @@ export function searchObservations(q: {
 }
 
 export function getDashboardKpis(filters: DashboardFilterParams): Promise<DashboardKpis> {
-  return withFallback(
-    () => apiFetch<DashboardKpis>(`/api/v1/dashboard/kpis${buildQuery(filters as Record<string, unknown>)}`),
+  return widgetCall(
+    () => apiFetch<DashboardKpis>(`/api/v1/dashboard/kpis${buildQuery(filters as Record<string, unknown>)}`, { timeoutMs: 15000 }),
     () => mock.mockDashboardKpis(filters),
   )
 }
@@ -655,7 +729,8 @@ export function runArchival(mode: 'PREVIEW' | 'EXECUTE', application?: string): 
     () =>
       apiFetch<ArchiveResult>('/api/v1/retention/archive', {
         method: 'POST',
-        body: { mode, application: application || undefined },
+        // the backend rejects an unscoped EXECUTE: "no application" is sent as an explicit allApplications
+        body: application ? { mode, application } : { mode, allApplications: true },
       }),
     () => mock.mockArchive(mode, application),
   )
@@ -702,7 +777,7 @@ export function listChecks(): Promise<CheckDefView[]> {
 }
 
 export function listCheckResults(params: CheckResultParams): Promise<Page<CheckResultView>> {
-  return withFallback(
+  return widgetCall(
     () => apiFetch<Page<CheckResultView>>(`/api/v1/check-results${buildQuery(params as Record<string, unknown>)}`),
     () => mock.mockCheckResultsPage(params),
   )
@@ -744,13 +819,13 @@ export function getEvidenceCompleteness(applicationSlug?: string, framework?: st
 
 /** Evidence Completeness — Framework -> Control rollup: one row per framework. */
 export function getEvidenceCompletenessFrameworks(applicationSlug?: string): Promise<FrameworkCompletenessRow[]> {
-  return withFallback(
+  return widgetCall(
     () =>
       apiFetch<FrameworkCompletenessRow[]>(
         `/api/v1/insight/evidence-completeness/frameworks${buildQuery({ applicationSlug })}`,
+        { timeoutMs: 20000 },
       ),
     () => mock.mockEvidenceCompletenessFrameworks(applicationSlug),
-    true,
   )
 }
 
@@ -795,10 +870,9 @@ function unitsQuery(units?: string[]): string {
 }
 
 export function getLeadershipDashboard(businessUnits?: string[]): Promise<LeadershipDashboard> {
-  return withFallback(
+  return widgetCall(
     () => apiFetch<LeadershipDashboard>(`/api/v1/insight/leadership${unitsQuery(businessUnits)}`),
     () => mock.mockLeadershipDashboard(businessUnits),
-    true,
   )
 }
 
@@ -812,10 +886,9 @@ export function getComparison(
   ;(applications ?? []).forEach((a) => qs.append('applications', a))
   if (framework) qs.set('framework', framework)
   const q = qs.toString()
-  return withFallback(
+  return widgetCall(
     () => apiFetch<ComparisonReport>(`/api/v1/insight/comparison${q ? `?${q}` : ''}`),
     () => mock.mockComparison(applications, framework, businessUnits),
-    true,
   )
 }
 
@@ -852,10 +925,9 @@ export function getAuditPrep(applicationSlug?: string, framework?: string): Prom
 /** `businessUnit` scopes points and `current` to one function; closure/collection come back empty. */
 export function getTrend(businessUnit?: string | string[]): Promise<TrendReport> {
   const units = businessUnit === undefined ? undefined : [businessUnit].flat()
-  return withFallback(
+  return widgetCall(
     () => apiFetch<TrendReport>(`/api/v1/insight/trend${unitsQuery(units)}`),
     () => mock.mockTrend(units),
-    true,
   )
 }
 
@@ -863,31 +935,28 @@ export function getTrend(businessUnit?: string | string[]): Promise<TrendReport>
  *  trend) is computed only from this application's evidence lifecycle events — see App Owner
  *  dashboard Overview. `current`/`points` stay portfolio-wide (not tracked per application). */
 export function getTrendForApplication(applicationSlug: string): Promise<TrendReport> {
-  return withFallback(
+  return widgetCall(
     () => apiFetch<TrendReport>(`/api/v1/insight/trend?applicationSlug=${encodeURIComponent(applicationSlug)}`),
     () => mock.mockTrendForApplication(applicationSlug),
-    true,
   )
 }
 
 /** App Owner dashboard — evidence lifecycle counts, rejection audit trail, Auditor SLA, pending aging. */
 export function getEvidenceLifecycleSummary(applicationSlug: string): Promise<EvidenceLifecycleSummary> {
-  return withFallback(
+  return widgetCall(
     () =>
       apiFetch<EvidenceLifecycleSummary>(
         `/api/v1/insight/evidence-lifecycle/summary?applicationSlug=${encodeURIComponent(applicationSlug)}`,
       ),
     () => mock.mockEvidenceLifecycleSummary(applicationSlug),
-    true,
   )
 }
 
 /** Upcoming audit schedule — every scheduled audit plus a computed readyCount/totalCount. */
 export function getAuditSchedule(): Promise<AuditScheduleReport> {
-  return withFallback(
+  return widgetCall(
     () => apiFetch<AuditScheduleReport>('/api/v1/insight/audit-schedule'),
     () => mock.mockAuditSchedule(),
-    true,
   )
 }
 
@@ -933,13 +1002,12 @@ export function getEvidenceSummaryReport(applicationSlug?: string, framework?: s
 }
 
 export function getCompliance(applicationSlug: string, framework?: string): Promise<ComplianceReport> {
-  return withFallback(
+  return widgetCall(
     () =>
       apiFetch<ComplianceReport>(
         `/api/v1/insight/compliance${buildQuery({ applicationSlug, framework })}`,
       ),
     () => mock.mockCompliance(applicationSlug, framework),
-    true,
   )
 }
 

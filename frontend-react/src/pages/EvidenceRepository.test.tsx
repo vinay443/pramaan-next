@@ -4,8 +4,12 @@ import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { EvidenceRepository } from './EvidenceRepository'
 import { renderOffline } from '../test/render'
+import { PERSONA_STORAGE_KEY } from './PersonaLogin'
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  sessionStorage.removeItem(PERSONA_STORAGE_KEY)
+})
 
 describe('EvidenceRepository', () => {
   it('lists mock evidence and filters by application', async () => {
@@ -93,5 +97,76 @@ describe('EvidenceRepository', () => {
     await userEvent.click(within(panel).getByRole('button', { name: 'Copy SHA-256' }))
     expect(writeText).toHaveBeenCalledWith(sha)
     expect(await within(panel).findByText('Copied')).toBeInTheDocument()
+  })
+
+  describe('FT006 metadata edit', () => {
+    const row = {
+      evidenceId: 'e1', evidenceKey: 'net-banking|PCI_DSS|MW-TLS-VERSION|BULK_UPLOAD|tls-report.txt',
+      applicationSlug: 'net-banking', controlId: 'MW-TLS-VERSION', framework: 'PCI_DSS', sourceSystem: 'BULK_UPLOAD',
+      currentVersion: 1, createdAt: '2026-10-13T05:00:00Z', updatedAt: '2026-10-13T06:00:00Z', integrityStatus: 'VERIFIED',
+      lifecycleState: 'APPROVED',
+      tags: { name: 'net-banking_MW-TLS-VERSION_UAT_20261013_001', sourceTitle: 'tls-report.txt', environment: 'UAT',
+        frameworks: 'PCI_DSS', technology: 'nginx', evidenceType: 'MIDDLEWARE-CONFIG' },
+      latest: { version: 1, sha256: 'ab'.repeat(32), contentType: 'text/plain', sizeBytes: 10, objectKey: 'k', collectedAt: '2026-10-13T06:30:00Z', collectedBy: 'App Owner', metadata: {} },
+    }
+    const note = JSON.stringify({ reason: 'wrong tech', role: 'APP', changes: { technology: { old: 'apache', new: 'nginx' } } })
+    const lifecycle = {
+      evidenceId: 'e1', applicationSlug: 'net-banking', controlId: 'MW-TLS-VERSION', state: 'DRAFT', effectiveState: 'DRAFT',
+      expired: false, retentionDays: 365, currentVersion: 1,
+      history: [
+        { toState: 'DRAFT', action: 'INGESTED', actor: 'App Owner', occurredAt: '2026-10-13T06:30:00Z' },
+        { fromState: 'APPROVED', toState: 'DRAFT', action: 'METADATA_EDITED', actor: 'App Owner', note, occurredAt: '2026-10-14T06:30:00Z' },
+      ],
+    }
+
+    function stub(calls: Array<{ url: string; init?: { method?: string; body?: string; headers?: Record<string, string> } }>) {
+      vi.stubGlobal('fetch', vi.fn((url: string, init?: { method?: string; body?: string; headers?: Record<string, string> }) => {
+        calls.push({ url: String(url), init })
+        const reply = (b: unknown) =>
+          Promise.resolve({ ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(JSON.stringify(b)) })
+        if (String(url).includes('/metadata')) return reply({ ...row, lifecycleState: 'DRAFT' })
+        if (String(url).includes('/lifecycle')) return reply(lifecycle)
+        return reply({ items: [row], page: 0, size: 20, totalItems: 1, totalPages: 1 })
+      }))
+    }
+
+    async function open() {
+      render(<MemoryRouter><EvidenceRepository /></MemoryRouter>)
+      await userEvent.click(await screen.findByRole('button', { name: 'Show details' }))
+    }
+
+    it('shows Edit only to APP and ADMIN, and lists the metadata history read-only', async () => {
+      stub([])
+      sessionStorage.setItem(PERSONA_STORAGE_KEY, 'AUDITOR')
+      await open()
+      expect(await screen.findByText('Metadata history')).toBeInTheDocument()
+      expect(await screen.findByText(/technology: apache → nginx/)).toBeInTheDocument()
+      expect(screen.getByText(/reason: wrong tech/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Edit metadata' })).not.toBeInTheDocument()
+    })
+
+    it.each(['APP', 'ADMIN'])('%s can edit: a reason is mandatory and the PATCH carries only the changed fields', async (code) => {
+      const calls: Array<{ url: string; init?: { method?: string; body?: string; headers?: Record<string, string> } }> = []
+      stub(calls)
+      sessionStorage.setItem(PERSONA_STORAGE_KEY, code)
+      await open()
+      await userEvent.click(await screen.findByRole('button', { name: 'Edit metadata' }))
+
+      const tech = screen.getByLabelText('Edit technology')
+      await userEvent.clear(tech)
+      await userEvent.type(tech, 'Tomcat')
+      await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(/reason is required/i)
+      expect(calls.some((c) => c.init?.method === 'PATCH')).toBe(false)
+
+      await userEvent.type(screen.getByLabelText('Reason for the change'), 'fix the technology')
+      await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+      expect(await screen.findByText(/Saved. Lifecycle state: DRAFT/)).toBeInTheDocument()
+
+      const patch = calls.find((c) => c.init?.method === 'PATCH')!
+      expect(patch.url).toContain('/api/v1/evidence/e1/metadata')
+      expect(JSON.parse(patch.init!.body!)).toEqual({ changes: { technology: 'Tomcat' }, reason: 'fix the technology' })
+      expect(patch.init!.headers).toMatchObject({ 'X-Pramaan-Role': code })
+    })
   })
 })

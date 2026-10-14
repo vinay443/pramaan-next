@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class EvidenceLifecycleService {
 
     public static final String DUPLICATE_SKIPPED = "DUPLICATE_SKIPPED";
+    public static final String METADATA_EDITED = "METADATA_EDITED";
 
     /** Allowed source states per action; the target state each action produces. */
     private static final Map<LifecycleAction, Set<EvidenceLifecycleState>> ALLOWED_FROM = Map.of(
@@ -157,6 +158,24 @@ public class EvidenceLifecycleService {
     private boolean isExpired(EvidenceRecord r) {
         Instant last = r.getLatestCollectedAt();
         return last != null && ChronoUnit.DAYS.between(last, clock.instant()) > retention.days();
+    }
+
+    /**
+     * A metadata edit was applied to {@code r}: audit event + state rule. ARCHIVED is terminal (409); any other
+     * non-DRAFT state returns to DRAFT so the edited evidence is reviewed again; DRAFT stays DRAFT. {@code note} is the
+     * caller's JSON payload (old/new values, reason, role).
+     */
+    @Transactional
+    public void recordMetadataEdit(EvidenceRecord r, String actor, String note, Instant now) {
+        EvidenceLifecycleState from = r.getLifecycleState();
+        if (from == EvidenceLifecycleState.ARCHIVED) {
+            throw ApiException.conflict("cannot edit metadata of evidence in state ARCHIVED");
+        }
+        if (from != EvidenceLifecycleState.DRAFT) {
+            r.applyLifecycle(EvidenceLifecycleState.DRAFT, actor, "metadata edited - back to draft for re-review", now);
+        }
+        r.touch(now);
+        append(r, from, r.getLifecycleState(), METADATA_EDITED, actor, note, now);
     }
 
     /** Retention archival: terminal state + audit event only. Callers decide eligibility. */

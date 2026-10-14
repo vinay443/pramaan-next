@@ -118,6 +118,20 @@ export function Loading({ what = 'data' }: { what?: string }) {
   )
 }
 
+/** One dashboard widget failed to load: says so, keeps the rest of the page live, and offers a retry. */
+export function WidgetError({ message, onRetry }: { message?: string; onRetry: () => void }) {
+  return (
+    <div className="state state-error widget-error" role="alert">
+      <span>
+        Couldn't load this widget{message ? ` (${message})` : ''}.
+      </span>
+      <button type="button" onClick={onRetry}>
+        Retry
+      </button>
+    </div>
+  )
+}
+
 export function ErrorNote({ message }: { message: string }) {
   return (
     <div className="state state-error" role="alert">

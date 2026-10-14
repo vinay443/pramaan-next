@@ -100,7 +100,8 @@ class RetentionTest {
     }
 
     private JsonNode archive(String mode, String app) throws Exception {
-        String body = "{\"mode\":\"" + mode + "\"" + (app == null ? "" : ",\"application\":\"" + app + "\"") + "}";
+        // no application = the explicit "all applications" scope (EXECUTE refuses an unscoped request)
+        String body = "{\"mode\":\"" + mode + "\"" + (app == null ? ",\"allApplications\":true" : ",\"application\":\"" + app + "\"") + "}";
         return json.readTree(mvc.perform(post("/api/v1/retention/archive").header(ROLE, "ADMIN")
                         .header("X-Pramaan-User", "Platform Admin").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
@@ -198,6 +199,59 @@ class RetentionTest {
         assertThat(ids(run)).containsExactly(oldId.toString());
         assertThat(load(oldId).getLifecycleState()).isEqualTo(EvidenceLifecycleState.ARCHIVED);
         assertThat(load(otherAppOldId).getLifecycleState()).isNotEqualTo(EvidenceLifecycleState.ARCHIVED);
+    }
+
+    private com.fasterxml.jackson.databind.JsonNode raw(String role, String body, int expectedStatus) throws Exception {
+        var r = mvc.perform(post("/api/v1/retention/archive").header(ROLE, role)
+                .header("X-Pramaan-User", "Platform Admin").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().is(expectedStatus)).andReturn().getResponse().getContentAsString();
+        return r.isBlank() ? json.createObjectNode() : json.readTree(r);
+    }
+
+    @Test
+    void archiveContractRejectsUnknownKeysAcceptsTheAliasAndNeedsAnExplicitScopeToExecute() throws Exception {
+        // a mistyped scope field is a 400 naming the key - it must never widen the run to every record
+        JsonNode typo = raw("ADMIN", "{\"mode\":\"EXECUTE\",\"applicationSlugg\":\"payments\"}", 400);
+        assertThat(typo.get("message").asText()).contains("applicationSlugg");
+        raw("ADMIN", "{\"mode\":\"PREVIEW\",\"scope\":\"payments\"}", 400);
+        assertThat(load(oldId).getLifecycleState()).isNotEqualTo(EvidenceLifecycleState.ARCHIVED);
+
+        // applicationSlug is an alias of application; both given must agree
+        JsonNode alias = raw("ADMIN", "{\"mode\":\"PREVIEW\",\"applicationSlug\":\"payments\"}", 200);
+        assertThat(alias.get("application").asText()).isEqualTo("payments");
+        assertThat(ids(alias)).containsExactly(oldId.toString());
+        raw("ADMIN", "{\"mode\":\"PREVIEW\",\"application\":\"payments\",\"applicationSlug\":\"payments\"}", 200);
+        raw("ADMIN", "{\"mode\":\"PREVIEW\",\"application\":\"payments\",\"applicationSlug\":\"net-banking\"}", 400);
+
+        // EXECUTE needs a scope; PREVIEW may stay unscoped
+        raw("ADMIN", "{\"mode\":\"EXECUTE\"}", 400);
+        raw("ADMIN", "{\"mode\":\"EXECUTE\",\"allApplications\":false}", 400);
+        raw("ADMIN", "{\"mode\":\"EXECUTE\",\"application\":\"no-such-app\"}", 400);
+        raw("ADMIN", "{\"mode\":\"EXECUTE\",\"allApplications\":true,\"application\":\"payments\"}", 400);
+        raw("ADMIN", "{\"mode\":\"EXECUTE\",\"allApplications\":\"yes\"}", 400);
+        assertThat(load(oldId).getLifecycleState()).isNotEqualTo(EvidenceLifecycleState.ARCHIVED);
+        assertThat(raw("ADMIN", "{\"mode\":\"PREVIEW\"}", 200).get("eligible").asInt()).isGreaterThanOrEqualTo(2);
+        // backward compatible: a preview for an unknown application still just finds nothing
+        JsonNode none = raw("ADMIN", "{\"mode\":\"PREVIEW\",\"application\":\"no-such-app\"}", 200);
+        assertThat(none.get("eligible").asInt()).isZero();
+        assertThat(none.get("scanned").asInt()).isZero();
+
+        // allApplications:true is allowed (test fixture only - this class rolls back)
+        JsonNode all = raw("ADMIN", "{\"mode\":\"EXECUTE\",\"allApplications\":true}", 200);
+        assertThat(ids(all)).contains(oldId.toString(), otherAppOldId.toString());
+        assertThat(load(oldId).getLifecycleState()).isEqualTo(EvidenceLifecycleState.ARCHIVED);
+        assertThat(load(freshId).getLifecycleState()).isNotEqualTo(EvidenceLifecycleState.ARCHIVED);
+    }
+
+    @Test
+    void nonAdminsAreRefusedTheNewContractToo() throws Exception {
+        for (String role : new String[] {"APP", "AUDITOR", "FH", "VH", "CIO"}) {
+            long before = deniedCount(role);
+            raw(role, "{\"mode\":\"EXECUTE\",\"allApplications\":true}", 403);
+            raw(role, "{\"mode\":\"EXECUTE\",\"application\":\"payments\"}", 403);
+            assertThat(deniedCount(role)).isEqualTo(before + 2);
+        }
+        assertThat(load(oldId).getLifecycleState()).isNotEqualTo(EvidenceLifecycleState.ARCHIVED);
     }
 
     @Test

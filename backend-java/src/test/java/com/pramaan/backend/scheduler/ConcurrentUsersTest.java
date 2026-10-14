@@ -169,8 +169,12 @@ class ConcurrentUsersTest {
         assertThat(finalSettings.notifyOnSuccess()).isEqualTo(finalSettings.recipientRoles().size() == 1);
 
         long v = finalSettings.version();
+        // This intermediate save must CHANGE a stored field: a no-op save issues no UPDATE, so Hibernate would not bump
+        // @Version and the "stale" save below would silently succeed (it did whenever "a" happened to win the race above).
+        String changed = a.replace("\"emailSimulated\":true", "\"emailSimulated\":" + !finalSettings.emailSimulated());
         mvc.perform(put("/api/v1/notifications/settings").header(ROLE, "APP").contentType(MediaType.APPLICATION_JSON)
-                .content(a)).andReturn();
+                .content(changed)).andReturn();
+        assertThat(notifications.getSettings().version()).isGreaterThan(v);
         MvcResult staleSave = mvc.perform(put("/api/v1/notifications/settings").header(ROLE, "ADMIN")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(b.replace("}", ",\"version\":" + v + "}"))).andReturn();

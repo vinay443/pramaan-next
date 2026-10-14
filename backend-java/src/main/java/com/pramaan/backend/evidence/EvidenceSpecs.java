@@ -3,7 +3,10 @@ package com.pramaan.backend.evidence;
 import com.pramaan.backend.evidence.domain.EvidenceRecord;
 import com.pramaan.backend.evidence.domain.EvidenceTag;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Predicate;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
 
 /** Composable, deterministic filters for evidence-record queries. */
@@ -35,7 +38,13 @@ final class EvidenceSpecs {
         return (root, q, cb) -> v == null ? null : cb.lessThan(root.get("latestCollectedAt"), v);
     }
 
-    /** Filter by tag "key" or "key:value". */
+    /** Separator joining repeated {@code tag} parameters into the single filter string (see {@link #tag}). */
+    public static final String TAG_SEPARATOR = "\n";
+
+    /**
+     * Filter by tag "key" or "key:value". Several expressions separated by {@link #TAG_SEPARATOR} (repeated
+     * {@code tag} request parameters) are ANDed: the record must carry every one.
+     */
     static Specification<EvidenceRecord> tag(String expr) {
         return (root, query, cb) -> {
             if (expr == null || expr.isBlank()) {
@@ -44,12 +53,17 @@ final class EvidenceSpecs {
             if (query != null) {
                 query.distinct(true);
             }
-            String[] parts = expr.split(":", 2);
-            Join<EvidenceRecord, EvidenceTag> join = root.join("tags");
-            var keyMatch = cb.equal(join.get("tagKey"), parts[0].trim());
-            return parts.length == 2
-                    ? cb.and(keyMatch, cb.equal(join.get("tagValue"), parts[1].trim()))
-                    : keyMatch;
+            List<Predicate> all = new ArrayList<>();
+            for (String one : expr.split(TAG_SEPARATOR)) {
+                if (one.isBlank()) continue;
+                String[] parts = one.split(":", 2);
+                Join<EvidenceRecord, EvidenceTag> join = root.join("tags");
+                var keyMatch = cb.equal(join.get("tagKey"), parts[0].trim());
+                all.add(parts.length == 2
+                        ? cb.and(keyMatch, cb.equal(join.get("tagValue"), parts[1].trim()))
+                        : keyMatch);
+            }
+            return all.isEmpty() ? null : cb.and(all.toArray(new Predicate[0]));
         };
     }
 

@@ -2,7 +2,7 @@
 import { currentPersona } from '../pages/PersonaLogin'
 
 /** Scheduler / source-connection / system-status calls carry the declared persona (demo-mode authorization, not authentication). */
-const SCHEDULER_PATH = /^\/api\/v1\/(scheduler|schedules|sources|system|notifications|security|observations|dashboard|retention)(\/|$)|^\/api\/v1\/evidence\/[^/]+\/observations$|^\/api\/v1\/evidence\/bulk\/upload$/
+const SCHEDULER_PATH = /^\/api\/v1\/(scheduler|schedules|sources|system|notifications|security|observations|dashboard|retention)(\/|$)|^\/api\/v1\/evidence\/[^/]+\/observations$|^\/api\/v1\/evidence\/bulk\/upload$|^\/api\/v1\/evidence\/[^/]+\/metadata$/
 
 function personaHeaders(path: string): Record<string, string> {
   const p = SCHEDULER_PATH.test(path) ? currentPersona() : undefined

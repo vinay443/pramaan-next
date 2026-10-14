@@ -1,0 +1,121 @@
+=== RECORDS ===
+evidence_key | title | cur_ver | state
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | mobile-banking_PCI-C1_GENERAL_20261014_001 | 1 | DRAFT
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_001 | 2 | DRAFT
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_002 | 1 | DRAFT
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_004 | 1 | DRAFT
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_003 | 1 | DRAFT
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | net-banking_PCI-DSS-6.2_CODE-REVIEW_PROD_20261014_001 | 1 | DRAFT
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_005 | 1 | DRAFT
+=== TAGS ===
+evidence_key | tag_key | tag_value
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | application | mobile-banking
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | batchId | b1cf0a0e-d10a-47f2-bedb-2a4b0b7fd4e6
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | collectionMethod | bulk
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | control | PCI-C1
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | evidenceType | GENERAL
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | framework | PCI_DSS
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | frameworks | PCI_DSS
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | ingest.channel | bulk-upload
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | name | mobile-banking_PCI-C1_GENERAL_20261014_001
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | sourceTitle | uc03-ft003-blank-r3mv7mgsjz.txt
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | technology | postgresql
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | uploadedBy | App Owner
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | version | v1
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | application | net-banking
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | batchId | 9ffd3135-79b0-4529-bfbc-fa6d2acebc0f
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | collectionMethod | bulk
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | control | PCI-DSS-6.2
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | environment | UAT
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | evidenceType | CODE-REVIEW
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | framework | PCI_DSS
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | frameworks | PCI_DSS,DPSC
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | ingest.channel | bulk-upload
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | name | net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_001
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | sourceTitle | uc03-ft001-r3mv7mgsjz.txt
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | technology | postgresql
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | uploadedBy | App Owner
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | version | v2
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | application | net-banking
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | batchId | 661efe07-c4df-47d9-af70-6a3fdf2a5de9
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | collectionMethod | bulk
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | control | PCI-DSS-6.2
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | environment | UAT
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | evidenceType | CODE-REVIEW
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | framework | PCI_DSS
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | frameworks | PCI_DSS,DPSC
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | ingest.channel | bulk-upload
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | name | net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_002
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | sourceTitle | uc03-ft002-app-r3mv7mgsjz.txt
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | technology | postgresql
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | uploadedBy | App Owner
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | version | v1
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | application | net-banking
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | batchId | 661efe07-c4df-47d9-af70-6a3fdf2a5de9
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | collectionMethod | bulk
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | control | PCI-DSS-6.2
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | environment | UAT
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | evidenceType | CODE-REVIEW
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | framework | PCI_DSS
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | frameworks | PCI_DSS,DPSC
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | ingest.channel | bulk-upload
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | name | net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_004
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | sourceTitle | uc03-ft002-ctl-r3mv7mgsjz.txt
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | technology | postgresql
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | uploadedBy | App Owner
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | version | v1
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | application | net-banking
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | batchId | 661efe07-c4df-47d9-af70-6a3fdf2a5de9
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | collectionMethod | bulk
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | control | PCI-DSS-6.2
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | environment | UAT
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | evidenceType | CODE-REVIEW
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | framework | PCI_DSS
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | frameworks | PCI_DSS,DPSC
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | ingest.channel | bulk-upload
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | name | net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_003
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | sourceTitle | uc03-ft002-fw-r3mv7mgsjz.txt
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | technology | postgresql
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | uploadedBy | App Owner
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | version | v1
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | application | net-banking
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | batchId | eb80e0af-a9b2-4f12-ac3e-b50c9818a3aa
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | collectionMethod | bulk
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | control | PCI-DSS-6.2
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | environment | PROD
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | evidenceType | CODE-REVIEW
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | framework | PCI_DSS
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | frameworks | PCI_DSS,DPSC
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | ingest.channel | bulk-upload
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | name | net-banking_PCI-DSS-6.2_CODE-REVIEW_PROD_20261014_001
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | sourceTitle | uc03-ft003-prod-r3mv7mgsjz.txt
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | technology | postgresql
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | uploadedBy | App Owner
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | version | v1
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | application | net-banking
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | batchId | b3c4b728-b566-4e2c-b715-42635cb5b980
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | collectionMethod | bulk
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | control | PCI-DSS-6.2
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | environment | UAT
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | evidenceType | CODE-REVIEW
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | framework | PCI_DSS
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | frameworks | PCI_DSS,DPSC
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | ingest.channel | bulk-upload
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | name | net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_005
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | sourceTitle | uc03..ft004-r3mv7mgsjz.txt
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | technology | postgresql
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | uploadedBy | App Owner
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | version | v1
+=== VERSIONS ===
+evidence_key | version_number | sha256 | size_bytes | collected_at
+mobile-banking|PCI_DSS|PCI-C1|BULK_UPLOAD|uc03-ft003-blank-r3mv7mgsjz.txt | 1 | aaa6ae9023f4a360d1ade2d1f0e290661033bf3deaf5e739d7b257e5cef38247 | 43 | 2026-10-14 04:43:35.820992+00
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | 1 | 613da4b93b35c19f306a0a21a8babc8e0f71b4103e1fe4a037d5660aa63781ed | 37 | 2026-10-14 04:41:06.476474+00
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft001-r3mv7mgsjz.txt | 2 | 73eff808cbd02a3790833d888e129e58f2e9a6d93b18c93224f7a29127bfaabb | 29 | 2026-10-14 04:43:53.920717+00
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-app-r3mv7mgsjz.txt | 1 | 55756f9953d17b8bde8acfd312009c9b5b2b1178a28a7a95ffc8fb0a4cb1d67a | 41 | 2026-10-14 04:41:37.414234+00
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-ctl-r3mv7mgsjz.txt | 1 | 13bc81e2f665a27c55a70a3bb3f51d8106ce1979ae715dfab2c19cefdc120b06 | 41 | 2026-10-14 04:41:38.641555+00
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft002-fw-r3mv7mgsjz.txt | 1 | 0071ef85837a7ac72186d86e43ec839c1bf9875557174a7f87080890275e44e8 | 40 | 2026-10-14 04:41:37.995705+00
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03-ft003-prod-r3mv7mgsjz.txt | 1 | 74a9245e9e7c2564582a271a40dec9949a610fe6d68e9b78cca70fa0bdae2249 | 42 | 2026-10-14 04:43:32.007608+00
+net-banking|PCI_DSS|PCI-DSS-6.2|BULK_UPLOAD|uc03..ft004-r3mv7mgsjz.txt | 1 | 9cce8db01ee9226ef09533131a537502981cb545552bb6ef2edbec02b95bcdd5 | 38 | 2026-10-14 04:41:44.013141+00
+=== REJECTED-INPUT ROW COUNT (expect 0) ===
+rejected_rows
+0

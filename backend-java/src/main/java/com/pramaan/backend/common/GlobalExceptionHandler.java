@@ -35,6 +35,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
     ResponseEntity<ErrorBody> handleApi(ApiException ex) {
+        // FT013: a 403 raised inside a service (e.g. evidence approval scope) is a denied attempt too. The access
+        // interceptor already records its own refusals, which never reach this handler.
+        if (ex.status() == HttpStatus.FORBIDDEN && security != null) {
+            security.record(com.pramaan.backend.security.SecurityEvent.Type.ACCESS_DENIED,
+                    "refused: " + ex.getMessage());
+        }
         return ResponseEntity.status(ex.status()).body(ErrorBody.of(ex.status(), ex.getMessage()));
     }
 
@@ -57,6 +63,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
     ResponseEntity<ErrorBody> handleValidation(Exception ex) {
         return ResponseEntity.badRequest().body(ErrorBody.of(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
+    /** A missing required query parameter is the caller's mistake: 400 naming it, not a 500. */
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    ResponseEntity<ErrorBody> handleMissingParam(org.springframework.web.bind.MissingServletRequestParameterException ex) {
+        return ResponseEntity.badRequest().body(ErrorBody.of(HttpStatus.BAD_REQUEST,
+                "Required parameter '" + ex.getParameterName() + "' is missing; supply it and retry."));
     }
 
     /** A file bigger than spring.servlet.multipart limits: a clear 413 (and an audit event), not a 500. */

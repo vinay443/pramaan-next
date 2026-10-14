@@ -782,6 +782,17 @@ p.muted.small,
 
 /* ---- forms ------------------------------------------------- */
 
+fieldset.upload-form {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+fieldset.upload-form:disabled {
+  opacity: 0.55;
+}
+
 .filter-row {
   display: flex;
   flex-wrap: wrap;
@@ -1882,3 +1893,18 @@ pre.json {
 /* UC02 bulk upload: show the full SHA-256 without stretching the table */
 .hash-full { word-break: break-all; font-size: 0.78em; }
 .batch-detail { margin-top: 0.75rem; }
+
+.metadata-edit h4 {
+  margin: 14px 0 6px;
+}
+
+.metadata-history {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.widget-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

@@ -66,6 +66,9 @@ export const SCHEDULER_MANAGE_ROLES: PersonaCode[] = ['APP', 'ADMIN']
 /** Mirrors the backend SchedulerAccessPolicy: only these personas may upload evidence in bulk. */
 export const BULK_UPLOAD_ROLES: PersonaCode[] = ['APP', 'ADMIN']
 
+/** Mirrors the backend (SchedulerAccessPolicy.METADATA_EDIT_ROLES): only these personas may edit evidence metadata. */
+export const METADATA_EDIT_ROLES: PersonaCode[] = ['APP', 'ADMIN']
+
 /** Mirrors the backend: only these personas may raise or close audit observations. */
 export const OBSERVATION_WRITE_ROLES: PersonaCode[] = ['AUDITOR', 'ADMIN']
 

@@ -162,8 +162,14 @@ export function BulkUpload() {
     setAttempted(true)
     setError(undefined)
     setResult(undefined)
-    if (!applicationSlug.trim() || !framework.trim() || !controlId.trim()) {
-      setError('Application, framework and control are required.')
+    const missing = [
+      !applicationSlug.trim() && 'Application',
+      !framework.trim() && 'Framework',
+      !controlId.trim() && 'Control ID',
+    ].filter((m): m is string => !!m)
+    if (missing.length > 0) {
+      const list = missing.length > 1 ? `${missing.slice(0, -1).join(', ')} and ${missing[missing.length - 1]}` : missing[0]
+      setError(`${list} ${missing.length > 1 ? 'are' : 'is'} required.`)
       return
     }
     if (files.length === 0) {
@@ -214,9 +220,11 @@ export function BulkUpload() {
         </p>
       ) : null}
       {!canUpload ? (
-        <ErrorNote message={`Your role (${persona?.name}) can view batches but cannot upload evidence. Sign in as an App Owner or Admin to upload.`} />
+        <ErrorNote message={`Your role cannot upload evidence (${persona?.name} can view batches only). Sign in as an App Owner or Admin to upload.`} />
       ) : null}
 
+      {/* a role that cannot upload sees the whole form, but disabled (the backend also answers 403) */}
+      <fieldset className="upload-form" disabled={!canUpload}>
       <Section title="Common fields">
         <div className="filter-row">
           <label>
@@ -365,6 +373,7 @@ export function BulkUpload() {
       <button className="primary" onClick={submit} disabled={busy || !canUpload}>
         {busy ? 'Uploading…' : 'Submit bulk'}
       </button>
+      </fieldset>
 
       {error ? (
         <div ref={errorRef}>

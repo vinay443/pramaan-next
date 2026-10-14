@@ -591,6 +591,48 @@ paths:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceLifecycleView" } } } }
         "409": { $ref: "#/components/responses/Error" }
 
+  /api/v1/evidence/{id}/metadata:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: "#/components/parameters/PramaanRole"
+    patch:
+      tags: [evidence]
+      summary: >-
+        UC03-FT006 - edit evidence metadata with a mandatory reason. APP and ADMIN only (other roles 403 and an ACCESS_DENIED
+        security event); APP ownership of the application is not enforced (applications.owner is free text). Editable keys:
+        title (the human source title), environment (PROD|UAT|DR|DEV or blank), technology, evidenceType, frameworks (known
+        frameworks, must include the record's primary framework). Any other key is a 400 naming it. Changing environment or
+        evidenceType recomputes the name app_control_TYPE[_ENV]_yyyymmdd_NNN: the NNN is kept when the new prefix is free,
+        else the next free one is allocated under the application naming lock (names are never duplicated). ARCHIVED -> 409;
+        any other non-DRAFT state returns to DRAFT. The edit is audited as a METADATA_EDITED lifecycle event (actor =
+        X-Pramaan-User; note = JSON {reason, role, changes:{field:{old,new}}}), readable through GET /{id}/lifecycle. An edit
+        that changes nothing returns 200 with no event. Content, hashes and versions are never touched.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [changes, reason]
+              properties:
+                changes:
+                  type: object
+                  minProperties: 1
+                  properties:
+                    title: { type: string, maxLength: 150 }
+                    environment: { type: string, description: "PROD, UAT, DR, DEV or empty to clear" }
+                    technology: { type: string, maxLength: 60 }
+                    evidenceType: { type: string, maxLength: 60 }
+                    frameworks: { type: array, items: { type: string } }
+                  additionalProperties: false
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        "200": { description: "The updated evidence item (GET /evidence/{id} shape, includes lifecycleState)", content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceView" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /api/v1/evidence/{id}/versions:
     parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
     get:
@@ -847,7 +889,11 @@ paths:
         deleted or modified in storage, and repeating EXECUTE archives 0. ADMIN only. Every call is recorded as a retention run.
       requestBody:
         required: true
-        content: { application/json: { schema: { type: object, required: [mode], properties: { mode: { type: string, enum: [PREVIEW, EXECUTE] }, application: { type: string } } } } }
+        description: >-
+          Unknown fields are a 400 naming the field (never ignored). applicationSlug is an alias of application (both given
+          must match). EXECUTE needs an explicit scope: a known application, or allApplications:true (400 otherwise, and 400
+          for an unknown application). PREVIEW may be unscoped.
+        content: { application/json: { schema: { type: object, additionalProperties: false, required: [mode], properties: { mode: { type: string, enum: [PREVIEW, EXECUTE] }, application: { type: string }, applicationSlug: { type: string, description: "alias of application" }, allApplications: { type: boolean } } } } }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ArchiveResult" } } } }
         "400": { $ref: "#/components/responses/Error" }

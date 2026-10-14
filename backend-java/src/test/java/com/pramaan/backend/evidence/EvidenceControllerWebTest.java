@@ -34,6 +34,43 @@ class EvidenceControllerWebTest {
         }
     }
 
+    private void ingestTagged(String obj, String env, String type) throws Exception {
+        String body = """
+                {"applicationSlug":"payments","controlId":"PCI-DSS-6.2","framework":"PCI_DSS","sourceSystem":"MOCK_GITHUB",
+                 "sourceObjectId":"%s","contentText":"content for %s","tags":{"environment":"%s","evidenceType":"%s"}}
+                """.formatted(obj, obj, env, type);
+        mvc.perform(post("/api/v1/evidence/ingest").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated());
+    }
+
+    /** UC03-FT007: repeated tag parameters are ANDed. */
+    @Test
+    void repeatedTagParametersAreAnded() throws Exception {
+        ingestTagged("t1", "UAT", "CODE-REVIEW");
+        ingestTagged("t2", "UAT", "DB-CONFIG");
+        ingestTagged("t3", "PROD", "CODE-REVIEW");
+
+        mvc.perform(get("/api/v1/evidence").param("applicationSlug", "payments")
+                        .param("tag", "environment:UAT").param("tag", "evidenceType:CODE-REVIEW"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalItems").value(1))
+                .andExpect(jsonPath("$.items[0].tags.environment").value("UAT"))
+                .andExpect(jsonPath("$.items[0].tags.evidenceType").value("CODE-REVIEW"));
+        mvc.perform(get("/api/v1/evidence").param("applicationSlug", "payments").param("tag", "environment:UAT"))
+                .andExpect(jsonPath("$.totalItems").value(2));
+        mvc.perform(get("/api/v1/evidence").param("applicationSlug", "payments")
+                        .param("tag", "environment:PROD").param("tag", "evidenceType:DB-CONFIG"))
+                .andExpect(jsonPath("$.totalItems").value(0));
+    }
+
+    /** UC03-FT016: a missing required parameter is a clear 400, not a 500. */
+    @Test
+    void missingRequiredParameterIsA400WithAMessage() throws Exception {
+        mvc.perform(get("/api/v1/insight/evidence-lifecycle/summary"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("applicationSlug")));
+    }
+
     @Test
     void ingestThenQueryAndRunDeterministicQuery() throws Exception {
         String body = """

@@ -160,8 +160,9 @@ public class EvidenceIngestionService {
 
         EvidenceVersion latest = record.latestVersion();
         if (latest != null && latest.getSha256().equalsIgnoreCase(sha)) {
-            String dupName = EvidenceNaming.standardName(record.getApplicationSlug(),
-                    record.getControlId(), evidenceType, collectedAt, record.getCurrentVersion());
+            // a duplicate re-upload keeps the environment the evidence was first stored under (see BATCH_SCOPED_TAGS)
+            String dupName = evidenceName(record, evidenceType, storedEnvironment(record, environmentOf(req)),
+                    collectedAt);
             record.setTitle(dupName);
             Map<String, String> dupTags = new LinkedHashMap<>(standardTags(req, technology, frameworks, evidenceType,
                     dupName, collectionMethod, record.getCurrentVersion()));
@@ -176,14 +177,20 @@ public class EvidenceIngestionService {
         String objectKey = "evidence/%s/v%d/%s".formatted(record.getId(), nextVersion, sha);
         String contentType = req.contentType() != null ? req.contentType()
                 : (req.contentText() != null ? "text/plain" : "application/octet-stream");
+        // Known gap (deferred): the object is written before the DB work commits, so a later failure rolls the rows back
+        // but leaves this immutable object behind. The put cannot simply move to beforeCommit: autoEvaluate() below
+        // reads the latest object through RuleEvaluationService.latestContent. The store is immutable (no delete), so
+        // the fix is an orphan sweep (needs ObjectStore.list) - out of scope for now. A retry of a NEW VERSION reuses
+        // this exact key (record id + version + sha) and so adds no second object; only a failed first CREATE orphans one.
         objectStore.put(objectKey, content, contentType);
 
         EvidenceVersion version = new EvidenceVersion(UUID.randomUUID(), nextVersion, sha, contentType,
                 content.length, objectKey, collectedAt, req.collectedBy(), ingestionRunId,
                 sanitize(req.metadata()), now);
         record.addVersion(version);
-        String standardName = EvidenceNaming.standardName(record.getApplicationSlug(),
-                record.getControlId(), evidenceType, collectedAt, nextVersion);
+        String reqEnv = environmentOf(req);
+        String standardName = evidenceName(record, evidenceType,
+                reqEnv != null ? reqEnv : storedEnvironment(record, null), collectedAt);
         record.setTitle(standardName);
         applyTags(record, standardTags(req, technology, frameworks, evidenceType, standardName,
                 collectionMethod, nextVersion));
@@ -280,6 +287,254 @@ public class EvidenceIngestionService {
         applyTags(record, Map.of(EvidenceNaming.TAG_FRAMEWORKS, String.join(",", frameworks)));
         records.save(record);
         return EvidenceView.from(record);
+    }
+
+    /** Fields a metadata edit may change ({@code title} is the human source title, the {@code sourceTitle} tag). */
+    static final java.util.Set<String> EDITABLE_METADATA =
+            java.util.Set.of("title", "environment", "technology", "evidenceType", "frameworks");
+    private static final int MAX_REASON = 500;
+    private static final int MAX_AUDIT_VALUE = 120;
+    private static final com.fasterxml.jackson.databind.ObjectMapper AUDIT_JSON =
+            new com.fasterxml.jackson.databind.ObjectMapper();
+
+    /**
+     * FT006 - edit an evidence record's metadata with a mandatory reason. Reuses the ingest naming/tag helpers: an
+     * environment or evidence-type change recomputes the name prefix under the same per-application naming lock,
+     * keeping the record's sequence when the new prefix is free and otherwise taking the next one. The edit is
+     * audited as a METADATA_EDITED lifecycle event (old/new per field, role, reason); content, hashes and versions
+     * are never touched.
+     *
+     * <p>Callers are limited to APP and ADMIN by SchedulerAccessPolicy. APP ownership of the application is NOT
+     * enforced: {@code applications.owner} is free text, with no user-to-application mapping (docs/METADATA_EDIT.md).
+     *
+     * @return false when nothing actually changed (no event, no state change)
+     */
+    @Transactional
+    public boolean updateMetadata(UUID evidenceId, Map<String, Object> changes, String reason, String actor,
+                                  String role) {
+        if (changes == null || changes.isEmpty()) {
+            throw ApiException.badRequest("changes must contain at least one field; editable: "
+                    + EDITABLE_METADATA.stream().sorted().toList());
+        }
+        for (String key : changes.keySet()) {
+            if (!EDITABLE_METADATA.contains(key)) {
+                throw ApiException.badRequest("'" + key + "' cannot be edited; editable fields: "
+                        + EDITABLE_METADATA.stream().sorted().toList());
+            }
+        }
+        String why = reason == null ? "" : reason.trim();
+        if (why.isEmpty()) {
+            throw ApiException.badRequest("reason is required");
+        }
+        if (why.length() > MAX_REASON || why.chars().anyMatch(Character::isISOControl)) {
+            throw ApiException.badRequest("reason must be at most " + MAX_REASON + " characters of plain text");
+        }
+        EvidenceRecord record = records.findById(evidenceId)
+                .orElseThrow(() -> ApiException.notFound("Unknown evidence: " + evidenceId));
+        if (record.getLifecycleState() == com.pramaan.backend.evidence.domain.EvidenceLifecycleState.ARCHIVED) {
+            throw ApiException.conflict("cannot edit metadata of evidence in state ARCHIVED");
+        }
+
+        Map<String, String> tags = new LinkedHashMap<>();
+        record.getTags().forEach(t -> tags.put(t.getTagKey(), t.getTagValue()));
+        String primary = record.getFramework() == null ? "" : record.getFramework().trim().toUpperCase(Locale.ROOT);
+
+        String oldTitle = tags.getOrDefault(EvidenceNaming.TAG_SOURCE_TITLE, "");
+        String oldEnv = storedEnvironment(record, null);
+        String oldTech = tags.getOrDefault(EvidenceNaming.TAG_TECHNOLOGY, "unknown");
+        String oldType = tags.containsKey(EvidenceNaming.TAG_EVIDENCE_TYPE)
+                ? tags.get(EvidenceNaming.TAG_EVIDENCE_TYPE)
+                : EvidenceNaming.resolveEvidenceType(tags, null, record.getControlId(), record.getSourceSystem());
+        List<String> oldFrameworks = frameworkList(tags.get(EvidenceNaming.TAG_FRAMEWORKS), primary);
+
+        String newTitle = oldTitle;
+        String newEnv = oldEnv;
+        String newTech = oldTech;
+        String newType = oldType;
+        List<String> newFrameworks = oldFrameworks;
+        if (changes.containsKey("title")) {
+            newTitle = editText("title", changes.get("title"), 150);
+        }
+        if (changes.containsKey("environment")) {
+            Object v = changes.get("environment");
+            String env = v == null ? "" : v.toString().trim().toUpperCase(Locale.ROOT);
+            if (!env.isEmpty() && !BulkUploadService.ENVIRONMENTS.contains(env)) {
+                throw ApiException.badRequest("environment '" + env + "' is not valid; choose one of "
+                        + BulkUploadService.ENVIRONMENTS + " or leave it blank");
+            }
+            newEnv = env.isEmpty() ? null : env;
+        }
+        if (changes.containsKey("technology")) {
+            newTech = editText("technology", changes.get("technology"), 60).toLowerCase(Locale.ROOT);
+        }
+        if (changes.containsKey("evidenceType")) {
+            newType = EvidenceNaming.typeToken(editText("evidenceType", changes.get("evidenceType"), 60));
+        }
+        if (changes.containsKey("frameworks")) {
+            newFrameworks = editedFrameworks(record, primary, changes.get("frameworks"));
+        }
+
+        Map<String, String[]> diff = new LinkedHashMap<>(); // field -> {old, new}
+        if (!java.util.Objects.equals(oldTitle, newTitle)) diff.put("title", new String[]{oldTitle, newTitle});
+        if (!java.util.Objects.equals(oldEnv, newEnv)) diff.put("environment", new String[]{oldEnv, newEnv});
+        if (!java.util.Objects.equals(oldTech, newTech)) diff.put("technology", new String[]{oldTech, newTech});
+        if (!java.util.Objects.equals(oldType, newType)) diff.put("evidenceType", new String[]{oldType, newType});
+        if (!oldFrameworks.equals(newFrameworks)) {
+            diff.put("frameworks", new String[]{String.join(",", oldFrameworks), String.join(",", newFrameworks)});
+        }
+        if (diff.isEmpty()) {
+            return false;
+        }
+
+        String oldName = record.getTitle();
+        String newName = oldName;
+        if (diff.containsKey("environment") || diff.containsKey("evidenceType")) {
+            Instant named = record.getLatestCollectedAt() != null ? record.getLatestCollectedAt() : record.getCreatedAt();
+            String prefix = EvidenceNaming.namePrefix(record.getApplicationSlug(), record.getControlId(), newType,
+                    newEnv, named);
+            if (EvidenceNaming.sequenceOf(prefix, oldName) == 0) {
+                // same lock as ingest: the next allocator sees this record's new title once we commit
+                applications.lockForNaming(record.getApplicationSlug());
+                List<String> others = records.titlesWithPrefix(record.getApplicationSlug(), record.getId(),
+                        EvidenceNaming.titlePattern(prefix));
+                int seq = EvidenceNaming.resolveEditedSequence(prefix, oldName, others);
+                newName = EvidenceNaming.standardName(record.getApplicationSlug(), record.getControlId(), newType,
+                        newEnv, named, seq);
+            }
+        }
+
+        Map<String, String> next = new LinkedHashMap<>(tags);
+        next.put(EvidenceNaming.TAG_NAME, newName);
+        if (newTitle == null || newTitle.isBlank()) next.remove(EvidenceNaming.TAG_SOURCE_TITLE);
+        else next.put(EvidenceNaming.TAG_SOURCE_TITLE, newTitle);
+        next.put(EvidenceNaming.TAG_TECHNOLOGY, newTech);
+        next.put(EvidenceNaming.TAG_EVIDENCE_TYPE, newType);
+        next.put(EvidenceNaming.TAG_FRAMEWORKS, String.join(",", newFrameworks));
+        if (newEnv == null) next.remove("environment"); else next.put("environment", newEnv);
+        List<EvidenceTag> merged = new ArrayList<>();
+        next.forEach((k, v) -> merged.add(new EvidenceTag(UUID.randomUUID(), k, v)));
+        record.replaceTags(merged);
+        record.setTitle(newName);
+
+        Map<String, Object> audit = new LinkedHashMap<>();
+        audit.put("reason", why);
+        audit.put("role", role == null ? null : role.trim());
+        Map<String, Object> fields = new LinkedHashMap<>();
+        diff.forEach((k, v) -> fields.put(k, auditValues(v[0], v[1])));
+        if (!java.util.Objects.equals(oldName, newName)) fields.put("name", auditValues(oldName, newName));
+        audit.put("changes", fields);
+        String note;
+        try {
+            note = AUDIT_JSON.writeValueAsString(audit);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException("cannot serialise the metadata audit payload", e);
+        }
+        lifecycle.recordMetadataEdit(record, actor == null || actor.isBlank() ? "anonymous" : actor.trim(), note,
+                clock.instant());
+        return true;
+    }
+
+    private static Map<String, String> auditValues(String oldValue, String newValue) {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("old", auditTrunc(oldValue));
+        m.put("new", auditTrunc(newValue));
+        return m;
+    }
+
+    private static String auditTrunc(String v) {
+        return v == null || v.length() <= MAX_AUDIT_VALUE ? v : v.substring(0, MAX_AUDIT_VALUE) + "…";
+    }
+
+    private static String editText(String field, Object value, int max) {
+        String v = value == null ? "" : value.toString().trim();
+        if (v.isEmpty()) {
+            throw ApiException.badRequest(field + " must not be blank");
+        }
+        if (v.length() > max || v.chars().anyMatch(Character::isISOControl)) {
+            throw ApiException.badRequest(field + " must be at most " + max + " characters of plain text");
+        }
+        return v;
+    }
+
+    /** Framework list from the {@code frameworks} tag, de-duplicated, upper case, the record's primary first. */
+    private static List<String> frameworkList(String tag, String primary) {
+        List<String> out = new ArrayList<>();
+        if (!primary.isBlank()) out.add(primary);
+        if (tag != null) {
+            for (String f : tag.split(",")) {
+                String s = f.trim().toUpperCase(Locale.ROOT);
+                if (!s.isBlank() && !out.contains(s)) out.add(s);
+            }
+        }
+        return out;
+    }
+
+    private List<String> editedFrameworks(EvidenceRecord record, String primary, Object value) {
+        List<String> given = new ArrayList<>();
+        if (value instanceof java.util.Collection<?> c) {
+            c.forEach(o -> given.add(String.valueOf(o)));
+        } else if (value != null) {
+            given.addAll(List.of(value.toString().split(",")));
+        }
+        List<String> wanted = new ArrayList<>();
+        for (String g : given) {
+            String f = g.trim().toUpperCase(Locale.ROOT);
+            if (f.isEmpty()) continue;
+            if (!controlFrameworks.frameworks().contains(f)) {
+                throw ApiException.badRequest("'" + f + "' is not a known framework; choose from "
+                        + controlFrameworks.frameworks());
+            }
+            if (!wanted.contains(f)) wanted.add(f);
+        }
+        if (wanted.isEmpty()) {
+            throw ApiException.badRequest("frameworks must list at least the record's framework " + primary);
+        }
+        if (!wanted.contains(primary)) {
+            throw ApiException.badRequest("frameworks must keep the record's primary framework " + primary);
+        }
+        if (!controlFrameworks.maps(record.getControlId(), primary)
+                && !controlCatalog.isConformant(primary, record.getControlId())) {
+            throw ApiException.badRequest("control " + record.getControlId() + " does not belong to framework "
+                    + primary);
+        }
+        wanted.remove(primary);
+        wanted.add(0, primary);
+        return wanted;
+    }
+
+    /**
+     * Canonical name for the record. The trailing sequence is the record's own (kept across versions);
+     * a record new to this name prefix takes the next free number among the application's other records.
+     */
+    private String evidenceName(EvidenceRecord record, String evidenceType, String environment, Instant collectedAt) {
+        String prefix = EvidenceNaming.namePrefix(record.getApplicationSlug(), record.getControlId(),
+                evidenceType, environment, collectedAt);
+        List<String> others = new ArrayList<>();
+        if (EvidenceNaming.sequenceOf(prefix, record.getTitle()) == 0) {
+            // FT015: concurrent uploads must not read the same max(seq). The lock is held until this ingest commits,
+            // so the next allocator sees this record's title. Existing titles are never renumbered.
+            applications.lockForNaming(record.getApplicationSlug());
+            // only the titles under this prefix matter to the sequence; never load the application's whole evidence set
+            others.addAll(records.titlesWithPrefix(record.getApplicationSlug(), record.getId(),
+                    EvidenceNaming.titlePattern(prefix)));
+        }
+        int seq = EvidenceNaming.resolveSequence(prefix, record.getTitle(), others);
+        return EvidenceNaming.standardName(record.getApplicationSlug(), record.getControlId(), evidenceType,
+                environment, collectedAt, seq);
+    }
+
+    private static String environmentOf(IngestRequest req) {
+        String v = req.tags() == null ? null : req.tags().get("environment");
+        return v == null || v.isBlank() ? null : v.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private static String storedEnvironment(EvidenceRecord record, String fallback) {
+        return record.getTags().stream()
+                .filter(t -> "environment".equals(t.getTagKey()))
+                .map(EvidenceTag::getTagValue)
+                .filter(v -> v != null && !v.isBlank())
+                .map(v -> v.trim().toUpperCase(Locale.ROOT))
+                .findFirst().orElse(fallback);
     }
 
     /** Caller tags plus the canonical Use Case 3 tag set (canonical keys win). */

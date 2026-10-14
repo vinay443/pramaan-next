@@ -27,6 +27,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,16 +76,29 @@ public class EvidenceCompletenessService {
     private final ControlCatalog controlCatalog;
     private final Clock clock;
     private final int staleAfterDays;
+    private final long cacheMillis;
+    /** Scored scopes. Scoring hashes every stored object, so it is computed once per data change, not per request. */
+    private final Map<String, CachedScope> cache = new ConcurrentHashMap<>();
+
+    private record CachedScope(String fingerprint, long computedAtMillis, EvidenceCompletenessReport report) {}
+
+    /** Integrity verdict of one immutable version whose stored object hashed to its recorded SHA-256. */
+    private record Verified(int sizeBytes, boolean substantive) {}
+
+    /** Key: version id | object key | recorded sha256. Only VERIFIED verdicts are kept (see {@link #score}). */
+    private final Map<String, Verified> verifiedVersions = new ConcurrentHashMap<>();
 
     public EvidenceCompletenessService(EvidenceQueryService evidence, ObjectStore objectStore,
                                        ControlFrameworkCatalog controlFrameworks, ControlCatalog controlCatalog,
-                                       Clock clock, PramaanProperties props) {
+                                       Clock clock, PramaanProperties props,
+                                       @Value("${pramaan.insight.completeness-cache-seconds:30}") long cacheSeconds) {
         this.evidence = evidence;
         this.objectStore = objectStore;
         this.controlFrameworks = controlFrameworks;
         this.controlCatalog = controlCatalog;
         this.clock = clock;
         this.staleAfterDays = props.scheduler() != null ? props.scheduler().staleAfterDays() : 90;
+        this.cacheMillis = Math.max(0, cacheSeconds) * 1000;
     }
 
     /** The app-wide stale-after threshold (days) that decides "current" vs "stale". */
@@ -101,7 +116,28 @@ public class EvidenceCompletenessService {
         return ageDays <= staleAfterDays;
     }
 
+    /**
+     * Scored report for a scope. Served from a short-lived cache keyed by scope and invalidated as soon as evidence
+     * changes (see {@link EvidenceQueryService#dataFingerprint}); concurrent callers for one scope share one scoring
+     * pass instead of each re-reading every object (the cause of the multi-second dashboard load and its timeouts).
+     */
     public EvidenceCompletenessReport forScope(String applicationSlug, String framework) {
+        if (cacheMillis <= 0) {
+            return computeScope(applicationSlug, framework);
+        }
+        String key = blankToEmpty(applicationSlug) + "|" + blankToEmpty(framework);
+        String fingerprint = evidence.dataFingerprint();
+        long nowMs = System.currentTimeMillis();
+        return cache.compute(key, (k, cur) -> cur != null && cur.fingerprint().equals(fingerprint)
+                && nowMs - cur.computedAtMillis() < cacheMillis
+                ? cur : new CachedScope(fingerprint, nowMs, computeScope(applicationSlug, framework))).report();
+    }
+
+    private static String blankToEmpty(String s) {
+        return s == null ? "" : s.trim();
+    }
+
+    private EvidenceCompletenessReport computeScope(String applicationSlug, String framework) {
         Instant now = clock.instant();
         List<EvidenceRecord> records = evidence.recordsMatching(new EvidenceFilter(
                 blankToNull(applicationSlug), blankToNull(framework), null, null, null, null, null, 0, 100_000));
@@ -204,25 +240,34 @@ public class EvidenceCompletenessService {
             factors.add(fail("Integrity", "No version recorded — nothing to verify."));
             factors.add(fail("Evidence content", "No evidence content has ever been collected."));
         } else {
-            byte[] bytes = objectStore.get(v.getObjectKey()).orElse(null);
-            if (bytes == null) {
+            // A version is immutable (content-addressed key + recorded hash), so a VERIFIED verdict is kept for the
+            // process lifetime and the object is not re-read or re-hashed. Missing and TAMPERED verdicts are never kept
+            // (an object can reappear or be restored), and a new version has a new key, so it is always verified.
+            String verdictKey = v.getId() + "|" + v.getObjectKey() + "|" + v.getSha256();
+            Verified known = verifiedVersions.get(verdictKey);
+            byte[] bytes = known != null ? null : objectStore.get(v.getObjectKey()).orElse(null);
+            if (known == null && bytes == null) {
                 integrityStatus = IntegrityStatus.UNKNOWN;
                 factors.add(fail("Integrity",
                         "Stored object is missing from the object store (key " + v.getObjectKey() + ")."));
                 factors.add(fail("Evidence content", "Content is unavailable — cannot confirm it is non-trivial."));
             } else {
-                String actual = Hashing.sha256Hex(bytes);
-                if (actual.equalsIgnoreCase(v.getSha256())) {
+                boolean intact = known != null || Hashing.sha256Hex(bytes).equalsIgnoreCase(v.getSha256());
+                if (intact) {
+                    if (known == null) {
+                        known = new Verified(bytes.length, isSubstantive(bytes));
+                        verifiedVersions.put(verdictKey, known);
+                    }
                     integrityStatus = IntegrityStatus.VERIFIED;
                     score += WEIGHT_INTEGRITY;
                     factors.add(ok("Integrity", "SHA-256 matches the recorded hash."));
-                    if (isSubstantive(bytes)) {
+                    if (known.substantive()) {
                         score += WEIGHT_CONTENT;
                         factors.add(ok("Evidence content",
-                                "Content is present and non-trivial (" + bytes.length + " bytes)."));
+                                "Content is present and non-trivial (" + known.sizeBytes() + " bytes)."));
                     } else {
                         factors.add(fail("Evidence content",
-                                "Content is empty or looks like a placeholder (" + bytes.length + " bytes)."));
+                                "Content is empty or looks like a placeholder (" + known.sizeBytes() + " bytes)."));
                     }
                 } else {
                     integrityStatus = IntegrityStatus.TAMPERED;

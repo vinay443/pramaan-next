@@ -11,6 +11,7 @@ import com.pramaan.backend.evidence.EvidenceDtos.EvidenceView;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestRequest;
 import com.pramaan.backend.evidence.EvidenceDtos.IngestResult;
 import com.pramaan.backend.evidence.EvidenceDtos.IntegrityReport;
+import com.pramaan.backend.evidence.EvidenceDtos.MetadataEditRequest;
 import com.pramaan.backend.evidence.EvidenceQueryService.EvidenceFilter;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -22,6 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -144,14 +146,19 @@ public class EvidenceController {
             @RequestParam(required = false) String sourceSystem,
             @RequestParam(required = false) String collectedAfter,
             @RequestParam(required = false) String collectedBefore,
-            @RequestParam(required = false) String tag,
+            jakarta.servlet.http.HttpServletRequest request,
             @RequestParam(required = false) String technology,
             @RequestParam(required = false) String collectionMethod,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return queries.search(new EvidenceFilter(applicationSlug, framework, controlId, sourceSystem,
-                parseInstant(collectedAfter), parseInstant(collectedBefore), tag, page, size),
+                parseInstant(collectedAfter), parseInstant(collectedBefore), joinTags(request.getParameterValues("tag")), page, size),
                 new EvidenceQueryService.TagFacets(technology, collectionMethod));
+    }
+
+    /** Repeated {@code tag=key:value} parameters are ANDed (read raw: Spring would comma-split a single value). */
+    private static String joinTags(String[] tags) {
+        return tags == null || tags.length == 0 ? null : String.join(EvidenceSpecs.TAG_SEPARATOR, tags);
     }
 
     @GetMapping("/{id}")
@@ -187,6 +194,23 @@ public class EvidenceController {
                 .header("Content-Disposition", "attachment; filename=\"" + c.filename() + "\"")
                 .header("X-Content-Type-Options", "nosniff")
                 .body(c.bytes());
+    }
+
+    /**
+     * FT006 - edit metadata ({title, environment, technology, evidenceType, frameworks}) with a mandatory reason.
+     * APP and ADMIN only (SchedulerAccessPolicy); the edit is audited as a METADATA_EDITED event, readable through
+     * GET /{id}/lifecycle. Returns the item in the GET /{id} shape (with the resulting lifecycleState).
+     */
+    @PatchMapping("/{id}/metadata")
+    public EvidenceView editMetadata(@PathVariable UUID id,
+                                     @RequestBody(required = false) MetadataEditRequest req,
+                                     @RequestHeader(value = "X-Pramaan-User", required = false) String user,
+                                     @RequestHeader(value = "X-Pramaan-Role", required = false) String role) {
+        if (req == null) {
+            throw com.pramaan.backend.common.ApiException.badRequest("body {\"changes\":{...},\"reason\":\"...\"} is required");
+        }
+        ingestion.updateMetadata(id, req.changes(), req.reason(), user, role);
+        return queries.get(id);
     }
 
     @GetMapping("/{id}/lifecycle")

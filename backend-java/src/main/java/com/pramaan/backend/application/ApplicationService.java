@@ -87,6 +87,12 @@ public class ApplicationService {
         return ApplicationView.from(repository.save(e));
     }
 
+    /** Write-locks the application row until the surrounding transaction ends (no-op for an unknown slug). */
+    @Transactional
+    public void lockForNaming(String slug) {
+        repository.lockBySlug(slug);
+    }
+
     /** Used by ingestion/scheduler so evidence for an unknown app is never silently dropped. */
     @Transactional
     public ApplicationEntity getOrAutoCreate(String slug) {

@@ -156,6 +156,9 @@ public class EvidenceRecord {
     public String getSourceObjectId() { return sourceObjectId; }
     public String getTitle() { return title; }
     public void setTitle(String v) { this.title = v; }
+
+    /** Marks the record as changed (moves the derived-result cache fingerprint); content is untouched. */
+    public void touch(Instant now) { this.updatedAt = now; }
     public int getCurrentVersion() { return currentVersion; }
     public String getLatestSha256() { return latestSha256; }
     public Instant getLatestCollectedAt() { return latestCollectedAt; }

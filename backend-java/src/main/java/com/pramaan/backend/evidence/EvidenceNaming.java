@@ -3,6 +3,8 @@ package com.pramaan.backend.evidence;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -13,9 +15,10 @@ import java.util.Map;
  * evidence record, whether scheduler-collected, bulk-uploaded, or produced by an
  * on-demand predefined query.
  *
- * <p>Name: {@code {sourceApp}_{controlCode}_{evidenceType}_{yyyyMMdd}_{seq}}
- * (e.g. {@code payments_DB-TLS-IN-TRANSIT_DB-CONFIG_20260908_001}). Deterministic
- * for a given record: {@code seq} is the record's version number, zero-padded.
+ * <p>Name: {@code {sourceApp}_{controlCode}_{evidenceType}[_{ENV}]_{yyyyMMdd}_{seq}}
+ * (e.g. {@code payments_DB-TLS-IN-TRANSIT_DB-CONFIG_UAT_20260908_001}). {@code seq} is a
+ * zero-padded per-record sequence, unique among records sharing the rest of the name and
+ * stable across that record's new versions (the version lives in the {@code version} tag).
  */
 public final class EvidenceNaming {
 
@@ -40,15 +43,100 @@ public final class EvidenceNaming {
 
     private EvidenceNaming() {}
 
-    /** The canonical evidence name. {@code seq} is normally the record version number. */
+    /** The canonical evidence name without an environment segment. */
     public static String standardName(String application, String controlCode, String evidenceType,
                                       Instant collectedAt, int seq) {
-        return String.join("_",
-                slug(application, "app"),
-                token(controlCode, "CONTROL"),
-                token(evidenceType, "GENERAL"),
-                STAMP.format(collectedAt == null ? Instant.EPOCH : collectedAt),
-                String.format(Locale.ROOT, "%03d", Math.max(seq, 1)));
+        return standardName(application, controlCode, evidenceType, null, collectedAt, seq);
+    }
+
+    /**
+     * The canonical evidence name {@code app_control_TYPE[_ENV]_yyyymmdd_NNN}. The environment segment is
+     * omitted when blank. {@code seq} is the per-record sequence (see {@link #resolveSequence}).
+     */
+    public static String standardName(String application, String controlCode, String evidenceType,
+                                      String environment, Instant collectedAt, int seq) {
+        return namePrefix(application, controlCode, evidenceType, environment, collectedAt)
+                + "_" + String.format(Locale.ROOT, "%03d", Math.max(seq, 1));
+    }
+
+    /** Everything in the name before the trailing {@code _NNN}. */
+    public static String namePrefix(String application, String controlCode, String evidenceType,
+                                    String environment, Instant collectedAt) {
+        List<String> parts = new ArrayList<>();
+        parts.add(slug(application, "app"));
+        parts.add(token(controlCode, "CONTROL"));
+        parts.add(token(evidenceType, "GENERAL"));
+        if (environment != null && !environment.isBlank()) {
+            parts.add(token(environment, "ENV"));
+        }
+        parts.add(STAMP.format(collectedAt == null ? Instant.EPOCH : collectedAt));
+        return String.join("_", parts);
+    }
+
+    /**
+     * Sequence for a record's name under {@code prefix}. A record keeps the sequence already in its current
+     * title when that title shares the prefix (so new versions keep their identity); otherwise it takes the
+     * next number after every other record's title under the same prefix.
+     */
+    public static int resolveSequence(String prefix, String currentTitle, Collection<String> otherTitles) {
+        int own = sequenceOf(prefix, currentTitle);
+        if (own > 0) return own;
+        int max = 0;
+        if (otherTitles != null) {
+            for (String t : otherTitles) max = Math.max(max, sequenceOf(prefix, t));
+        }
+        return max + 1;
+    }
+
+    /**
+     * Sequence for a record whose prefix changed through a metadata edit: keeps the NNN of its current title when no
+     * other record already uses {@code prefix_NNN}, otherwise takes the next number after every other title under the
+     * new prefix. Never returns a sequence another record holds.
+     */
+    public static int resolveEditedSequence(String prefix, String currentTitle, Collection<String> otherTitles) {
+        int own = sequenceOf(prefix, currentTitle);
+        int wanted = own > 0 ? own : trailingSequence(currentTitle);
+        int max = 0;
+        boolean taken = false;
+        if (otherTitles != null) {
+            for (String t : otherTitles) {
+                int s = sequenceOf(prefix, t);
+                max = Math.max(max, s);
+                if (s == wanted && s > 0) taken = true;
+            }
+        }
+        return wanted > 0 && !taken ? wanted : max + 1;
+    }
+
+    /** The trailing {@code _NNN} of any evidence name, else 0. */
+    static int trailingSequence(String title) {
+        if (title == null) return 0;
+        int us = title.lastIndexOf('_');
+        if (us < 0) return 0;
+        String tail = title.substring(us + 1);
+        if (tail.length() < 3 || !tail.chars().allMatch(Character::isDigit)) return 0;
+        try {
+            return Integer.parseInt(tail);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /** SQL LIKE pattern (escape char {@code !}) matching every title that starts with {@code prefix_}. */
+    public static String titlePattern(String prefix) {
+        return prefix.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "!_%";
+    }
+
+    /** The {@code NNN} of {@code title} when it is exactly {@code prefix_NNN}, else 0. */
+    static int sequenceOf(String prefix, String title) {
+        if (title == null || !title.startsWith(prefix + "_")) return 0;
+        String tail = title.substring(prefix.length() + 1);
+        if (tail.length() < 3 || !tail.chars().allMatch(Character::isDigit)) return 0;
+        try {
+            return Integer.parseInt(tail);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /**
@@ -147,6 +235,11 @@ public final class EvidenceNaming {
     private static String slug(String v, String fallback) {
         if (v == null || v.isBlank()) return fallback;
         return v.trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9-]+", "-");
+    }
+
+    /** Canonical evidence-type token (upper case, sanitised), as written to the {@code evidenceType} tag and the name. */
+    public static String typeToken(String v) {
+        return token(v, "GENERAL");
     }
 
     private static String token(String v, String fallback) {

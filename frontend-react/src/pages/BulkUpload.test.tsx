@@ -117,7 +117,7 @@ describe('BulkUpload', () => {
     await userEvent.selectOptions(screen.getByLabelText('Application'), '')
 
     await userEvent.click(screen.getByRole('button', { name: 'Submit bulk' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/required/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Application and Control ID are required.')
 
     // the empty required field is visibly flagged, not just reported in the banner
     expect(screen.getByLabelText('Application')).toHaveAttribute('aria-invalid', 'true')
@@ -216,6 +216,18 @@ describe('BulkUpload', () => {
     renderOffline(<BulkUpload />)
     expect(await screen.findByRole('alert')).toHaveTextContent(/cannot upload evidence/i)
     expect(screen.getByRole('button', { name: 'Submit bulk' })).toBeDisabled()
+    // the whole form is disabled, not only the submit button
+    expect(screen.getByLabelText('Application')).toBeDisabled()
+    expect(screen.getByLabelText('Technology')).toBeDisabled()
+    expect(screen.getByLabelText('Choose files')).toBeDisabled()
+  })
+
+  it('UC02: an App Owner can use the form', async () => {
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    renderOffline(<BulkUpload />)
+    expect(await screen.findByLabelText('Application')).toBeEnabled()
+    expect(screen.getByLabelText('Choose files')).toBeEnabled()
+    expect(screen.queryByText(/cannot upload evidence/i)).not.toBeInTheDocument()
   })
 
   it('browse dialog: files chosen via the input appear in the list and are submitted (input is reset after the change)', async () => {

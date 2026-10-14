@@ -1,0 +1,16 @@
+Normalisation: tags sorted by key; collectedAt compared as UTC epoch ms (tz/precision ignored); sizeBytes as number; null==missing.
+DB records: 589 | API records: 589 (API rows incl. duplicates: 589)
+Only in DB (0): -
+Only in API (0): -
+Field differences: 0
+RESULT: PASS
+
+Records matching r3mv7mgsjz (from DB):
+title | ver | env | evidenceType | technology | sha256[:12]
+mobile-banking_PCI-C1_GENERAL_20261014_001 | v1 | - | GENERAL | postgresql | aaa6ae9023f4
+net-banking_PCI-DSS-6.2_CODE-REVIEW_PROD_20261014_001 | v1 | PROD | CODE-REVIEW | postgresql | 74a9245e9e7c
+net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_001 | v2 | UAT | CODE-REVIEW | postgresql | 73eff808cbd0
+net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_002 | v1 | UAT | CODE-REVIEW | postgresql | 55756f9953d1
+net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_003 | v1 | UAT | CODE-REVIEW | postgresql | 0071ef85837a
+net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_004 | v1 | UAT | CODE-REVIEW | postgresql | 13bc81e2f665
+net-banking_PCI-DSS-6.2_CODE-REVIEW_UAT_20261014_005 | v1 | UAT | CODE-REVIEW | postgresql | 9cce8db01ee9

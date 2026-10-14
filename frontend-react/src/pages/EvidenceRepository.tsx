@@ -5,6 +5,7 @@ import { onDataEvent } from '../api/events'
 import type { EvidenceQueryParams, EvidenceView } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
 import { Empty, ErrorNote, Loading, Section, StatusPill } from '../components/ui'
+import { MetadataEditPanel } from '../components/MetadataEditPanel'
 
 const PAGE_SIZE = 20
 
@@ -193,7 +194,7 @@ export function EvidenceRepository() {
                       {isExpanded ? (
                         <tr>
                           <td colSpan={7} className="nested-cell">
-                            <RowDetails row={r} />
+                            <RowDetails row={r} onSaved={reload} />
                           </td>
                         </tr>
                       ) : null}
@@ -252,9 +253,10 @@ function HashWithCopy({ hash }: { hash: string }) {
 }
 
 /** The columns moved out of the default set (step 2): shown on expand only. */
-function RowDetails({ row }: { row: EvidenceView }) {
+function RowDetails({ row, onSaved }: { row: EvidenceView; onSaved: () => void }) {
   const latest = row.latest
   return (
+    <>
     <dl className="kv">
       <dt>Application</dt>
       <dd>{row.applicationSlug}</dd>
@@ -295,6 +297,8 @@ function RowDetails({ row }: { row: EvidenceView }) {
         </>
       ) : null}
     </dl>
+    <MetadataEditPanel row={row} onSaved={onSaved} />
+    </>
   )
 }
 

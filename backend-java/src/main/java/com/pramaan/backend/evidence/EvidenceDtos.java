@@ -156,6 +156,9 @@ public final class EvidenceDtos {
      */
     public record LifecycleTransitionRequest(LifecycleAction action, String actor, String note) {}
 
+    /** FT006 metadata edit: {@code changes} (editable keys only) plus the mandatory {@code reason}. */
+    public record MetadataEditRequest(Map<String, Object> changes, String reason) {}
+
     public record LifecycleEventView(String fromState, String toState, String action,
                                      String actor, String note, Instant occurredAt) {}
 

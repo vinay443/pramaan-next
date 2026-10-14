@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { Dashboard } from './Dashboard'
 import { renderOffline } from '../test/render'
 import { PERSONA_STORAGE_KEY } from './PersonaLogin'
+import { getDataSource } from '../api/dataSource'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -192,6 +193,48 @@ describe('Dashboard — App Owner', () => {
     renderOffline(<Dashboard />)
     expect(await screen.findByText(/Offline sample data/)).toBeInTheDocument()
     expect(screen.queryByText(/Demo data/)).not.toBeInTheDocument()
+  })
+
+  it('one failing widget shows its own Retry while the others stay on live data (no mock banner)', async () => {
+    sessionStorage.setItem(PERSONA_STORAGE_KEY, 'APP')
+    const mocks = await import('../api/mocks')
+    let lifecycleCalls = 0
+    const ok = (body: unknown) =>
+      Promise.resolve({ ok: true, status: 200, statusText: 'OK', text: async () => JSON.stringify(body) })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        const u = String(url)
+        if (u.includes('/api/v1/dashboard/kpis')) return ok(kpis())
+        if (u.includes('/api/v1/applications')) return ok(mocks.mockApplications)
+        if (u.includes('/api/v1/insight/trend')) return ok(mocks.mockTrendForApplication('net-banking'))
+        if (u.includes('/api/v1/insight/evidence-completeness/frameworks')) return ok(mocks.mockEvidenceCompletenessFrameworks())
+        if (u.includes('/api/v1/evidence?')) return ok({ items: [], page: 0, size: 500, totalItems: 0, totalPages: 1 })
+        if (u.includes('/api/v1/insight/evidence-lifecycle/summary')) {
+          lifecycleCalls++
+          // fails on the first try only: the widget's Retry must be able to recover
+          return lifecycleCalls === 1
+            ? Promise.resolve({ ok: false, status: 500, statusText: 'Server Error', text: async () => JSON.stringify({ message: 'summary exploded' }) })
+            : ok(mocks.mockEvidenceLifecycleSummary('net-banking'))
+        }
+        if (u.includes('/api/v1/system/status')) return ok({}) // the backend is reachable
+        return Promise.resolve({ ok: false, status: 404, statusText: 'Not Found', text: async () => '{}' })
+      }),
+    )
+    render(<MemoryRouter><Dashboard /></MemoryRouter>)
+
+    // the KPI widget is live
+    expect(await screen.findByLabelText('Evidence in scope')).toHaveTextContent('7 evidence records in scope')
+    // the failing widget says so and offers Retry
+    expect(await screen.findByText(/Couldn't load this widget \(summary exploded\)/)).toBeInTheDocument()
+    // ... without flipping the page to mock data
+    expect(screen.queryByText(/Offline sample data/)).not.toBeInTheDocument()
+    expect(getDataSource()).toBe('live')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(lifecycleCalls).toBe(2))
+    await waitFor(() => expect(screen.queryByText(/Couldn't load this widget/)).not.toBeInTheDocument())
+    expect(screen.getByLabelText('Evidence in scope')).toHaveTextContent('7 evidence records in scope')
   })
 
   it('Frameworks tab shows Framework Compliance, the Pending Actions Work Queue and Critical Findings (mock)', async () => {

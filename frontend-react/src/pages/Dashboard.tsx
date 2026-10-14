@@ -24,7 +24,7 @@ import { useDataSource } from '../hooks/useDataSource'
 import { AutomatedCollectionSection, DashboardFilterBar, repositoryQuery } from '../components/DashboardKpiPanel'
 import { useControlResultsSummary } from '../hooks/useControlResultsSummary'
 import { useCompletenessSummary } from '../hooks/useCompletenessSummary'
-import { DataTable, ErrorNote, LineChart, Loading, Section, StatCard, StatusPill } from '../components/ui'
+import { DataTable, ErrorNote, LineChart, Loading, Section, StatCard, StatusPill, WidgetError } from '../components/ui'
 import { getPersonaCode } from './PersonaLogin'
 import type { DashboardFilterParams, EvidenceDashboard, EvidenceView, LifecycleStateCounts } from '../api/types'
 import {
@@ -168,14 +168,14 @@ export function Dashboard() {
       </p>
 
       {board.loading ? <Loading what="evidence dashboard" /> : null}
-      {board.error ? <ErrorNote message={board.error} /> : null}
+      {board.error ? <WidgetError message={board.error} onRetry={board.reload} /> : null}
 
       {statGrid}
 
       <div className="chart-grid">
         <Section title="Evidence volume over time">
           {trend.loading ? <Loading what="trend" /> : null}
-          {trend.error ? <ErrorNote message={trend.error} /> : null}
+          {trend.error ? <WidgetError message={trend.error} onRetry={trend.reload} /> : null}
           {trend.data ? (
             <>
               <LineChart points={volumeSeries} ariaLabel="evidence record count per snapshot" />
@@ -246,7 +246,7 @@ export function Dashboard() {
 
       <Section title="Recent scheduler runs" actions={<Link to="/scheduler">Open scheduler →</Link>}>
         {runs.loading ? <Loading what="runs" /> : null}
-        {runs.error ? <ErrorNote message={runs.error} /> : null}
+        {runs.error ? <WidgetError message={runs.error} onRetry={runs.reload} /> : null}
         {runs.data ? (
           <DataTable
             rows={runs.data.items}
@@ -430,15 +430,15 @@ function AppOwnerDashboard({ staleAfterDays }: { staleAfterDays: number }) {
         ))}
       </div>
 
-      {owner.lifecycle.error ? <ErrorNote message={owner.lifecycle.error} /> : null}
-      {owner.trend.error ? <ErrorNote message={owner.trend.error} /> : null}
-      {owner.evidence.error ? <ErrorNote message={owner.evidence.error} /> : null}
+      {owner.lifecycle.error ? <WidgetError message={owner.lifecycle.error} onRetry={owner.lifecycle.reload} /> : null}
+      {owner.trend.error ? <WidgetError message={owner.trend.error} onRetry={owner.trend.reload} /> : null}
+      {owner.evidence.error ? <WidgetError message={owner.evidence.error} onRetry={owner.evidence.reload} /> : null}
 
       {tab === 'Evidence' ? (
         <div className="dash-tab-panel">
           {owner.lifecycle.loading ? <Loading what="evidence lifecycle summary" /> : null}
           {kpis.loading ? <Loading what="dashboard KPIs" /> : null}
-          {kpis.error ? <ErrorNote message={kpis.error} /> : null}
+          {kpis.error ? <WidgetError message={kpis.error} onRetry={kpis.reload} /> : null}
           {ev ? (
             <>
               <p className="muted small" aria-label="Evidence in scope">
@@ -696,7 +696,7 @@ function UpcomingAuditsSection({ slug }: { slug: string }) {
   return (
     <Section title="Upcoming Audits">
       {schedule.loading ? <Loading what="audit schedule" /> : null}
-      {schedule.error ? <ErrorNote message={schedule.error} /> : null}
+      {schedule.error ? <WidgetError message={schedule.error} onRetry={schedule.reload} /> : null}
       {schedule.data ? (
         audits.length === 0 ? (
           <p className="muted">No upcoming audits scheduled for this application.</p>
@@ -746,7 +746,7 @@ function AuditReadinessTab({ slug, counts }: { slug: string; counts: LifecycleSt
   return (
     <>
       {compliance.loading ? <Loading what="compliance" /> : null}
-      {compliance.error ? <ErrorNote message={compliance.error} /> : null}
+      {compliance.error ? <WidgetError message={compliance.error} onRetry={compliance.reload} /> : null}
 
       <Section title="Audit Readiness Score">
         <div className="stat-grid">
@@ -887,7 +887,7 @@ function AuditorDashboard({
       </p>
 
       {board.loading ? <Loading what="evidence dashboard" /> : null}
-      {board.error ? <ErrorNote message={board.error} /> : null}
+      {board.error ? <WidgetError message={board.error} onRetry={board.reload} /> : null}
 
       <div className="dash-tabs" role="tablist" aria-label="Dashboard sections">
         {AUDITOR_TABS.map((t) => (
@@ -942,7 +942,7 @@ function AuditorDashboard({
         <div className="dash-tab-panel dash-grid-2">
           <Section title="Control results" actions={<Link to="/control-results">Open control results →</Link>}>
             {controlResults.loading ? <Loading what="control results" /> : null}
-            {controlResults.error ? <ErrorNote message={controlResults.error} /> : null}
+            {controlResults.error ? <WidgetError message={controlResults.error} onRetry={controlResults.reload} /> : null}
             {controlResults.data ? (
               <div className="stat-grid">
                 <StatCard label="PASS" value={controlResults.counts.PASS ?? 0} />
@@ -955,7 +955,7 @@ function AuditorDashboard({
 
           <Section title="Evidence completeness" actions={<Link to="/completeness">Open completeness →</Link>}>
             {completeness.loading ? <Loading what="evidence completeness" /> : null}
-            {completeness.error ? <ErrorNote message={completeness.error} /> : null}
+            {completeness.error ? <WidgetError message={completeness.error} onRetry={completeness.reload} /> : null}
             {completeness.data ? (
               <div className="stat-grid">
                 <StatCard
@@ -1030,7 +1030,7 @@ function ClosureTrend() {
   return (
     <>
       {report.loading ? <Loading what="closure metrics" /> : null}
-      {report.error ? <ErrorNote message={report.error} /> : null}
+      {report.error ? <WidgetError message={report.error} onRetry={report.reload} /> : null}
       {d ? (
         <>
           <Section title="Evidence closure" actions={<Link to="/evidence-lifecycle">Open evidence lifecycle →</Link>}>
@@ -1091,7 +1091,7 @@ function FunctionalHeadDashboard({ board, d }: { board: AsyncBoard; d: EvidenceD
       </p>
 
       {board.loading ? <Loading what="evidence dashboard" /> : null}
-      {board.error ? <ErrorNote message={board.error} /> : null}
+      {board.error ? <WidgetError message={board.error} onRetry={board.reload} /> : null}
 
       <div className="dash-tabs" role="tablist" aria-label="Dashboard sections">
         {FH_TABS.map((t) => (
@@ -1117,7 +1117,7 @@ function FunctionalHeadDashboard({ board, d }: { board: AsyncBoard; d: EvidenceD
 
           <Section title="Control results" actions={<Link to="/control-results">Open control results →</Link>}>
             {controlResults.loading ? <Loading what="control results" /> : null}
-            {controlResults.error ? <ErrorNote message={controlResults.error} /> : null}
+            {controlResults.error ? <WidgetError message={controlResults.error} onRetry={controlResults.reload} /> : null}
             {controlResults.data ? (
               <div className="stat-grid">
                 <StatCard label="PASS" value={controlResults.counts.PASS ?? 0} />
@@ -1135,7 +1135,7 @@ function FunctionalHeadDashboard({ board, d }: { board: AsyncBoard; d: EvidenceD
           <Section title="Control results — detail" actions={<Link to="/control-results">Open control results →</Link>}>
             <p className="muted small">Deterministic rule evaluation over stored evidence, across the portfolio.</p>
             {controlResults.loading ? <Loading what="control results" /> : null}
-            {controlResults.error ? <ErrorNote message={controlResults.error} /> : null}
+            {controlResults.error ? <WidgetError message={controlResults.error} onRetry={controlResults.reload} /> : null}
             {controlResults.data ? (
               <div className="stat-grid">
                 <StatCard label="PASS" value={controlResults.counts.PASS ?? 0} />
@@ -1167,7 +1167,7 @@ function FunctionalHeadDashboard({ board, d }: { board: AsyncBoard; d: EvidenceD
         <div className="dash-tab-panel dash-grid-2">
           <Section title="Evaluation gaps">
             {completeness.loading ? <Loading what="evidence completeness" /> : null}
-            {completeness.error ? <ErrorNote message={completeness.error} /> : null}
+            {completeness.error ? <WidgetError message={completeness.error} onRetry={completeness.reload} /> : null}
             {completeness.data ? (
               <>
                 <p>
@@ -1230,7 +1230,7 @@ function FunctionRollup() {
     : []
 
   if (apps.loading) return <Loading what="functions" />
-  if (apps.error) return <ErrorNote message={apps.error} />
+  if (apps.error) return <WidgetError message={apps.error} onRetry={apps.reload} />
   if (units.length === 0) return <p className="muted">No function (business unit) is defined for any application.</p>
 
   return (
@@ -1251,7 +1251,7 @@ function FunctionRollup() {
 
       <Section title={`${unit} — compliance trend`}>
         {trend.loading ? <Loading what="trend" /> : null}
-        {trend.error ? <ErrorNote message={trend.error} /> : null}
+        {trend.error ? <WidgetError message={trend.error} onRetry={trend.reload} /> : null}
         {trend.data ? (
           series.length > 1 ? (
             <>
@@ -1335,7 +1335,7 @@ function VerticalHeadDashboard({
       </p>
 
       {board.loading ? <Loading what="evidence dashboard" /> : null}
-      {board.error ? <ErrorNote message={board.error} /> : null}
+      {board.error ? <WidgetError message={board.error} onRetry={board.reload} /> : null}
 
       {allUnits.length > 0 ? (
         <fieldset className="filter-row">
@@ -1373,7 +1373,7 @@ function VerticalHeadDashboard({
           <div className="chart-grid">
             <Section title="Compliance % over time">
               {complianceTrend.loading ? <Loading what="trend" /> : null}
-              {complianceTrend.error ? <ErrorNote message={complianceTrend.error} /> : null}
+              {complianceTrend.error ? <WidgetError message={complianceTrend.error} onRetry={complianceTrend.reload} /> : null}
               {complianceTrend.data ? (
                 complianceSeries.length > 1 ? (
                   <>
@@ -1396,7 +1396,7 @@ function VerticalHeadDashboard({
 
             <Section title="Integrity pass-rate over time">
               {trend.loading ? <Loading what="trend" /> : null}
-              {trend.error ? <ErrorNote message={trend.error} /> : null}
+              {trend.error ? <WidgetError message={trend.error} onRetry={trend.reload} /> : null}
               {trend.data ? (
                 <>
                   <LineChart
@@ -1420,7 +1420,7 @@ function VerticalHeadDashboard({
         <div className="dash-tab-panel">
           <Section title="Business-unit comparison" actions={<Link to="/comparison">Open comparison →</Link>}>
             {enterprise.loading ? <Loading what="business-unit comparison" /> : null}
-            {enterprise.error ? <ErrorNote message={enterprise.error} /> : null}
+            {enterprise.error ? <WidgetError message={enterprise.error} onRetry={enterprise.reload} /> : null}
             {ed ? (
               <>
                 <p className="muted small">
@@ -1467,7 +1467,7 @@ function VerticalHeadDashboard({
         <div className="dash-tab-panel">
           <Section title="Executive rollup" actions={<Link to="/leadership">Open leadership dashboard →</Link>}>
             {leadership.loading ? <Loading what="leadership dashboard" /> : null}
-            {leadership.error ? <ErrorNote message={leadership.error} /> : null}
+            {leadership.error ? <WidgetError message={leadership.error} onRetry={leadership.reload} /> : null}
             {ld ? (
               <>
                 <p className="muted small">
@@ -1542,7 +1542,7 @@ function CIODashboard({
       </p>
 
       {board.loading ? <Loading what="evidence dashboard" /> : null}
-      {board.error ? <ErrorNote message={board.error} /> : null}
+      {board.error ? <WidgetError message={board.error} onRetry={board.reload} /> : null}
 
       <div className="dash-tabs" role="tablist" aria-label="Dashboard sections">
         {CIO_TABS.map((t) => (
@@ -1562,7 +1562,7 @@ function CIODashboard({
       {tab === 'Posture Overview' ? (
         <div className="dash-tab-panel">
           {leadership.loading ? <Loading what="leadership dashboard" /> : null}
-          {leadership.error ? <ErrorNote message={leadership.error} /> : null}
+          {leadership.error ? <WidgetError message={leadership.error} onRetry={leadership.reload} /> : null}
           {ld ? (
             <div className="stat-grid">
               <StatCard label="Portfolio compliance" value={`${ld.compliancePct}%`} hint={`${ld.compliant}/${ld.expected} controls`} />
@@ -1574,7 +1574,7 @@ function CIODashboard({
 
           <Section title="Integrity pass-rate over time">
             {trend.loading ? <Loading what="trend" /> : null}
-            {trend.error ? <ErrorNote message={trend.error} /> : null}
+            {trend.error ? <WidgetError message={trend.error} onRetry={trend.reload} /> : null}
             {trend.data ? (
               <>
                 <LineChart
@@ -1599,7 +1599,7 @@ function CIODashboard({
 
           <Section title="Framework coverage spread" actions={<Link to="/comparison">Open comparison →</Link>}>
             {comparison.loading ? <Loading what="comparison" /> : null}
-            {comparison.error ? <ErrorNote message={comparison.error} /> : null}
+            {comparison.error ? <WidgetError message={comparison.error} onRetry={comparison.reload} /> : null}
             {cd ? (
               <>
                 <p className="muted small">
@@ -1627,7 +1627,7 @@ function CIODashboard({
         <div className="dash-tab-panel dash-grid-2">
           <Section title="Control gaps" actions={<Link to="/comparison">Open comparison →</Link>}>
             {comparison.loading ? <Loading what="comparison" /> : null}
-            {comparison.error ? <ErrorNote message={comparison.error} /> : null}
+            {comparison.error ? <WidgetError message={comparison.error} onRetry={comparison.reload} /> : null}
             {cd ? (
               <>
                 <div className="stat-grid">
@@ -1670,7 +1670,7 @@ function CIODashboard({
         <div className="dash-tab-panel">
           <Section title="Org-wide compliance % trend" actions={<Link to="/trend">Open trend →</Link>}>
             {trend.loading ? <Loading what="trend" /> : null}
-            {trend.error ? <ErrorNote message={trend.error} /> : null}
+            {trend.error ? <WidgetError message={trend.error} onRetry={trend.reload} /> : null}
             {trend.data ? (
               complianceSeries.length > 1 ? (
                 <>
@@ -1731,7 +1731,7 @@ function AdminDashboard({
       </p>
 
       {board.loading ? <Loading what="evidence dashboard" /> : null}
-      {board.error ? <ErrorNote message={board.error} /> : null}
+      {board.error ? <WidgetError message={board.error} onRetry={board.reload} /> : null}
 
       <div className="dash-tabs" role="tablist" aria-label="Dashboard sections">
         {ADMIN_TABS.map((t) => (
@@ -1807,7 +1807,7 @@ function AdminDashboard({
 
           <Section title="Recent scheduler runs" actions={<Link to="/scheduler">Open scheduler →</Link>}>
             {runs.loading ? <Loading what="runs" /> : null}
-            {runs.error ? <ErrorNote message={runs.error} /> : null}
+            {runs.error ? <WidgetError message={runs.error} onRetry={runs.reload} /> : null}
             {runs.data ? (
               <DataTable
                 className="dash-capped-table dash-capped-table-tall"

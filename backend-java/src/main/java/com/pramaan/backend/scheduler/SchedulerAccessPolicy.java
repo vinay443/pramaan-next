@@ -42,6 +42,9 @@ public class SchedulerAccessPolicy implements HandlerInterceptor {
     /** Bulk evidence upload (POST /api/v1/evidence/bulk/upload): same writers as the scheduler. */
     static final Set<String> UPLOAD_ROLES = Set.of("APP", "ADMIN");
     static final String BULK_UPLOAD_PATH = "/api/v1/evidence/bulk/upload";
+    /** FT006 metadata edit (PATCH /api/v1/evidence/{id}/metadata): APP and ADMIN. APP ownership of the application is not enforced. */
+    static final Set<String> METADATA_EDIT_ROLES = Set.of("APP", "ADMIN");
+    static final String METADATA_PATH_PATTERN = "/api/v1/evidence/*/metadata";
     static final Set<String> SECURITY_ROLES = Set.of("ADMIN", "AUDITOR");
     /** Retention: everyone reads the policy and runs, only these change the policy or archive. */
     static final Set<String> RETENTION_ROLES = Set.of("ADMIN");
@@ -87,6 +90,13 @@ public class SchedulerAccessPolicy implements HandlerInterceptor {
                 return reject(res, HttpServletResponse.SC_FORBIDDEN, "FORBIDDEN",
                         "Role " + role + " is not permitted to upload evidence");
             }
+        } else if (isMetadataEdit(uri)) {
+            boolean read = HttpMethod.GET.matches(req.getMethod()) || HttpMethod.HEAD.matches(req.getMethod());
+            if (!read && !METADATA_EDIT_ROLES.contains(role)) {
+                security.record(Type.ACCESS_DENIED, "refused: edit evidence metadata (" + req.getMethod() + ")", req);
+                return reject(res, HttpServletResponse.SC_FORBIDDEN, "FORBIDDEN",
+                        "Role " + role + " is not permitted to edit evidence metadata");
+            }
         } else if (isObservation(uri)) {
             boolean read = HttpMethod.GET.matches(req.getMethod()) || HttpMethod.HEAD.matches(req.getMethod());
             if (!read && !OBSERVATION_ROLES.contains(role)) {
@@ -119,6 +129,10 @@ public class SchedulerAccessPolicy implements HandlerInterceptor {
             return reject(res, HttpServletResponse.SC_BAD_REQUEST, "BAD_REQUEST", "Invalid identifier in the request path");
         }
         return true;
+    }
+
+    private static boolean isMetadataEdit(String uri) {
+        return uri.startsWith("/api/v1/evidence/") && uri.endsWith("/metadata");
     }
 
     private static boolean isObservation(String uri) {
@@ -169,7 +183,7 @@ public class SchedulerAccessPolicy implements HandlerInterceptor {
                     "/api/v1/sources/**", "/api/v1/system/**",
                     "/api/v1/notifications", "/api/v1/notifications/**", "/api/v1/security/**",
                     "/api/v1/evidence/*/observations", "/api/v1/observations", "/api/v1/observations/**",
-                    "/api/v1/dashboard/**", "/api/v1/retention/**", BULK_UPLOAD_PATH);
+                    "/api/v1/dashboard/**", "/api/v1/retention/**", BULK_UPLOAD_PATH, METADATA_PATH_PATTERN);
         }
     }
 }

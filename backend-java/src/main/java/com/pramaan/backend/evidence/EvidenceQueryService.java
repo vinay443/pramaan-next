@@ -362,6 +362,11 @@ public class EvidenceQueryService {
         return pageAll(f);
     }
 
+    /** Cheap marker that changes whenever evidence is added or modified (record count + latest update). */
+    public String dataFingerprint() {
+        return records.count() + ":" + records.maxUpdatedAt();
+    }
+
     /** Total persisted evidence records. Cheap; used to detect a stale embedding index. */
     public long count() {
         return records.count();
